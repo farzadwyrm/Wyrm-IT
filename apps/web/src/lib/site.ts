@@ -117,7 +117,8 @@ export const DEMOS: readonly Demo[] = [
     name: "AI Receptionist",
     summary:
       "Talk to a receptionist for a fictional clinic that answers questions and books visits.",
-    status: "coming-soon",
+    status: "live",
+    href: "/receptionist",
   },
   {
     slug: "ask-your-docs",
@@ -172,4 +173,12 @@ export const PRINCIPLES = [
 ] as const;
 
 /** Every static page, used by the sitemap and the smoke tests. Add new pages here. */
-export const STATIC_ROUTES = ["/", "/services", "/scan", "/about", "/contact", "/blog"] as const;
+export const STATIC_ROUTES = [
+  "/",
+  "/services",
+  "/scan",
+  "/receptionist",
+  "/about",
+  "/contact",
+  "/blog",
+] as const;

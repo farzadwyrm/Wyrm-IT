@@ -16,6 +16,10 @@ Last updated: 2026-10-19
   (`packages/ai/src/readiness-report.ts`, Claude Opus 5.5, low effort, server-side refusal
   fallback). Server re-validates answers and re-scores; demo guard: 3 summaries per visitor per
   hour, daily cap `DEMO_DAILY_BUDGET_CENTS` (default 500 = $5).
+- Phase 3 Receptionist demo at `/receptionist` (free mode): rule-based engine in
+  `packages/receptionist` for the fictional Harbor Lane Dental; runs in the browser, nothing is
+  booked. Hours/prices/location answers, booking with corrections and side questions, explicit
+  yes before booking, demo cancel. 60 unit tests incl. rejected dates/times and corrections.
 - Playwright smoke tests (`apps/web/e2e/`): every page on desktop and phone, 404, navigation,
   no dead booking link. Included in `pnpm verify` and CI.
 
@@ -27,7 +31,7 @@ Last updated: 2026-10-19
 ## Last verification
 
 2026-10-19, local Windows, Node 24.20, pnpm 10.15: `pnpm verify` passed (harness check, Biome,
-typecheck in 5 packages, 39 unit tests, `next build`, 26 Playwright tests incl. full scan flow).
+typecheck in 5 packages, 99 unit tests, `next build`, 34 Playwright tests incl. full scan and booking flows).
 Visual check in a browser: site pages; scan steps and results (desktop dark).
 AI summary verified only with a fake client and the no-key path; no real Claude call made yet.
 GitHub CI passed on commit 678002e (before Phase 1); Phase 1 CI not yet confirmed.
@@ -39,7 +43,8 @@ GitHub CI passed on commit 678002e (before Phase 1); Phase 1 CI not yet confirme
 - AI summaries are OFF by choice (free mode). To switch on later: add `ANTHROPIC_API_KEY` in Vercel
   (Production only) and redeploy; the route falls back to the free summary when over budget.
 - Phase 2 remainder: lead capture (email the report) needs a database + email provider.
-- Phase 3: AI Receptionist demo.
+- Receptionist next steps: AI understanding (Claude) behind a key like the scan; voice; reuse
+  of ReceptionAI's engine for real clients.
 
 ## Known limits
 
