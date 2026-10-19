@@ -15,8 +15,9 @@ pnpm dev
 
 Open http://127.0.0.1:3000.
 
-On Windows, `corepack enable` needs an Administrator terminal. Without it, prefix commands with
-`corepack`, for example `corepack pnpm install` and `corepack pnpm dev`.
+On Windows, `corepack enable` needs an Administrator terminal. Without admin rights, install
+pnpm for your user instead: `npm install -g pnpm@10.15.0`. Turborepo needs a `pnpm` command on
+PATH, so `corepack pnpm …` alone is not enough for `pnpm verify`.
 
 ## Checks
 
