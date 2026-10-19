@@ -66,6 +66,8 @@ export function useReceptionistSession() {
   const [suggestions, setSuggestions] = useState<string[]>(() => greeting().suggestions);
   const [busy, setBusy] = useState(false);
   const [mode, setModeState] = useState<SessionMode>("ai");
+  /** Which AI answered last: Claude (paid) or a free open model on Groq. */
+  const [provider, setProvider] = useState<"claude" | "groq" | null>(null);
 
   const messagesRef = useRef(messages);
   const modeRef = useRef<SessionMode>("ai");
@@ -173,6 +175,7 @@ export function useReceptionistSession() {
         return replyBasic(trimmed);
       }
 
+      setProvider(data.provider);
       for (const event of data.events) {
         if (event.type === "proposed") pendingRef.current = event.proposal;
         if (event.type === "booked") {
@@ -205,7 +208,7 @@ export function useReceptionistSession() {
     basicRef.current = initialState();
   }, [commit]);
 
-  return { messages, suggestions, busy, mode, send, restart, append };
+  return { messages, suggestions, busy, mode, provider, send, restart, append };
 }
 
 export type ReceptionistSession = ReturnType<typeof useReceptionistSession>;

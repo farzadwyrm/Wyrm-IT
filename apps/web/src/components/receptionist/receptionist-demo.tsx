@@ -43,7 +43,13 @@ export function ReceptionistDemo() {
           <p className="font-semibold">Harbor Lane Dental</p>
           <p className="truncate text-xs text-ink-muted">
             Fictional clinic ·{" "}
-            {session.mode === "ai" ? "AI receptionist" : "basic receptionist (no AI)"}
+            {session.mode === "basic"
+              ? "basic receptionist (no AI)"
+              : session.provider === "groq"
+                ? "AI receptionist · free open model"
+                : session.provider === "claude"
+                  ? "AI receptionist · Claude"
+                  : "AI receptionist"}
           </p>
         </div>
         <div className="flex items-center gap-3">

@@ -13,6 +13,6 @@ export interface ReceptionistRequest {
 }
 
 export type ReceptionistResponse =
-  | { status: "ok"; text: string; events: ToolEvent[] }
+  | { status: "ok"; text: string; events: ToolEvent[]; provider: "claude" | "groq" }
   /** The AI is off, over budget or failed: the page switches to the basic receptionist. */
   | { status: "fallback"; reason: string };

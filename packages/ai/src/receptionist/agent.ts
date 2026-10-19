@@ -27,7 +27,14 @@ export interface AgentInput {
 }
 
 export type AgentOutcome =
-  | { status: "ok"; text: string; events: ToolEvent[]; costCents: number }
+  | {
+      status: "ok";
+      text: string;
+      events: ToolEvent[];
+      costCents: number;
+      /** Which AI answered: Claude (paid) or a free open model on Groq. */
+      provider: "claude" | "groq";
+    }
   | {
       status: "unavailable";
       reason: "not_configured" | "refused" | "error" | "empty";
@@ -37,9 +44,9 @@ export type AgentOutcome =
 /** Upper bound for the demo budget check before a turn (a turn is usually far cheaper). */
 export const RECEPTIONIST_TURN_ESTIMATED_CENTS = 1;
 
-const MAX_TOOL_ROUNDS = 6;
-const MAX_HISTORY = 30;
-const MAX_MESSAGE_CHARS = 600;
+export const MAX_TOOL_ROUNDS = 6;
+export const MAX_HISTORY = 30;
+export const MAX_MESSAGE_CHARS = 600;
 
 const services = SERVICES.map(
   (s) => `${s.name} (id ${s.id}, about ${s.minutes} minutes, ${s.price})`,
@@ -99,7 +106,7 @@ Receptionist: (finds the earliest urgent slot) Oh, I'm sorry, that sounds really
 </example>
 </examples>`;
 
-const CHANNEL_PROMPTS: Record<Channel, string> = {
+export const CHANNEL_PROMPTS: Record<Channel, string> = {
   chat: "<channel>You're in the website chat. Your words appear as text, so normal times, prices and references are fine (2:30 pm, €70, HL-1234). Keep to one to three short sentences.</channel>",
   voice: `<channel>You're on a phone call, and every word you write is spoken aloud by a voice engine. Keep each turn to one or two short sentences that someone could say in one breath. Never read out a list; offer two choices.
 Before you check the calendar, say a few words such as "Let me have a look."
@@ -211,7 +218,7 @@ export async function runReceptionistTurn(
       if (toolUses.length === 0) {
         const reply = spoken.join(" ").trim();
         return reply
-          ? { status: "ok", text: reply, events, costCents }
+          ? { status: "ok", text: reply, events, costCents, provider: "claude" }
           : { status: "unavailable", reason: "empty", costCents };
       }
 

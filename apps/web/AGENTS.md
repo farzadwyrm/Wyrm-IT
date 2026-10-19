@@ -17,7 +17,7 @@ conventions, file structure). Before writing Next.js code, read the relevant gui
 - Demo routes must use `@wyrm/ai`'s demo guard and fictional data only.
 - Voice-call tests use Chromium's fake microphone and the scripted fakes in `e2e/fake-speech.ts`;
   never real speech services. The call visual must never be the only carrier of state.
-- Tests never call paid AI APIs: Playwright starts the server with `ANTHROPIC_API_KEY` empty,
+- Tests never call paid AI APIs: Playwright starts the server with `ANTHROPIC_API_KEY` and `GROQ_API_KEY` empty,
   and unit tests pass a fake client. Keep it that way.
 - Pages must work at 375px width with no horizontal scroll.
 - Every new page goes in `STATIC_ROUTES` (`src/lib/site.ts`) so the sitemap and the

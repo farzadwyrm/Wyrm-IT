@@ -2,9 +2,10 @@ import { createHash } from "node:crypto";
 import {
   type ChatMessage,
   createDemoGuard,
+  isAnyReceptionistAiConfigured,
   type Proposal,
   RECEPTIONIST_TURN_ESTIMATED_CENTS,
-  runReceptionistTurn,
+  runReceptionist,
 } from "@wyrm/ai";
 import { type Booking, SERVICES } from "@wyrm/receptionist";
 import type { ReceptionistRequest, ReceptionistResponse } from "@/lib/receptionist-api";
@@ -110,16 +111,17 @@ export async function POST(request: Request) {
     return json({ status: "fallback", reason: "invalid_request" }, 400);
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) return json({ status: "fallback", reason: "not_configured" });
+  if (!isAnyReceptionistAiConfigured())
+    return json({ status: "fallback", reason: "not_configured" });
 
   const visitor = visitorId(request);
   const decision = guard.check(visitor, RECEPTIONIST_TURN_ESTIMATED_CENTS);
   if (!decision.allowed) return json({ status: "fallback", reason: decision.reason });
 
-  const outcome = await runReceptionistTurn({ history, bookings, pending, now, channel });
+  const outcome = await runReceptionist({ history, bookings, pending, now, channel });
   guard.record(visitor, outcome.costCents);
 
   return outcome.status === "ok"
-    ? json({ status: "ok", text: outcome.text, events: outcome.events })
+    ? json({ status: "ok", text: outcome.text, events: outcome.events, provider: outcome.provider })
     : json({ status: "fallback", reason: outcome.reason });
 }

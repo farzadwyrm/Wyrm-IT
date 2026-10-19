@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { createDemoGuard, REPORT_ESTIMATED_CENTS, writeReadinessReport } from "@wyrm/ai";
+import { createDemoGuard, REPORT_ESTIMATED_CENTS, writeReadinessReportAny } from "@wyrm/ai";
 import { parseAnswers, QUESTIONS, scoreAssessment, writeBasicSummary } from "@wyrm/assessment";
 import type { ReportResponse } from "@/lib/scan";
 
@@ -23,7 +23,7 @@ function visitorId(request: Request): string {
 const json = (body: ReportResponse, status = 200) => Response.json(body, { status });
 
 /**
- * Writes the scan summary. Uses Claude when ANTHROPIC_API_KEY is set and the demo guard
+ * Writes the scan summary. Uses Claude or Groq's free models (whichever key is set) when the demo guard
  * allows it; otherwise (or if the AI call fails) returns the free rule-based summary,
  * so visitors always get a useful answer and the AI bill can never run away.
  */
@@ -43,12 +43,12 @@ export async function POST(request: Request) {
   const result = scoreAssessment(QUESTIONS, answers);
   const basic = () => json({ status: "ok", text: writeBasicSummary(result), source: "basic" });
 
-  if (!process.env.ANTHROPIC_API_KEY) return basic();
+  if (!process.env.ANTHROPIC_API_KEY && !process.env.GROQ_API_KEY) return basic();
 
   const visitor = visitorId(request);
   if (!guard.check(visitor, REPORT_ESTIMATED_CENTS).allowed) return basic();
 
-  const outcome = await writeReadinessReport(result);
+  const outcome = await writeReadinessReportAny(result);
   guard.record(visitor, outcome.costCents);
 
   return outcome.status === "ok"

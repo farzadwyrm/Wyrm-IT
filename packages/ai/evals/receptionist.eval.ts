@@ -2,16 +2,18 @@
  * Live evals for the AI receptionist: real conversations against Claude, checked for
  * behaviour. They cost real (tiny) money, so they never run in CI or `pnpm verify`.
  *
- *   ANTHROPIC_API_KEY=... pnpm eval
+ *   GROQ_API_KEY=... pnpm eval        (free open models)
+ *   ANTHROPIC_API_KEY=... pnpm eval   (Claude; takes priority when both are set)
  *
  * Every bug found in a real conversation becomes a scenario here (the ratchet).
  */
 import { addDays, type Booking, toDayString, weekdayOf } from "@wyrm/receptionist";
 import { describe, expect, it } from "vitest";
-import { type Channel, type ChatMessage, runReceptionistTurn } from "../src/receptionist/agent";
+import type { Channel, ChatMessage } from "../src/receptionist/agent";
+import { runReceptionist } from "../src/receptionist/providers";
 import type { Proposal, ToolEvent } from "../src/receptionist/tools";
 
-const HAS_KEY = Boolean(process.env.ANTHROPIC_API_KEY);
+const HAS_KEY = Boolean(process.env.ANTHROPIC_API_KEY || process.env.GROQ_API_KEY);
 
 /** Next Monday 10:00 local, so scenarios never depend on today's weekday. */
 function nextMondayMorning(): Date {
@@ -38,7 +40,7 @@ async function converse(visitorMessages: string[], channel: Channel = "chat"): P
   const t: Transcript = { replies: [], events: [], bookings: [], pending: null, costCents: 0 };
   for (const text of visitorMessages) {
     history.push({ role: "visitor", text });
-    const outcome = await runReceptionistTurn({
+    const outcome = await runReceptionist({
       history,
       bookings: t.bookings,
       pending: t.pending,

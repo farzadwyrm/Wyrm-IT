@@ -16,4 +16,5 @@ Short record of settled decisions. Details live in `docs/adr/`.
 | 2026-10-19 | AI receptionist: Claude Haiku 5.5 + deterministic booking tools; no fine-tuning; booking needs a proposal from an earlier turn and a code-checked yes | 0003 |
 | 2026-10-19 | Voice calls use free browser speech (Web Speech API + speechSynthesis), half-duplex, honest about Chrome using Google's speech service; Tide ring visualiser | 0004 |
 | 2026-10-19 | Conversation upgrade from ai_quality review: speech-safe clear-yes check, channel-aware prompt, 36 live evals | 0004 |
+| 2026-10-19 | Free smart AI: Groq free tier (gpt-oss-120b, qwen3.8-27b, gpt-oss-20b) as fallback chain after Claude, before the basic receptionist | 0005 |
 | 2026-10-19 | Legal setup (company, contracts, GDPR paperwork) deferred until first client commits | — |

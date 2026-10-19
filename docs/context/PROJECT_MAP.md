@@ -52,8 +52,9 @@ GitHub CI confirmed green by the owner on commit 678002e; later runs not checked
 - Owner to confirm: About page founder wording, contact promises (reply time, no model training).
 - Booking live: `NEXT_PUBLIC_BOOKING_URL` set in Vercel (Production) to the owner's Cal.com
   30-minute event; Contact page verified on the live site. Still to do: `NEXT_PUBLIC_CONTACT_EMAIL`.
-- AI is OFF until the owner adds `ANTHROPIC_API_KEY` in Vercel (Production only) and redeploys.
-  Then run `pnpm eval` locally with the key and fix any failing scenario before promoting.
+- AI providers (ADR 0005): Claude if `ANTHROPIC_API_KEY`, else Groq's free models if `GROQ_API_KEY`,
+  else basic. Owner is adding `GROQ_API_KEY` in Vercel (Production). Then run `pnpm eval` with the
+  Groq key (free) and fix failing scenarios.
 - Marketing: LinkedIn plan in `docs/business/marketing/LINKEDIN.md`, local outreach plan in
   `docs/business/marketing/OUTREACH.md`. Real lead lists stay out of git (`.gitignore`).
 - Phase 2 remainder: lead capture (email the report) needs a database + email provider.

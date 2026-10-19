@@ -28,7 +28,7 @@ export default defineConfig({
     // Always start a fresh server: reusing one left running from a manual check tests an old build.
     reuseExistingServer: false,
     timeout: 60_000,
-    // Tests must never call the paid AI API, even if a key is set on this machine.
-    env: { ANTHROPIC_API_KEY: "" },
+    // Tests must never call a real AI API (paid or free), even if a key is set on this machine.
+    env: { ANTHROPIC_API_KEY: "", GROQ_API_KEY: "" },
   },
 });

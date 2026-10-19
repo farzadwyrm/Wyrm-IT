@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { type AssessmentResult, PILLAR_INFO, readinessBand } from "@wyrm/assessment";
+import Groq from "groq-sdk";
 import { costInCents, MODELS } from "./models";
+import { GROQ_MODELS, stripReasoning } from "./receptionist/groq-agent";
 
 /** Upper bound used for the demo budget check before the call is made. */
 export const REPORT_ESTIMATED_CENTS = 1;
@@ -107,4 +109,43 @@ export async function writeReadinessReport(
     }
     return { status: "unavailable", reason: "error", costCents: 0 };
   }
+}
+
+/** Writes the summary with Groq's free open models, trying each in turn. Never throws. */
+export async function writeReadinessReportWithGroq(
+  result: AssessmentResult,
+  options: { client?: Groq; apiKey?: string | undefined } = {},
+): Promise<ReportOutcome> {
+  const apiKey = options.apiKey ?? process.env.GROQ_API_KEY;
+  if (!options.client && !apiKey) {
+    return { status: "unavailable", reason: "not_configured", costCents: 0 };
+  }
+  const client = options.client ?? new Groq({ apiKey, maxRetries: 0, timeout: 20_000 });
+  for (const model of GROQ_MODELS) {
+    try {
+      const response = await client.chat.completions.create({
+        model: model.id,
+        messages: [
+          { role: "system", content: REPORT_SYSTEM_PROMPT },
+          { role: "user", content: buildReportPrompt(result) },
+        ],
+        temperature: 0.6,
+        max_completion_tokens: 1024,
+        ...model.params,
+      });
+      const text = stripReasoning(response.choices[0]?.message?.content ?? "");
+      if (text) return { status: "ok", text, costCents: 0 };
+    } catch (err) {
+      console.error(`groq report ${model.id} failed`, (err as { status?: number }).status ?? "");
+    }
+  }
+  return { status: "unavailable", reason: "error", costCents: 0 };
+}
+
+/** Claude if configured, otherwise Groq's free models; `unavailable` means use the free summary. */
+export async function writeReadinessReportAny(result: AssessmentResult): Promise<ReportOutcome> {
+  const claude = await writeReadinessReport(result);
+  if (claude.status === "ok") return claude;
+  const groq = await writeReadinessReportWithGroq(result);
+  return { ...groq, costCents: claude.costCents };
 }
