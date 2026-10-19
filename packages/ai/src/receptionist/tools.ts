@@ -357,10 +357,10 @@ export function executeTool(
 }
 
 /** Three weeks of dates with weekday names, so the model never does calendar arithmetic. */
-export function calendarContext(now: Date): string {
+export function calendarContext(now: Date, days = 21): string {
   const today = toDayString(now);
   const minutes = now.getHours() * 60 + now.getMinutes();
-  const days = Array.from({ length: 21 }, (_, i) => {
+  const upcoming = Array.from({ length: days }, (_, i) => {
     const day = addDays(today, i);
     return `${formatDay(day)} = ${day}`;
   });
@@ -368,7 +368,7 @@ export function calendarContext(now: Date): string {
     `Current local time: ${formatDay(today)} (${today}), ${formatTime(minutes - (minutes % 5))}.`,
     `Bookings are possible up to ${CLINIC.bookingWindowDays} days ahead; for later dates use the day_label the tools return.`,
     "Upcoming days:",
-    ...days,
+    ...upcoming,
   ].join("\n");
 }
 

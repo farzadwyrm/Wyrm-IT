@@ -143,6 +143,7 @@ export function stateContext(
   bookings: readonly Booking[],
   pending: Proposal | null,
   justBooked: Booking | null = null,
+  calendarDays = 21,
 ): string {
   const describe = (s: { serviceId: string; day: string; time: number; name: string }) => {
     const service = SERVICES.find((x) => x.id === s.serviceId)?.name ?? s.serviceId;
@@ -150,7 +151,7 @@ export function stateContext(
   };
   const lines = [
     `Channel: ${channel}.`,
-    calendarContext(now),
+    calendarContext(now, calendarDays),
     "",
     `Bookings made in this conversation: ${
       bookings.length === 0

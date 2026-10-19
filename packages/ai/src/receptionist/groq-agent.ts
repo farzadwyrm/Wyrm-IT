@@ -1,23 +1,24 @@
 import Groq from "groq-sdk";
-import type {
-  ChatCompletionMessageParam,
-  ChatCompletionTool,
-} from "groq-sdk/resources/chat/completions";
+import type { ChatCompletionMessageParam } from "groq-sdk/resources/chat/completions";
 import {
   type AgentInput,
   type AgentOutcome,
-  CHANNEL_PROMPTS,
   type Channel,
   type ChatMessage,
-  MAX_HISTORY,
   MAX_MESSAGE_CHARS,
   MAX_TOOL_ROUNDS,
   prepareTurn,
-  RECEPTIONIST_SYSTEM_PROMPT,
   stateContext,
 } from "./agent";
+import {
+  COMPACT_CALENDAR_DAYS,
+  COMPACT_CHANNEL_PROMPTS,
+  COMPACT_HISTORY,
+  COMPACT_SYSTEM_PROMPT,
+  COMPACT_TOOLS,
+} from "./compact";
 import { MAX_CORRECTIONS, reviewReply, safeReply } from "./reply-guard";
-import { executeTool, type Proposal, RECEPTIONIST_TOOLS, type ToolEvent } from "./tools";
+import { executeTool, type Proposal, type ToolEvent } from "./tools";
 
 /**
  * The free "smart" receptionist: open models on Groq's free tier, tried in order. Each model has
@@ -52,15 +53,6 @@ export function resetGroqCooldowns(): void {
   restingUntil.clear();
 }
 
-const GROQ_TOOLS: ChatCompletionTool[] = RECEPTIONIST_TOOLS.map((tool) => ({
-  type: "function",
-  function: {
-    name: tool.name,
-    description: tool.description ?? "",
-    parameters: tool.input_schema as Record<string, unknown>,
-  },
-}));
-
 /** Removes any reasoning a model leaks into its visible text. */
 export function stripReasoning(text: string): string {
   return text
@@ -71,7 +63,7 @@ export function stripReasoning(text: string): string {
 
 function toMessages(history: readonly ChatMessage[], system: string): ChatCompletionMessageParam[] {
   const trimmed = history
-    .slice(-MAX_HISTORY)
+    .slice(-COMPACT_HISTORY)
     .map((m) => ({ ...m, text: m.text.slice(0, MAX_MESSAGE_CHARS) }));
   const firstVisitor = trimmed.findIndex((m) => m.role === "visitor");
   const messages: ChatCompletionMessageParam[] = [{ role: "system", content: system }];
@@ -116,7 +108,10 @@ async function runWithModel(
   let pending: Proposal | null = prepared.pending;
   const spoken: string[] = [];
   let corrections = 0;
-  const system = `${RECEPTIONIST_SYSTEM_PROMPT}\n\n${CHANNEL_PROMPTS[channel]}\n\n${stateContext(input.now, channel, bookings, pending, justBooked)}`;
+  const system = `${COMPACT_SYSTEM_PROMPT}
+${COMPACT_CHANNEL_PROMPTS[channel]}
+
+${stateContext(input.now, channel, bookings, pending, justBooked, COMPACT_CALENDAR_DAYS)}`;
   const messages = toMessages(input.history, system);
 
   try {
@@ -124,7 +119,7 @@ async function runWithModel(
       const response = await client.chat.completions.create({
         model: model.id,
         messages,
-        tools: GROQ_TOOLS,
+        tools: COMPACT_TOOLS,
         tool_choice: "auto",
         temperature: 0.6,
         max_completion_tokens: 1024,

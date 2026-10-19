@@ -49,6 +49,14 @@ GitHub CI confirmed green by the owner on commit 678002e; later runs not checked
 
 ## In progress / next
 
+- RESUME HERE (paused 2026-10-19): Groq free tier hits 8,000 tokens/min per model during fast
+  conversations (confirmed in Vercel logs). Just shipped a compact prompt/tools/calendar/history for
+  Groq (`packages/ai/src/receptionist/compact.ts`). Next: re-run the live paced conversation
+  (scratch script replays: check-up Thursday afternoon -> change to 4 pm -> yes -> reminder ->
+  bye) and confirm no fallback; then run `pnpm eval` with a Groq key. If still rate-limited,
+  options: Claude Haiku key (~$5 for ~1,000 conversations) or Groq pay-as-you-go plan.
+- Old Groq key pasted in chat on 2026-10-19 must be deleted in the Groq console (owner).
+
 - Owner to confirm: About page founder wording, contact promises (reply time, no model training).
 - Booking live: `NEXT_PUBLIC_BOOKING_URL` set in Vercel (Production) to the owner's Cal.com
   30-minute event; Contact page verified on the live site. Still to do: `NEXT_PUBLIC_CONTACT_EMAIL`.
