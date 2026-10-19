@@ -13,7 +13,7 @@ Last updated: 2026-10-19
 
 2026-10-19, local Windows, Node 24.20, pnpm 10.15: `pnpm verify` passed (harness check, Biome
 recommended rules, typecheck in 5 packages, 14 unit tests, `next build` of `/`).
-Not yet verified: CI on GitHub, deployment.
+GitHub CI run #1 on commit 678002e passed (32s). Not yet verified: deployment.
 
 ## In progress / next
 
