@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 
-const chat = (page: Page) => page.getByRole("region", { name: "Receptionist chat" });
+const chat = (page: Page) => page.getByRole("region", { name: "Receptionist demo" });
 const chips = (page: Page) => chat(page).getByRole("group", { name: "Suggested replies" });
 const conversation = (page: Page) => chat(page).getByRole("list", { name: "Conversation" });
 

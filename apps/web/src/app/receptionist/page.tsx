@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ReceptionistChat } from "@/components/receptionist/receptionist-chat";
+import { ReceptionistDemo } from "@/components/receptionist/receptionist-demo";
 import { Container, CtaBand, PageHeader } from "@/components/sections";
 
 export const metadata: Metadata = {
@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 };
 
 const TRY_THIS = [
+  "Press Call and talk to it like a real phone call (Chrome, Edge or Safari)",
   "Talk naturally: “hi, my tooth's been killing me since the weekend”",
   "Ask for “something after work on Wednesday”",
   "Change your mind halfway: “actually, could my partner come instead on Friday?”",
@@ -26,7 +27,7 @@ export default function ReceptionistPage() {
       />
 
       <Container className="grid gap-10 pb-16 lg:grid-cols-[3fr_2fr]">
-        <ReceptionistChat />
+        <ReceptionistDemo />
 
         <aside className="space-y-8">
           <div>

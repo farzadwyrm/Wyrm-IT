@@ -85,11 +85,7 @@ export async function writeReadinessReport(
       messages: [{ role: "user", content: buildReportPrompt(result) }],
     });
 
-    const costCents = costInCents(
-      response.model,
-      response.usage.input_tokens,
-      response.usage.output_tokens,
-    );
+    const costCents = costInCents(response.model, response.usage);
 
     if (response.stop_reason === "refusal") {
       return { status: "unavailable", reason: "refused", costCents };

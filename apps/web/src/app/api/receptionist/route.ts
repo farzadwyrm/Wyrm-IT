@@ -105,6 +105,7 @@ export async function POST(request: Request) {
   const bookings = parseBookings(body.bookings ?? []);
   const pending = parsePending(body.pending ?? null);
   const now = parseClock(body.clock);
+  const channel = body.channel === "voice" ? "voice" : "chat";
   if (!history || !bookings || pending === undefined || !now) {
     return json({ status: "fallback", reason: "invalid_request" }, 400);
   }
@@ -115,7 +116,7 @@ export async function POST(request: Request) {
   const decision = guard.check(visitor, RECEPTIONIST_TURN_ESTIMATED_CENTS);
   if (!decision.allowed) return json({ status: "fallback", reason: decision.reason });
 
-  const outcome = await runReceptionistTurn({ history, bookings, pending, now });
+  const outcome = await runReceptionistTurn({ history, bookings, pending, now, channel });
   guard.record(visitor, outcome.costCents);
 
   return outcome.status === "ok"

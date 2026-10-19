@@ -8,6 +8,8 @@ export interface ReceptionistRequest {
   pending: Proposal | null;
   /** The visitor's local date and time, so "today" and "tomorrow" mean what they expect. */
   clock: { day: string; minutes: number };
+  /** How the visitor is talking: typed chat, or a spoken (simulated phone) call. */
+  channel?: "chat" | "voice";
 }
 
 export type ReceptionistResponse =

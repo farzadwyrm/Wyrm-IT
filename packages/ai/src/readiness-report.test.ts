@@ -31,8 +31,23 @@ describe("buildReportPrompt", () => {
 
 describe("costInCents", () => {
   it("prices Opus 5.5 at $4 in / $20 out per million tokens", () => {
-    expect(costInCents("claude-opus-5-5", 1_000_000, 0)).toBeCloseTo(400);
-    expect(costInCents("claude-opus-5-5", 0, 1_000)).toBeCloseTo(2);
+    expect(
+      costInCents("claude-opus-5-5", { input_tokens: 1_000_000, output_tokens: 0 }),
+    ).toBeCloseTo(400);
+    expect(costInCents("claude-opus-5-5", { input_tokens: 0, output_tokens: 1_000 })).toBeCloseTo(
+      2,
+    );
+  });
+
+  it("charges cache writes at 1.25x and cache reads at 0.1x the input price", () => {
+    const usage = {
+      input_tokens: 0,
+      output_tokens: 0,
+      cache_creation_input_tokens: 1_000_000,
+      cache_read_input_tokens: 1_000_000,
+    };
+    // Haiku 5.5 input is $0.10/M: 1.25 x 10 cents + 0.1 x 10 cents = 13.5 cents.
+    expect(costInCents("claude-haiku-5-5", usage)).toBeCloseTo(13.5);
   });
 });
 

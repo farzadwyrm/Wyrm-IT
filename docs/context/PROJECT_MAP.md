@@ -20,6 +20,10 @@ Last updated: 2026-10-19
   (`packages/ai/src/receptionist/`). Two-step booking enforced in code (proposal card, then a
   deterministic clear-yes check). Falls back to the rule-based receptionist without a key.
   Live evals: `packages/ai/evals/receptionist.eval.ts` (`pnpm eval`). Scan summary also Haiku 5.5.
+- Voice call mode (ADR 0004): `[Chat | Call]` on `/receptionist`, shared session, browser speech
+  in/out (`apps/web/src/lib/voice/`), call state machine and "Tide ring" visualiser
+  (`apps/web/src/components/receptionist/`). Conversation upgrade from the ai_quality review:
+  hardened clear-yes check, voice-aware prompt, part-of-day tools, text kept across tool rounds.
 - Phase 3 Receptionist demo at `/receptionist` (basic mode): rule-based engine in
   `packages/receptionist` for the fictional Harbor Lane Dental; runs in the browser, nothing is
   booked. Hours/prices/location answers, booking with corrections and side questions, explicit
@@ -35,7 +39,9 @@ Last updated: 2026-10-19
 ## Last verification
 
 2026-10-19, local Windows, Node 24.20, pnpm 10.15: `pnpm verify` passed (harness check, Biome,
-typecheck in 5 packages, 135 unit tests, `next build`, 38 Playwright tests incl. full scan and booking flows).
+typecheck in 5 packages, 185 unit tests, `next build`, 46 Playwright tests incl. full scan, chat booking and a spoken
+call booking with a fake microphone and scripted speech). Visual check of the call view (idle,
+speaking, listening, ended) in a browser with simulated audio; no real microphone used.
 AI mode verified only with scripted fake models; live evals not yet run (no API key configured).
 Visual check in a browser: site pages; scan steps and results (desktop dark).
 GitHub CI confirmed green by the owner on commit 678002e; later runs not checked from here

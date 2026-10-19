@@ -14,4 +14,6 @@ Short record of settled decisions. Details live in `docs/adr/`.
 | 2026-10-19 | Receptionist demo is rule-based and runs in the browser (free); clinic is fictional; no personal data beyond a first name | — |
 | 2026-10-19 | Playwright never reuses a running server, so tests always hit the current build | — |
 | 2026-10-19 | AI receptionist: Claude Haiku 5.5 + deterministic booking tools; no fine-tuning; booking needs a proposal from an earlier turn and a code-checked yes | 0003 |
+| 2026-10-19 | Voice calls use free browser speech (Web Speech API + speechSynthesis), half-duplex, honest about Chrome using Google's speech service; Tide ring visualiser | 0004 |
+| 2026-10-19 | Conversation upgrade from ai_quality review: speech-safe clear-yes check, channel-aware prompt, 36 live evals | 0004 |
 | 2026-10-19 | Legal setup (company, contracts, GDPR paperwork) deferred until first client commits | — |

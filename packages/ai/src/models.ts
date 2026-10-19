@@ -22,8 +22,24 @@ export const PRICES_PER_MILLION: Record<string, { input: number; output: number 
   "claude-haiku-5-5": { input: 0.1, output: 0.5 },
 };
 
-/** Cost of one call in US cents. Unknown models are priced as Opus 5.5 to stay conservative. */
-export function costInCents(model: string, inputTokens: number, outputTokens: number): number {
+/** Token counts as reported in a response's `usage` (cache fields are optional). */
+export interface TokenUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+}
+
+/**
+ * Cost of one call in US cents, including prompt-cache writes (1.25x input price) and reads
+ * (0.1x). Unknown models are priced as Opus 5.5 to stay conservative.
+ */
+export function costInCents(model: string, usage: TokenUsage): number {
   const price = PRICES_PER_MILLION[model] ?? { input: 4, output: 20 };
-  return ((inputTokens * price.input + outputTokens * price.output) / 1_000_000) * 100;
+  const dollars =
+    usage.input_tokens * price.input +
+    (usage.cache_creation_input_tokens ?? 0) * price.input * 1.25 +
+    (usage.cache_read_input_tokens ?? 0) * price.input * 0.1 +
+    usage.output_tokens * price.output;
+  return (dollars / 1_000_000) * 100;
 }

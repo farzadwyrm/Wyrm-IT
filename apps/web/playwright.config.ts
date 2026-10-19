@@ -11,6 +11,11 @@ export default defineConfig({
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
     trace: "retain-on-failure",
+    // A fake microphone (Chromium's built-in test device) so voice-call tests need no hardware.
+    permissions: ["microphone"],
+    launchOptions: {
+      args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
+    },
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },

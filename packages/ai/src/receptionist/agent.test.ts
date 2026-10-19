@@ -1,7 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { freeTimes, SERVICES, type Service } from "@wyrm/receptionist";
 import { describe, expect, it, vi } from "vitest";
-import { type ChatMessage, runReceptionistTurn } from "./agent";
+import { type ChatMessage, runReceptionistTurn, stateContext } from "./agent";
 import { calendarContext, executeTool, type Proposal, type ToolContext } from "./tools";
 
 // Monday 19 October 2026, 10:00 local time.
@@ -39,7 +39,9 @@ describe("tools", () => {
       executeTool("check_availability", { service_id: "checkup", day: THURSDAY }, ctx()).content,
     );
     expect(open.status).toBe("available");
-    expect(open.free_times).toEqual(FREE.map(hhmm));
+    const slots = open.free_times as { time: string; say: string }[];
+    expect(slots.map((t) => t.time)).toEqual(FREE.map(hhmm));
+    expect(slots[0]?.say).toMatch(/(am|pm)$/);
 
     const sunday = parse(
       executeTool("check_availability", { service_id: "checkup", day: "2026-10-25" }, ctx())
@@ -162,11 +164,56 @@ describe("tools", () => {
     ).toBe("cancelled");
   });
 
-  it("calendar context lists two weeks with weekday names", () => {
+  it("filters by part of day and spreads suggested times", () => {
+    const pm = parse(
+      executeTool(
+        "check_availability",
+        { service_id: "checkup", day: THURSDAY, part_of_day: "afternoon" },
+        ctx(),
+      ).content,
+    );
+    for (const t of pm.free_times as { time: string }[]) expect(t.time >= "12:00").toBe(true);
+    const next = parse(
+      executeTool(
+        "find_next_available_days",
+        { service_id: "checkup", from_day: THURSDAY, part_of_day: "morning" },
+        ctx(),
+      ).content,
+    );
+    const days = next.days as { times: { time: string }[] }[];
+    expect(days.length).toBeGreaterThan(0);
+    for (const day of days) {
+      expect(day.times.length).toBeGreaterThan(0);
+      expect(day.times.length).toBeLessThanOrEqual(4);
+      for (const t of day.times) expect(t.time < "12:00").toBe(true);
+    }
+  });
+
+  it("refuses to book on speech-style changes that have no question mark", () => {
+    const proposal = proposeOk();
+    for (const message of ["ok what about friday", "sure thing three pm works better"]) {
+      const out = executeTool(
+        "book_appointment",
+        { proposal_id: proposal.id },
+        ctx({ pendingFromEarlierTurn: proposal, latestVisitorMessage: message }),
+      );
+      expect(out.isError, message).toBe(true);
+    }
+  });
+
+  it("calendar context lists three weeks with weekday names", () => {
     const text = calendarContext(NOW);
     expect(text).toContain("Monday 19 October = 2026-10-19");
     expect(text).toContain("Thursday 22 October = 2026-10-22");
-    expect(text.split("\n").filter((l) => l.includes(" = ")).length).toBe(14);
+    expect(text.split("\n").filter((l) => l.includes(" = ")).length).toBe(21);
+  });
+
+  it("describes the waiting proposal in words, with the channel", () => {
+    const text = stateContext(NOW, "voice", [], proposeOk());
+    expect(text).toContain("Channel: voice.");
+    expect(text).toMatch(
+      /Waiting for a yes on: Check-up, Thursday the 22nd of October at .+ for Alex/,
+    );
   });
 });
 
@@ -245,6 +292,45 @@ describe("runReceptionistTurn", () => {
     // The conversation sent to Claude starts with the visitor, and tool results follow tool calls.
     expect(requests[0]?.messages[0]?.role).toBe("user");
     expect(requests[2]?.messages.length).toBe(5);
+  });
+
+  it("keeps text written alongside a tool call (an aside answer, a holding phrase)", async () => {
+    const { client } = scriptedClient([
+      [
+        { type: "text", text: "There's free parking behind the building." },
+        {
+          type: "tool_use",
+          id: "t1",
+          name: "check_availability",
+          input: { service_id: "checkup", day: THURSDAY, part_of_day: "afternoon" },
+        },
+      ],
+      [{ type: "text", text: "On Thursday afternoon I have 2 pm or 4 pm." }],
+    ]);
+    const outcome = await runReceptionistTurn(
+      {
+        history: history("check-up thursday afternoon? and is there parking"),
+        bookings: [],
+        pending: null,
+        now: NOW,
+      },
+      { client },
+    );
+    if (outcome.status !== "ok") throw new Error("expected ok");
+    expect(outcome.text).toBe(
+      "There's free parking behind the building. On Thursday afternoon I have 2 pm or 4 pm.",
+    );
+  });
+
+  it("sends the voice channel instructions on phone calls", async () => {
+    const { client, requests } = scriptedClient([[{ type: "text", text: "Hello!" }]]);
+    await runReceptionistTurn(
+      { history: history("hi"), bookings: [], pending: null, now: NOW, channel: "voice" },
+      { client },
+    );
+    const system = JSON.stringify(requests[0]?.system);
+    expect(system).toContain("You're on a phone call");
+    expect(system).toContain("Channel: voice.");
   });
 
   it("cannot book in the same turn it proposed, even if the model tries", async () => {
