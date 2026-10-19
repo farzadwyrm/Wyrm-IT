@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import "@wyrm/ui/theme.css";
+
+@source "../../../../packages/ui/src";
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}

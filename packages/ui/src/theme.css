@@ -1,0 +1,30 @@
+/*
+ * Wyrm IT brand tokens (Tailwind v4 theme). Change brand colours here only.
+ * Apps import this file after `@import "tailwindcss";`.
+ */
+@theme {
+  --color-ink: #0f1720;
+  --color-ink-muted: #4a5868;
+  --color-paper: #fbfaf7;
+  --color-paper-raised: #ffffff;
+  --color-line: #e3e0d8;
+  --color-ember: #c2410c;
+  --color-ember-strong: #9a3412;
+  --color-moss: #3f6212;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-ink: #ece8df;
+    --color-ink-muted: #a8b0ba;
+    --color-paper: #11161c;
+    --color-paper-raised: #182029;
+    --color-line: #2a333d;
+    --color-ember: #fb923c;
+    --color-ember-strong: #fdba74;
+    --color-moss: #a3e635;
+  }
+}
