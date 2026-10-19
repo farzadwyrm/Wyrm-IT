@@ -29,3 +29,17 @@ free-tier specifics not separately stated, so recheck before using real customer
 - Open models are expected to be less reliable than Claude at nuance; run `pnpm eval` with the Groq
   key (free) to measure, and keep booking safety in code.
 - The preview Qwen model may change or disappear without notice; the chain skips failing models.
+
+## Token use (2026-10-20)
+
+Groq's free tier allows 8K tokens/min per model, so every turn is kept small:
+
+- **Answer in code first.** Short FAQ messages (hours, address, prices) with nothing pending are
+  answered by `answerSimpleQuestion` (provider `instant`): zero tokens.
+- **Cache-friendly prompt.** The system prompt and tools never change; history is append-only; the
+  volatile booking state (time, calendar, pending proposal) is put in the latest user message. Groq
+  caches exact prefixes automatically and cached tokens do not count toward rate limits.
+- **Compact everything for Groq:** short prompt and tool descriptions, 10-day calendar, last 24
+  messages, tool results reduced to plain times, `max_completion_tokens` 600.
+- **Measure.** Each call logs `groq <model> tokens: in N out M` (no conversation content).
+
