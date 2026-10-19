@@ -1,3 +1,4 @@
+import { ButtonLink } from "@wyrm/ui";
 import type { Metadata } from "next";
 import { Container, CtaBand, PageHeader } from "@/components/sections";
 import { OFFERS } from "@/lib/site";
@@ -54,6 +55,11 @@ export default function ServicesPage() {
                   </ul>
                 </div>
               </div>
+              {offer.slug === "readiness-scan" && (
+                <ButtonLink href="/scan" className="mt-8">
+                  Start the free scan
+                </ButtonLink>
+              )}
             </li>
           ))}
         </ol>

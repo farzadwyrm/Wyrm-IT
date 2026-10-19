@@ -1,3 +1,4 @@
+export { PILLAR_INFO, type PillarInfo, type ReadinessBand, readinessBand } from "./pillars";
 export { QUESTIONS } from "./questions";
-export { scoreAssessment } from "./score";
+export { parseAnswers, scoreAssessment } from "./score";
 export * from "./types";

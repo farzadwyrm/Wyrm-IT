@@ -1,9 +1,9 @@
 import type { Question } from "./types";
 
 /**
- * Self-serve AI-Readiness & IT Health Scan — starter question bank.
- * Written in Wyrm IT's own words for small and medium businesses.
- * Phase 2 of the roadmap expands this to ~25 questions (see docs/business/ROADMAP.md).
+ * Self-serve AI-Readiness & IT Health Scan question bank (24 questions, 7 areas).
+ * Written in Wyrm IT's own words for small and medium business owners.
+ * Keep it short: every extra question lowers the number of people who finish the scan.
  */
 export const QUESTIONS: readonly Question[] = [
   {
@@ -115,5 +115,117 @@ export const QUESTIONS: readonly Question[] = [
     prompt: "Have you written down the 3 systems the business cannot run without for a single day?",
     whyItMatters:
       "Knowing what is critical tells you where to spend the first euro of IT and AI budget.",
+  },
+  {
+    id: "fnd.it-owner",
+    pillar: "foundation",
+    phase: 2,
+    weight: 2,
+    prompt: "Is one named person responsible for IT decisions, even if only part-time?",
+    whyItMatters:
+      "When everyone owns IT, nobody does: renewals lapse, accounts pile up and problems wait.",
+  },
+  {
+    id: "fnd.supplier-list",
+    pillar: "foundation",
+    phase: 3,
+    weight: 1,
+    prompt:
+      "Do you have a list of your IT suppliers, what each one does, and who to call when something breaks?",
+    whyItMatters:
+      "During an outage, finding the right phone number should take seconds, not hours.",
+  },
+  {
+    id: "id.password-manager",
+    pillar: "identity",
+    phase: 2,
+    weight: 2,
+    prompt:
+      "Are shared passwords kept in a password manager, rather than in spreadsheets, notes or chat?",
+    whyItMatters:
+      "Passwords in documents and chats get copied, forwarded and forgotten, and are easy to steal.",
+  },
+  {
+    id: "dev.security-software",
+    pillar: "devices",
+    phase: 2,
+    weight: 2,
+    prompt:
+      "Do all work computers run security protection (antivirus or EDR) that someone actually monitors?",
+    whyItMatters: "Protection that nobody watches only tells you about an attack after the damage.",
+  },
+  {
+    id: "dev.phones",
+    pillar: "devices",
+    phase: 3,
+    weight: 1,
+    prompt:
+      "Are phones used for work email protected with a passcode, and can they be wiped if lost?",
+    whyItMatters: "A lost phone with open email is a direct way into customer conversations.",
+  },
+  {
+    id: "net.router",
+    pillar: "network",
+    phase: 2,
+    weight: 2,
+    prompt:
+      "Is your office router or firewall kept up to date, with its admin password changed from the default?",
+    whyItMatters: "Default passwords and old firmware are the first things automated attacks try.",
+  },
+  {
+    id: "net.remote-access",
+    pillar: "network",
+    phase: 1,
+    weight: 2,
+    prompt:
+      "Do people working remotely reach company systems securely, without shared logins or open remote desktop?",
+    whyItMatters:
+      "Exposed remote desktop and shared remote logins are among the most common ransomware entry points.",
+  },
+  {
+    id: "app.shared-documents",
+    pillar: "applications",
+    phase: 3,
+    weight: 1,
+    prompt:
+      "Are company documents kept in one shared, organised place, not on personal laptops or in email attachments?",
+    whyItMatters:
+      "AI assistants can only answer from documents they can find, and so can new staff.",
+  },
+  {
+    id: "data.cloud-backup",
+    pillar: "data",
+    phase: 2,
+    weight: 2,
+    prompt:
+      "Is data in cloud tools (email, Microsoft 365 or Google Workspace, CRM) backed up separately from the provider?",
+    whyItMatters:
+      "Cloud providers keep their service running; restoring your deleted or encrypted data is usually your job.",
+  },
+  {
+    id: "data.customer-data",
+    pillar: "data",
+    phase: 3,
+    weight: 2,
+    prompt: "Do you know what personal data you hold about customers, and how long you keep it?",
+    whyItMatters:
+      "Data protection rules apply to small businesses too, and AI tools must not see more than they need.",
+  },
+  {
+    id: "vis.incident-plan",
+    pillar: "visibility",
+    phase: 1,
+    weight: 2,
+    prompt:
+      "If you were hacked tomorrow, does the team know who to call and what to do in the first hour?",
+    whyItMatters: "The first hour decides how much is lost. A one-page plan beats improvising.",
+  },
+  {
+    id: "vis.website-uptime",
+    pillar: "visibility",
+    phase: 3,
+    weight: 1,
+    prompt: "Would you know within an hour if your website or online booking stopped working?",
+    whyItMatters: "Every hour offline is lost enquiries that quietly go to a competitor.",
   },
 ];

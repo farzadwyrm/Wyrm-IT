@@ -21,6 +21,24 @@ function weightedPercent(items: { weight: number; points: number }[]): number | 
   return Math.round((earned / total) * 100);
 }
 
+const VALID_ANSWERS = new Set<string>(["in_place", "partial", "gap", "not_applicable"]);
+
+/**
+ * Validates untrusted input (for example a request body) into Answers.
+ * Unknown question ids and invalid values are dropped, never trusted.
+ */
+export function parseAnswers(questions: readonly Question[], input: unknown): Answers {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) return {};
+  const known = new Set(questions.map((q) => q.id));
+  const answers: Record<string, Answer> = {};
+  for (const [id, value] of Object.entries(input)) {
+    if (known.has(id) && typeof value === "string" && VALID_ANSWERS.has(value)) {
+      answers[id] = value as Answer;
+    }
+  }
+  return answers;
+}
+
 /**
  * Score a set of answers. Unanswered and "not_applicable" questions are excluded
  * from the denominator so they neither help nor hurt the score.

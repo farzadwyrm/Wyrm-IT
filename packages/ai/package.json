@@ -15,5 +15,9 @@
     "@wyrm/config": "workspace:*",
     "typescript": "^5.9.0",
     "vitest": "^3.2.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "@wyrm/assessment": "workspace:*"
   }
 }

@@ -25,6 +25,7 @@ export const SITE = {
 
 export const NAV = [
   { href: "/services", label: "Services" },
+  { href: "/scan", label: "Free scan" },
   { href: "/#demos", label: "Demos" },
   { href: "/about", label: "About" },
   { href: "/blog", label: "Blog" },
@@ -99,6 +100,8 @@ export interface Demo {
   name: string;
   summary: string;
   status: "coming-soon" | "live";
+  /** Where the demo lives once it is live. */
+  href?: string;
 }
 
 export const DEMOS: readonly Demo[] = [
@@ -106,7 +109,8 @@ export const DEMOS: readonly Demo[] = [
     slug: "readiness-scan",
     name: "AI-Readiness Scan",
     summary: "See how ready your IT foundations are for AI, scored across seven areas.",
-    status: "coming-soon",
+    status: "live",
+    href: "/scan",
   },
   {
     slug: "ai-receptionist",
@@ -168,4 +172,4 @@ export const PRINCIPLES = [
 ] as const;
 
 /** Every static page, used by the sitemap and the smoke tests. Add new pages here. */
-export const STATIC_ROUTES = ["/", "/services", "/about", "/contact", "/blog"] as const;
+export const STATIC_ROUTES = ["/", "/services", "/scan", "/about", "/contact", "/blog"] as const;

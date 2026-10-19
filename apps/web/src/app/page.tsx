@@ -17,8 +17,8 @@ export default function HomePage() {
         </p>
         <div className="mt-10 flex flex-wrap gap-3">
           <ButtonLink href="/contact">Book a free call</ButtonLink>
-          <ButtonLink href="#demos" variant="secondary">
-            Try a demo
+          <ButtonLink href="/scan" variant="secondary">
+            Take the free AI-readiness scan
           </ButtonLink>
         </div>
       </Container>
@@ -67,7 +67,14 @@ export default function HomePage() {
               >
                 <h3 className="font-semibold">{demo.name}</h3>
                 <p className="mt-2 flex-1 text-sm text-ink-muted">{demo.summary}</p>
-                {demo.status === "coming-soon" && (
+                {demo.status === "live" && demo.href ? (
+                  <Link
+                    href={demo.href}
+                    className="mt-5 font-semibold text-ember hover:text-ember-strong"
+                  >
+                    Try it now →
+                  </Link>
+                ) : (
                   <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-moss">
                     Coming soon
                   </p>
