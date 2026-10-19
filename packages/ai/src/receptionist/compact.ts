@@ -62,6 +62,34 @@ export const COMPACT_TOOLS: ChatCompletionTool[] = RECEPTIONIST_TOOLS.map((tool)
   },
 }));
 
-/** Free models see the last 16 messages and the next 10 days. */
-export const COMPACT_HISTORY = 16;
+/** Free models see the last 24 messages and the next 10 days. */
+// A longer window keeps the cached prefix stable for typical conversations.
+export const COMPACT_HISTORY = 24;
 export const COMPACT_CALENDAR_DAYS = 10;
+
+/**
+ * Shrinks a tool result for the free models: times become plain "HH:MM" strings and
+ * spoken-label fields are dropped (the voice layer converts times for speech anyway).
+ */
+export function compactToolResult(content: string): string {
+  let data: unknown;
+  try {
+    data = JSON.parse(content);
+  } catch {
+    return content;
+  }
+  const slim = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(slim);
+    if (value && typeof value === "object") {
+      const record = value as Record<string, unknown>;
+      if (typeof record.time === "string" && typeof record.say === "string") return record.time;
+      return Object.fromEntries(
+        Object.entries(record)
+          .filter(([key]) => !["day_say", "service", "part_of_day", "duration_say"].includes(key))
+          .map(([key, v]) => [key, slim(v)]),
+      );
+    }
+    return value;
+  };
+  return JSON.stringify(slim(data));
+}

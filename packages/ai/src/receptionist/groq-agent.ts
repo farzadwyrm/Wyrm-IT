@@ -16,6 +16,7 @@ import {
   COMPACT_HISTORY,
   COMPACT_SYSTEM_PROMPT,
   COMPACT_TOOLS,
+  compactToolResult,
 } from "./compact";
 import { MAX_CORRECTIONS, reviewReply, safeReply } from "./reply-guard";
 import { executeTool, type Proposal, type ToolEvent } from "./tools";
@@ -61,7 +62,11 @@ export function stripReasoning(text: string): string {
     .trim();
 }
 
-function toMessages(history: readonly ChatMessage[], system: string): ChatCompletionMessageParam[] {
+function toMessages(
+  history: readonly ChatMessage[],
+  system: string,
+  state: string,
+): ChatCompletionMessageParam[] {
   const trimmed = history
     .slice(-COMPACT_HISTORY)
     .map((m) => ({ ...m, text: m.text.slice(0, MAX_MESSAGE_CHARS) }));
@@ -75,6 +80,10 @@ function toMessages(history: readonly ChatMessage[], system: string): ChatComple
     } else {
       messages.push({ role, content: m.text });
     }
+  }
+  const last = messages.at(-1);
+  if (last?.role === "user" && typeof last.content === "string") {
+    last.content = `[Booking system note, not said by the visitor]\n${state}\n\n[The visitor says]\n${last.content}`;
   }
   return messages;
 }
@@ -108,11 +117,19 @@ async function runWithModel(
   let pending: Proposal | null = prepared.pending;
   const spoken: string[] = [];
   let corrections = 0;
-  const system = `${COMPACT_SYSTEM_PROMPT}
-${COMPACT_CHANNEL_PROMPTS[channel]}
-
-${stateContext(input.now, channel, bookings, pending, justBooked, COMPACT_CALENDAR_DAYS)}`;
-  const messages = toMessages(input.history, system);
+  // Cache-friendly order: Groq caches exact prefixes and cached tokens don't count toward rate
+  // limits, so the fixed prompt and the (append-only) history come first and the changing state
+  // goes only into the latest message.
+  const system = `${COMPACT_SYSTEM_PROMPT}\n${COMPACT_CHANNEL_PROMPTS[channel]}`;
+  const state = stateContext(
+    input.now,
+    channel,
+    bookings,
+    pending,
+    justBooked,
+    COMPACT_CALENDAR_DAYS,
+  );
+  const messages = toMessages(input.history, system, state);
 
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -122,9 +139,16 @@ ${stateContext(input.now, channel, bookings, pending, justBooked, COMPACT_CALEND
         tools: COMPACT_TOOLS,
         tool_choice: "auto",
         temperature: 0.6,
-        max_completion_tokens: 1024,
+        // Replies are one or two sentences; a small cap also keeps the per-minute budget free.
+        max_completion_tokens: 600,
         ...model.params,
       });
+      const usage = response.usage;
+      if (usage) {
+        console.info(
+          `groq ${model.id} tokens: in ${usage.prompt_tokens} out ${usage.completion_tokens}`,
+        );
+      }
       const message = response.choices[0]?.message;
       if (!message) return { kind: "failed" };
 
@@ -177,7 +201,11 @@ ${stateContext(input.now, channel, bookings, pending, justBooked, COMPACT_CALEND
             if (index >= 0) bookings.splice(index, 1);
           }
         }
-        messages.push({ role: "tool", tool_call_id: call.id, content: output.content });
+        messages.push({
+          role: "tool",
+          tool_call_id: call.id,
+          content: compactToolResult(output.content),
+        });
       }
     }
     return { kind: "failed" };

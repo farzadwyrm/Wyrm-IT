@@ -34,8 +34,8 @@ export type AgentOutcome =
       text: string;
       events: ToolEvent[];
       costCents: number;
-      /** Which AI answered: Claude (paid) or a free open model on Groq. */
-      provider: "claude" | "groq";
+      /** Who answered: Claude (paid), a free open model on Groq, or code (instant, no AI call). */
+      provider: "claude" | "groq" | "instant";
     }
   | {
       status: "unavailable";

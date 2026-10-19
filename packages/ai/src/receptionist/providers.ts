@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { answerSimpleQuestion } from "@wyrm/receptionist";
 import type Groq from "groq-sdk";
 import { type AgentInput, type AgentOutcome, runReceptionistTurn } from "./agent";
 import { runGroqReceptionistTurn } from "./groq-agent";
@@ -22,6 +23,14 @@ export async function runReceptionist(
     groq?: { client?: Groq; apiKey?: string | undefined; clock?: () => number };
   } = {},
 ): Promise<AgentOutcome> {
+  // Cheapest path first: a short, plain question needs no model call at all.
+  const latest = input.history.at(-1);
+  if (latest?.role === "visitor" && !input.pending) {
+    const instant = answerSimpleQuestion(latest.text, input.now);
+    if (instant)
+      return { status: "ok", text: instant, events: [], costCents: 0, provider: "instant" };
+  }
+
   let costCents = 0;
   const claude = await runReceptionistTurn(input, options.claude ?? {});
   if (claude.status === "ok") return claude;

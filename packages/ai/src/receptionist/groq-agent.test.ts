@@ -5,6 +5,7 @@ import type Groq from "groq-sdk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { writeReadinessReportWithGroq } from "../readiness-report";
 import { type ChatMessage, stateContext } from "./agent";
+import { compactToolResult } from "./compact";
 import {
   GROQ_MODELS,
   resetGroqCooldowns,
@@ -330,7 +331,9 @@ describe("deterministic booking on a clear yes (live bug 2026-10-19)", () => {
     const firstRequest = create.mock.calls[0]?.[0] as unknown as
       | { messages: unknown[] }
       | undefined;
-    const system = JSON.stringify(firstRequest?.messages[0]);
+    const system = JSON.stringify(
+      firstRequest?.messages.filter((m) => (m as { role: string }).role === "user"),
+    );
     expect(system).toMatch(/Just booked because they said yes: HL-\d{4}/);
   });
 
@@ -443,5 +446,46 @@ describe("reply guard in the loop (live bug 2026-10-19, turns 3 and 4)", () => {
     expect(outcome.events.filter((e) => e.type === "booked")).toHaveLength(0);
     expect(outcome.text).toMatch(/^Just to be sure, nothing is booked yet/);
     warn.mockRestore();
+  });
+});
+
+describe("token savings", () => {
+  it("answers a plain question instantly without calling any model", async () => {
+    const { client, create } = fakeGroq([{ content: "should not be used" }]);
+    const outcome = await runReceptionist(input(["what are your opening hours?"]), {
+      claude: { apiKey: "" },
+      groq: { client },
+    });
+    expect(outcome).toMatchObject({ status: "ok", provider: "instant", costCents: 0 });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("keeps the system prompt fixed and puts the changing state in the last message", async () => {
+    const { client, create } = fakeGroq([{ content: "Hello!" }]);
+    await runGroqReceptionistTurn(input(["hi", "Hello, how can I help?", "do you do cleanings"]), {
+      client,
+    });
+    const request = create.mock.calls[0]?.[0] as unknown as {
+      messages: { role: string; content: string }[];
+    };
+    const messages = request.messages;
+    expect(messages[0]?.role).toBe("system");
+    expect(messages[0]?.content).not.toContain("Current local time");
+    expect(messages.at(-1)?.content).toMatch(
+      /^\[Booking system note[\s\S]*Current local time[\s\S]*\[The visitor says\]\ndo you do cleanings$/,
+    );
+    // Earlier history is sent unchanged, so the cached prefix keeps matching across turns.
+    expect(messages[1]?.content).toBe("hi");
+  });
+
+  it("compacts tool results to plain times", () => {
+    const full = executeTool(
+      "check_availability",
+      { service_id: "checkup", day: THURSDAY, part_of_day: "any" },
+      { now: NOW, bookings: [], pendingFromEarlierTurn: null, latestVisitorMessage: "" },
+    ).content;
+    const slim = compactToolResult(full);
+    expect(slim.length).toBeLessThan(full.length / 2);
+    expect(JSON.parse(slim).free_times[0]).toMatch(/^\d{2}:\d{2}$/);
   });
 });

@@ -583,3 +583,19 @@ export function respond(state: ConversationState, message: string, now: Date): T
     reply: withPrefix(prefix, step.reply),
   };
 }
+
+/**
+ * Answers a short, plain question about opening hours, location, prices or treatments without
+ * any AI (saves a model call and its tokens). Returns null when the message needs real
+ * understanding: booking intent, a day or time, or anything longer or unusual.
+ */
+export function answerSimpleQuestion(message: string, now: Date): string | null {
+  const t = message.toLowerCase().trim();
+  if (t.length === 0 || t.split(/\s+/).length > 12) return null;
+  const aside = detectAside(t);
+  if (!aside || aside === "human") return null;
+  if (isBookingIntent(t) || isCancelIntent(t) || parseDay(t, now) || parseTime(t) !== null) {
+    return null;
+  }
+  return `${answerAside(aside, t)} Is there anything else I can help with?`;
+}

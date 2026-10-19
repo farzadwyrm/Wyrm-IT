@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { freeTimes } from "./availability";
 import { SERVICES, type Service } from "./clinic";
 import { formatTime } from "./dates";
-import { type ConversationState, initialState, type Reply, respond } from "./engine";
+import {
+  answerSimpleQuestion,
+  type ConversationState,
+  initialState,
+  type Reply,
+  respond,
+} from "./engine";
 
 // Monday 19 October 2026, 10:00 local time.
 const NOW = new Date(2026, 9, 19, 10, 0);
@@ -257,5 +263,28 @@ describe("other actions", () => {
 
   it("handles unknown messages politely", () => {
     expect(chat(["what's the meaning of life"]).last.text).toContain("didn't quite follow");
+  });
+});
+
+describe("answerSimpleQuestion (no AI call)", () => {
+  it.each([
+    ["what are your opening hours?", /Closed on Sundays/],
+    ["where are you?", /Harbor Lane/],
+    ["how much is whitening?", /€250/],
+    ["prices", /€45/],
+  ])("answers %j", (message, pattern) => {
+    expect(answerSimpleQuestion(message, NOW)).toMatch(pattern);
+  });
+
+  it.each([
+    "can I book a cleaning tomorrow?",
+    "are you open on Saturday?",
+    "what time can I come in at 3pm",
+    "hi",
+    "I want to cancel my appointment",
+    "can I speak to a human",
+    "how much is whitening and can you tell me if it hurts and how long it lasts please",
+  ])("leaves %j to the AI", (message) => {
+    expect(answerSimpleQuestion(message, NOW)).toBeNull();
   });
 });

@@ -175,7 +175,7 @@ export function useReceptionistSession() {
         return replyBasic(trimmed);
       }
 
-      setProvider(data.provider);
+      if (data.provider !== "instant") setProvider(data.provider);
       for (const event of data.events) {
         if (event.type === "proposed") pendingRef.current = event.proposal;
         if (event.type === "booked") {
