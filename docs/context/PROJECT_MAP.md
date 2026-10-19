@@ -11,7 +11,8 @@ Last updated: 2026-10-19
   header with phone menu, footer, logo mark, Inter + Fraunces fonts, light/dark mode.
   Copy lives in `apps/web/src/lib/site.ts` and `posts.ts`.
 - Phase 2 Readiness Scan at `/scan`: 24 questions in 7 areas (`packages/assessment`), score,
-  verdict band, area bars, top 5 fixes; optional AI summary via `POST /api/scan/report`
+  verdict band, area bars, top 5 fixes; written summary via `POST /api/scan/report`: free
+  rule-based text (`packages/assessment/src/summary.ts`) by default, or an AI summary
   (`packages/ai/src/readiness-report.ts`, Claude Opus 5.5, low effort, server-side refusal
   fallback). Server re-validates answers and re-scores; demo guard: 3 summaries per visitor per
   hour, daily cap `DEMO_DAILY_BUDGET_CENTS` (default 500 = $5).
@@ -26,7 +27,7 @@ Last updated: 2026-10-19
 ## Last verification
 
 2026-10-19, local Windows, Node 24.20, pnpm 10.15: `pnpm verify` passed (harness check, Biome,
-typecheck in 5 packages, 34 unit tests, `next build`, 26 Playwright tests incl. full scan flow).
+typecheck in 5 packages, 39 unit tests, `next build`, 26 Playwright tests incl. full scan flow).
 Visual check in a browser: site pages; scan steps and results (desktop dark).
 AI summary verified only with a fake client and the no-key path; no real Claude call made yet.
 GitHub CI passed on commit 678002e (before Phase 1); Phase 1 CI not yet confirmed.
@@ -35,8 +36,8 @@ GitHub CI passed on commit 678002e (before Phase 1); Phase 1 CI not yet confirme
 
 - Owner to confirm: About page founder wording, contact promises (reply time, no model training).
 - Set `NEXT_PUBLIC_BOOKING_URL` (Cal.com) and `NEXT_PUBLIC_CONTACT_EMAIL` once they exist.
-- Owner: create an Anthropic API key and add `ANTHROPIC_API_KEY` in Vercel to switch on AI summaries,
-  then test one real summary on the live site.
+- AI summaries are OFF by choice (free mode). To switch on later: add `ANTHROPIC_API_KEY` in Vercel
+  (Production only) and redeploy; the route falls back to the free summary when over budget.
 - Phase 2 remainder: lead capture (email the report) needs a database + email provider.
 - Phase 3: AI Receptionist demo.
 

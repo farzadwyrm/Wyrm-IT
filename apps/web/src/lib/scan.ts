@@ -1,14 +1,7 @@
-/** Shape returned by POST /api/scan/report, shared by the route and the scan page. */
+/**
+ * Shape returned by POST /api/scan/report, shared by the route and the scan page.
+ * `source` says who wrote the text: Claude ("ai") or the free rule-based summary ("basic").
+ */
 export type ReportResponse =
-  | { status: "ok"; text: string }
-  | {
-      status: "unavailable";
-      reason:
-        | "not_configured"
-        | "refused"
-        | "error"
-        | "empty"
-        | "too_few_answers"
-        | "daily_budget_exhausted"
-        | "visitor_rate_limited";
-    };
+  | { status: "ok"; text: string; source: "ai" | "basic" }
+  | { status: "unavailable"; reason: "too_few_answers" | "invalid_request" };

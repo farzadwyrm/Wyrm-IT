@@ -8,28 +8,20 @@ import { primaryButton, secondaryButton } from "./buttons";
 
 const TOP_FIXES = 5;
 
-const UNAVAILABLE_MESSAGES: Record<
-  Extract<ReportResponse, { status: "unavailable" }>["reason"],
+const FAILED_MESSAGES: Record<
+  Extract<ReportResponse, { status: "unavailable" }>["reason"] | "network",
   string
 > = {
-  not_configured: "The AI summary is not switched on yet. Your results above are complete.",
-  daily_budget_exhausted:
-    "Today's free AI summaries have run out. Your results above are complete; try again tomorrow or book a call.",
-  visitor_rate_limited: "You have reached the summary limit for now. Please try again in an hour.",
   too_few_answers: "Answer a few more questions for a meaningful summary.",
-  refused: "The AI could not write a summary for these answers. Your results above are complete.",
-  empty: "The AI returned an empty summary. Please try again.",
-  error: "Something went wrong writing the summary. Please try again in a moment.",
+  invalid_request: "Something went wrong sending your answers. Please try again.",
+  network: "Could not reach the server. Check your connection and try again.",
 };
-
-/** Only temporary problems are worth retrying straight away. */
-const RETRYABLE = new Set<string>(["error", "empty"]);
 
 type SummaryState =
   | { kind: "idle" }
   | { kind: "loading" }
-  | { kind: "done"; text: string }
-  | { kind: "failed"; message: string; canRetry: boolean };
+  | { kind: "done"; text: string; source: "ai" | "basic" }
+  | { kind: "failed"; message: string };
 
 export function ScanResults({
   result,
@@ -56,15 +48,11 @@ export function ScanResults({
       const data = (await response.json()) as ReportResponse;
       setSummary(
         data.status === "ok"
-          ? { kind: "done", text: data.text }
-          : {
-              kind: "failed",
-              message: UNAVAILABLE_MESSAGES[data.reason],
-              canRetry: RETRYABLE.has(data.reason),
-            },
+          ? { kind: "done", text: data.text, source: data.source }
+          : { kind: "failed", message: FAILED_MESSAGES[data.reason] },
       );
     } catch {
-      setSummary({ kind: "failed", message: UNAVAILABLE_MESSAGES.error, canRetry: true });
+      setSummary({ kind: "failed", message: FAILED_MESSAGES.network });
     }
   }
 
@@ -165,8 +153,8 @@ export function ScanResults({
         {summary.kind === "idle" && (
           <>
             <p className="mt-2 text-ink-muted">
-              Our AI writes a short plain-language summary of your results: what to fix first, and a
-              realistic first AI project. Only your scores are sent, nothing personal.
+              A short plain-language summary of your results: what to fix first, and a realistic
+              first AI project. Only your scores are sent, nothing personal.
             </p>
             <button type="button" className={`${primaryButton} mt-5`} onClick={requestSummary}>
               Write my summary
@@ -185,19 +173,19 @@ export function ScanResults({
                 <p key={paragraph}>{paragraph}</p>
               ))}
             <p className="text-xs text-ink-muted">
-              Written by AI from your answers. Treat it as a starting point, not professional
-              advice.
+              {summary.source === "ai"
+                ? "Written by AI from your answers."
+                : "Generated instantly from your answers."}{" "}
+              Treat it as a starting point, not professional advice.
             </p>
           </div>
         )}
         {summary.kind === "failed" && (
           <div className="mt-3">
             <p className="text-ink-muted">{summary.message}</p>
-            {summary.canRetry && (
-              <button type="button" className={`${secondaryButton} mt-4`} onClick={requestSummary}>
-                Try again
-              </button>
-            )}
+            <button type="button" className={`${secondaryButton} mt-4`} onClick={requestSummary}>
+              Try again
+            </button>
           </div>
         )}
       </section>
