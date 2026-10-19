@@ -24,3 +24,8 @@ Thumbs.db
 
 # Local Claude Code overrides
 .claude/settings.local.json
+
+# Real lead lists contain personal data: keep them out of git (only the template is tracked)
+docs/business/marketing/*.csv
+docs/business/marketing/*.xlsx
+!docs/business/marketing/leads-template.csv
