@@ -16,4 +16,6 @@ conventions, file structure). Before writing Next.js code, read the relevant gui
 - Server Components by default. Add `"use client"` only for interactive parts.
 - Demo routes must use `@wyrm/ai`'s demo guard and fictional data only.
 - Pages must work at 375px width with no horizontal scroll.
+- Every new page goes in `STATIC_ROUTES` (`src/lib/site.ts`) so the sitemap and the
+  Playwright smoke tests in `e2e/` cover it automatically.
 - Verify with `pnpm verify` from the repo root before declaring work done.

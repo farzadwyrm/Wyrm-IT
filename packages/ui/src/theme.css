@@ -12,8 +12,9 @@
   --color-ember-strong: #9a3412;
   --color-moss: #3f6212;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  /* --font-inter / --font-fraunces are set by next/font in the app layout. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -2,8 +2,8 @@
 
 | Phase | Target | Outcome | Status |
 |---|---|---|---|
-| 0. Foundations | Week 1 | Repo, harness, CI, offer written down, domain and brand chosen | Repo done; domain/brand open |
-| 1. Website MVP | Weeks 2–3 | Home, Services, About, Contact + booking, blog skeleton, live on Vercel | Next |
+| 0. Foundations | Week 1 | Repo, harness, CI, offer written down, domain and brand chosen | Done; domain open |
+| 1. Website MVP | Weeks 2–3 | Home, Services, About, Contact + booking, blog skeleton, live on Vercel | Built; deploy pending (see LAUNCH.md) |
 | 2. Demo 1: Readiness Scan | Weeks 3–4 | ~25 questions → score per area → AI-written report → lead captured | Scoring engine started |
 | 3. Demo 2: AI Receptionist | Weeks 4–6 | Chat (then voice) receptionist for a fictional clinic | Not started |
 | 4. Marketing | From week 3 | LinkedIn 3×/week, list of 50 local SMBs, 10 outreach messages/week, free scans | Not started |
