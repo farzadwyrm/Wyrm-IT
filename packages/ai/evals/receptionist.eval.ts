@@ -198,6 +198,22 @@ for (const channel of ["chat", "voice"] as const) {
         if (last) expect(last.time, show(t)).toBe(15 * 60);
       });
 
+      it("books after a changed proposal is confirmed (live bug 2026-10-19)", async () => {
+        const t = await converse(
+          [...proposeThenSay("ok what about four instead"), "yes that's right"],
+          channel,
+        );
+        expect(booked(t), show(t)).toHaveLength(1);
+      });
+
+      it("never claims a booking that wasn't made when the caller leaves", async () => {
+        const t = await converse(proposeThenSay("no that's all, thanks, bye"), channel);
+        expect(booked(t), show(t)).toHaveLength(0);
+        expect(t.replies.at(-1) ?? "", show(t)).not.toMatch(
+          /all set|you're booked|is booked|confirmed|see you (on|then)/i,
+        );
+      });
+
       it("books on a natural yes", async () => {
         const t = await converse(proposeThenSay("that's fine, go on then"), channel);
         expect(booked(t), show(t)).toHaveLength(1);

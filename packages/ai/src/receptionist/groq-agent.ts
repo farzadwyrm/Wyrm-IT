@@ -12,6 +12,7 @@ import {
   MAX_HISTORY,
   MAX_MESSAGE_CHARS,
   MAX_TOOL_ROUNDS,
+  prepareTurn,
   RECEPTIONIST_SYSTEM_PROMPT,
   stateContext,
 } from "./agent";
@@ -109,11 +110,11 @@ async function runWithModel(
   channel: Channel,
   latest: ChatMessage,
 ): Promise<ModelResult> {
-  const bookings = [...input.bookings];
-  let pending: Proposal | null = input.pending;
-  const events: ToolEvent[] = [];
+  const prepared = prepareTurn(input, latest);
+  const { bookings, events, justBooked } = prepared;
+  let pending: Proposal | null = prepared.pending;
   const spoken: string[] = [];
-  const system = `${RECEPTIONIST_SYSTEM_PROMPT}\n\n${CHANNEL_PROMPTS[channel]}\n\n${stateContext(input.now, channel, bookings, pending)}`;
+  const system = `${RECEPTIONIST_SYSTEM_PROMPT}\n\n${CHANNEL_PROMPTS[channel]}\n\n${stateContext(input.now, channel, bookings, pending, justBooked)}`;
   const messages = toMessages(input.history, system);
 
   try {
@@ -151,7 +152,7 @@ async function runWithModel(
           now: input.now,
           bookings,
           // Only a proposal from an earlier turn can be booked: never one made this turn.
-          pendingFromEarlierTurn: input.pending,
+          pendingFromEarlierTurn: prepared.bookablePending,
           latestVisitorMessage: latest.text,
         });
         const event = output.event;

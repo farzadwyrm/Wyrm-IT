@@ -1,10 +1,10 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { type Answers, QUESTIONS, scoreAssessment } from "@wyrm/assessment";
-import { freeTimes, SERVICES, type Service } from "@wyrm/receptionist";
+import { formatTime, freeTimes, SERVICES, type Service } from "@wyrm/receptionist";
 import type Groq from "groq-sdk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { writeReadinessReportWithGroq } from "../readiness-report";
-import type { ChatMessage } from "./agent";
+import { type ChatMessage, stateContext } from "./agent";
 import {
   GROQ_MODELS,
   resetGroqCooldowns,
@@ -287,5 +287,96 @@ describe("writeReadinessReportWithGroq", () => {
     expect(await writeReadinessReportWithGroq(result, { client })).toMatchObject({ status: "ok" });
     expect(models.length).toBe(2);
     spy.mockRestore();
+  });
+});
+
+describe("deterministic booking on a clear yes (live bug 2026-10-19)", () => {
+  const proposal = () => {
+    const out = executeTool(
+      "propose_booking",
+      { service_id: "checkup", day: THURSDAY, time: hhmm(FIRST_FREE), name: "Sam" },
+      { now: NOW, bookings: [], pendingFromEarlierTurn: null, latestVisitorMessage: "" },
+    );
+    if (out.event?.type !== "proposed") throw new Error("expected a proposal");
+    return out.event.proposal;
+  };
+  const readBack = (p: { time: number }) =>
+    `So that's a check-up on Thursday the 22nd of October at ${formatTime(p.time)} for Sam. Is that right?`;
+
+  it("books even when the model re-reads the details instead of booking", async () => {
+    const p = proposal();
+    const { client, create } = fakeGroq([
+      // The model ignores the yes and proposes again (what gpt-oss did live).
+      {
+        content: null,
+        tool_calls: [
+          call("c1", "propose_booking", {
+            service_id: "checkup",
+            day: THURSDAY,
+            time: hhmm(FIRST_FREE),
+            name: "Sam",
+          }),
+        ],
+      },
+      { content: "You're all set, Sam!" },
+    ]);
+    const outcome = await runGroqReceptionistTurn(
+      input(["check-up thursday", readBack(p), "yes that's right"], { pending: p }),
+      { client },
+    );
+    if (outcome.status !== "ok") throw new Error("expected ok");
+    expect(outcome.events.filter((e) => e.type === "booked")).toHaveLength(1);
+    // The model was told it is booked, with the reference.
+    const firstRequest = create.mock.calls[0]?.[0] as unknown as
+      | { messages: unknown[] }
+      | undefined;
+    const system = JSON.stringify(firstRequest?.messages[0]);
+    expect(system).toMatch(/Just booked because they said yes: HL-\d{4}/);
+  });
+
+  it("never books twice when the model also calls book_appointment", async () => {
+    const p = proposal();
+    const { client } = fakeGroq([
+      { content: null, tool_calls: [call("c1", "book_appointment", { proposal_id: p.id })] },
+      { content: "Booked!" },
+    ]);
+    const outcome = await runGroqReceptionistTurn(
+      input(["check-up thursday", readBack(p), "yes please"], { pending: p }),
+      { client },
+    );
+    if (outcome.status !== "ok") throw new Error("expected ok");
+    expect(outcome.events.filter((e) => e.type === "booked")).toHaveLength(1);
+  });
+
+  it("does not auto-book a yes that answers a different question", async () => {
+    const p = proposal();
+    const { client } = fakeGroq([{ content: "Great, I'll let the team know." }]);
+    const outcome = await runGroqReceptionistTurn(
+      input(["check-up thursday", "Would you like me to pass a message to the team?", "yes"], {
+        pending: p,
+      }),
+      { client },
+    );
+    if (outcome.status !== "ok") throw new Error("expected ok");
+    expect(outcome.events.filter((e) => e.type === "booked")).toHaveLength(0);
+  });
+
+  it("does not auto-book a yes with a change in it", async () => {
+    const p = proposal();
+    const { client } = fakeGroq([{ content: "Sure, let me check 4 pm." }]);
+    const outcome = await runGroqReceptionistTurn(
+      input(["check-up thursday", readBack(p), "yes but make it 4pm"], { pending: p }),
+      { client },
+    );
+    if (outcome.status !== "ok") throw new Error("expected ok");
+    expect(outcome.events.filter((e) => e.type === "booked")).toHaveLength(0);
+  });
+
+  it("tells the model never to claim a booking that doesn't exist", () => {
+    const text = stateContext(NOW, "voice", [], proposal());
+    expect(text).toContain(
+      "Only say an appointment is booked or confirmed if it appears under bookings",
+    );
+    expect(text).toContain("call book_appointment with that proposal_id");
   });
 });

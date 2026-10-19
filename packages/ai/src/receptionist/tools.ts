@@ -371,3 +371,27 @@ export function calendarContext(now: Date): string {
     ...days,
   ].join("\n");
 }
+
+/**
+ * Deterministic confirmation, run by code before the model replies: if a proposal was read back
+ * in the receptionist's previous message and the visitor's reply is a plain yes, book it now.
+ * Weaker models sometimes re-read the details instead of booking; booking must not depend on that.
+ */
+export function bookIfClearYes(
+  ctx: ToolContext,
+  previousReceptionistText: string,
+): ToolOutput | null {
+  const pending = ctx.pendingFromEarlierTurn;
+  if (!pending || !isClearYes(ctx.latestVisitorMessage)) return null;
+  // The "yes" must answer the read-back, not some other question asked since.
+  const said = previousReceptionistText.toLowerCase();
+  const [h, m] = [Math.floor(pending.time / 60), pending.time % 60];
+  const timeMentioned =
+    said.includes(formatTime(pending.time).toLowerCase()) ||
+    said.includes(toHHMM(pending.time)) ||
+    said.includes(`${h % 12 === 0 ? 12 : h % 12}${m ? `:${String(m).padStart(2, "0")}` : ""}`);
+  const dayMentioned = said.includes(String(Number(pending.day.slice(8))));
+  if (!timeMentioned || !dayMentioned) return null;
+  const output = executeTool("book_appointment", { proposal_id: pending.id }, ctx);
+  return output.event?.type === "booked" ? output : null;
+}

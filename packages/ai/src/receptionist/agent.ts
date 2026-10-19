@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { type Booking, CLINIC, formatTime, SERVICES } from "@wyrm/receptionist";
 import { costInCents, MODELS } from "../models";
 import {
+  bookIfClearYes,
   calendarContext,
   executeTool,
   type Proposal,
@@ -79,7 +80,7 @@ People often give several details at once, change their minds, or ask something 
 - To book you need the treatment, day, time and a first name. Ask only for a first name, never a surname, phone, email, date of birth, address or health details. The first time you ask, mention that a made-up name is fine for this demo.
 - With all four, call propose_booking, read the details back in one natural sentence and ask if that's right. Call book_appointment only when their next reply is a plain yes. If the reply changes something, asks a question or sounds unsure, deal with that and propose again. After booking, confirm warmly and give the reference.
 - For a cancellation, confirm which booking and cancel only after a clear yes.
-- Promise only what your tools do. You cannot send texts, emails or reminders, keep a waiting list, transfer the call or take payment. If someone wants a person, offer to pass a message to the team.
+- Promise only what your tools do. You cannot send texts, emails or reminders, arrange reminder calls, keep a waiting list, transfer the call or take payment. If someone wants a person, offer to pass a message to the team.
 </booking>
 
 <care_and_limits>
@@ -140,12 +141,13 @@ export function stateContext(
   channel: Channel,
   bookings: readonly Booking[],
   pending: Proposal | null,
+  justBooked: Booking | null = null,
 ): string {
   const describe = (s: { serviceId: string; day: string; time: number; name: string }) => {
     const service = SERVICES.find((x) => x.id === s.serviceId)?.name ?? s.serviceId;
     return `${service}, ${sayDay(s.day)} at ${formatTime(s.time)}, for ${s.name}`;
   };
-  return [
+  const lines = [
     `Channel: ${channel}.`,
     calendarContext(now),
     "",
@@ -155,7 +157,69 @@ export function stateContext(
         : bookings.map((b) => `${b.reference}: ${describe(b)}`).join("; ")
     }.`,
     `Waiting for a yes on: ${pending ? `${describe(pending)} (proposal ${pending.id})` : "nothing"}.`,
-  ].join("\n");
+  ];
+  if (pending) {
+    lines.push(
+      "If their latest message is a plain yes to that, call book_appointment with that proposal_id; otherwise deal with what they said.",
+    );
+  }
+  if (justBooked) {
+    lines.push(
+      `Just booked because they said yes: ${justBooked.reference}, ${describe(justBooked)}. Confirm it warmly in one sentence and give the reference; don't ask them to confirm again.`,
+    );
+  }
+  lines.push(
+    "Only say an appointment is booked or confirmed if it appears under bookings made in this conversation.",
+  );
+  return lines.join("\n");
+}
+
+/** Turn state shared by both AI engines, after the deterministic clear-yes booking step. */
+export interface PreparedTurn {
+  bookings: Booking[];
+  pending: Proposal | null;
+  /** The proposal tools may still book this turn (null once code has booked it). */
+  bookablePending: Proposal | null;
+  events: ToolEvent[];
+  justBooked: Booking | null;
+}
+
+/**
+ * Runs before the model: if the visitor plainly said yes to the read-back, code books it now,
+ * so booking never depends on the model choosing the right tool.
+ */
+export function prepareTurn(input: AgentInput, latest: ChatMessage): PreparedTurn {
+  const bookings = [...input.bookings];
+  const previous = input.history
+    .slice(0, -1)
+    .reverse()
+    .find((m) => m.role === "receptionist");
+  const auto = bookIfClearYes(
+    {
+      now: input.now,
+      bookings,
+      pendingFromEarlierTurn: input.pending,
+      latestVisitorMessage: latest.text,
+    },
+    previous?.text ?? "",
+  );
+  if (auto?.event?.type === "booked") {
+    const booking = auto.event.booking;
+    return {
+      bookings: [...bookings, booking],
+      pending: null,
+      bookablePending: null,
+      events: [auto.event],
+      justBooked: booking,
+    };
+  }
+  return {
+    bookings,
+    pending: input.pending,
+    bookablePending: input.pending,
+    events: [],
+    justBooked: null,
+  };
 }
 
 /**
@@ -180,9 +244,9 @@ export async function runReceptionistTurn(
     return { status: "unavailable", reason: "error", costCents: 0 };
   }
 
-  const bookings = [...input.bookings];
-  let pending = input.pending;
-  const events: ToolEvent[] = [];
+  const prepared = prepareTurn(input, latest);
+  const { bookings, events, justBooked } = prepared;
+  let pending = prepared.pending;
   const spoken: string[] = [];
   let costCents = 0;
 
@@ -195,7 +259,7 @@ export async function runReceptionistTurn(
         system: [
           { type: "text", text: RECEPTIONIST_SYSTEM_PROMPT },
           { type: "text", text: CHANNEL_PROMPTS[channel], cache_control: { type: "ephemeral" } },
-          { type: "text", text: stateContext(input.now, channel, bookings, pending) },
+          { type: "text", text: stateContext(input.now, channel, bookings, pending, justBooked) },
         ],
         tools: RECEPTIONIST_TOOLS,
         messages,
@@ -228,7 +292,7 @@ export async function runReceptionistTurn(
           now: input.now,
           bookings,
           // Only a proposal from an earlier turn can be booked: never one made this turn.
-          pendingFromEarlierTurn: input.pending,
+          pendingFromEarlierTurn: prepared.bookablePending,
           latestVisitorMessage: latest.text,
         });
         const event = output.event;
