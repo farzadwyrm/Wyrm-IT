@@ -179,9 +179,17 @@ async function runWithModel(
 }
 
 /** One receptionist turn on Groq's free models. Never throws; free, so cost is always 0. */
+/** Longest the receptionist waits for a free model's per-minute allowance to refill. */
+export const MAX_GROQ_WAIT_MS = 10_000;
+
 export async function runGroqReceptionistTurn(
   input: AgentInput,
-  options: { client?: Groq; apiKey?: string | undefined; clock?: () => number } = {},
+  options: {
+    client?: Groq;
+    apiKey?: string | undefined;
+    clock?: () => number;
+    sleep?: (ms: number) => Promise<void>;
+  } = {},
 ): Promise<AgentOutcome> {
   const apiKey = options.apiKey ?? process.env.GROQ_API_KEY;
   if (!options.client && !apiKey) {
@@ -189,24 +197,38 @@ export async function runGroqReceptionistTurn(
   }
   const client = options.client ?? new Groq({ apiKey, maxRetries: 0, timeout: 20_000 });
   const clock = options.clock ?? Date.now;
+  const sleep = options.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const latest = input.history.at(-1);
   if (latest?.role !== "visitor") return { status: "unavailable", reason: "error", costCents: 0 };
   const channel = input.channel ?? "chat";
 
-  for (const model of GROQ_MODELS) {
-    if ((restingUntil.get(model.id) ?? 0) > clock()) continue;
-    const result = await runWithModel(client, model, input, channel, latest);
-    if (result.kind === "ok") {
-      return {
-        status: "ok",
-        text: result.text,
-        events: result.events,
-        costCents: 0,
-        provider: "groq",
-      };
+  // Two passes: if every model is only briefly rate-limited (the per-minute token allowance),
+  // wait for the soonest one to refill instead of giving up.
+  for (let pass = 0; pass < 2; pass++) {
+    for (const model of GROQ_MODELS) {
+      if ((restingUntil.get(model.id) ?? 0) > clock()) continue;
+      const result = await runWithModel(client, model, input, channel, latest);
+      if (result.kind === "ok") {
+        return {
+          status: "ok",
+          text: result.text,
+          events: result.events,
+          costCents: 0,
+          provider: "groq",
+        };
+      }
+      if (result.kind === "rate_limited") {
+        console.warn(
+          `groq ${model.id} rate-limited; resting ${Math.round(result.retryMs / 1000)}s`,
+        );
+        restingUntil.set(model.id, clock() + result.retryMs);
+      }
     }
-    if (result.kind === "rate_limited") restingUntil.set(model.id, clock() + result.retryMs);
-    // On failure or rate limit, try the next free model.
+    const resting = GROQ_MODELS.map((m) => restingUntil.get(m.id) ?? 0).filter((t) => t > clock());
+    if (pass > 0 || resting.length === 0) break;
+    const wait = Math.min(...resting) - clock();
+    if (wait > MAX_GROQ_WAIT_MS) break;
+    await sleep(wait + 250);
   }
   return { status: "unavailable", reason: "error", costCents: 0 };
 }

@@ -129,6 +129,46 @@ describe("runGroqReceptionistTurn", () => {
     expect(third.models).toEqual([GROQ_MODELS[0]?.id]);
   });
 
+  it("waits for a short per-minute limit to refill, then answers", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    let now = 5_000_000;
+    const slept: number[] = [];
+    const { client, models } = fakeGroq([
+      { error: 429, retryAfter: "3" },
+      { error: 429, retryAfter: "5" },
+      { error: 429, retryAfter: "6" },
+      { content: "Thanks for waiting! We open at 9 am." },
+    ]);
+    const outcome = await runGroqReceptionistTurn(input(["when do you open?"]), {
+      client,
+      clock: () => now,
+      sleep: async (ms) => {
+        slept.push(ms);
+        now += ms;
+      },
+    });
+    expect(outcome).toMatchObject({ status: "ok", text: "Thanks for waiting! We open at 9 am." });
+    expect(slept).toHaveLength(1);
+    expect(slept[0]).toBeLessThanOrEqual(3_500);
+    expect(models).toEqual([...GROQ_MODELS.map((m) => m.id), GROQ_MODELS[0]?.id]);
+    warn.mockRestore();
+  });
+
+  it("does not make the visitor wait for a long (daily) limit", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const slept: number[] = [];
+    const { client } = fakeGroq([{ error: 429, retryAfter: "600" }]);
+    const outcome = await runGroqReceptionistTurn(input(["hi"]), {
+      client,
+      sleep: async (ms) => {
+        slept.push(ms);
+      },
+    });
+    expect(outcome).toMatchObject({ status: "unavailable" });
+    expect(slept).toHaveLength(0);
+    warn.mockRestore();
+  });
+
   it("is unavailable when every free model is limited", async () => {
     const { client } = fakeGroq([{ error: 429 }]);
     expect(await runGroqReceptionistTurn(input(["hi"]), { client })).toMatchObject({
