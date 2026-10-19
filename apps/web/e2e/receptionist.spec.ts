@@ -38,6 +38,33 @@ test("refuses a past day and answers a side question mid-booking", async ({ page
   await expect(conversation(page)).toContainText("Back to your booking");
 });
 
+test("without an AI key the chat explains and switches to the basic receptionist", async ({
+  page,
+}) => {
+  await page.goto("/receptionist");
+  await expect(chat(page)).toContainText("AI receptionist");
+  await say(page, "prices");
+  await expect(conversation(page)).toContainText("resting right now");
+  await expect(conversation(page)).toContainText("€45");
+  await expect(chat(page)).toContainText("basic receptionist (no AI)");
+});
+
+test("receptionist API validates input and reports fallback without a key", async ({ request }) => {
+  const bad = await request.post("/api/receptionist", { data: { history: [] } });
+  expect(bad.status()).toBe(400);
+
+  const ok = await request.post("/api/receptionist", {
+    data: {
+      history: [{ role: "visitor", text: "hello" }],
+      bookings: [],
+      pending: null,
+      clock: { day: "2026-10-19", minutes: 600 },
+    },
+  });
+  expect(ok.status()).toBe(200);
+  expect(await ok.json()).toEqual({ status: "fallback", reason: "not_configured" });
+});
+
 test("restart clears the conversation", async ({ page }) => {
   await page.goto("/receptionist");
   await say(page, "prices");

@@ -16,7 +16,11 @@ Last updated: 2026-10-19
   (`packages/ai/src/readiness-report.ts`, Claude Opus 5.5, low effort, server-side refusal
   fallback). Server re-validates answers and re-scores; demo guard: 3 summaries per visitor per
   hour, daily cap `DEMO_DAILY_BUDGET_CENTS` (default 500 = $5).
-- Phase 3 Receptionist demo at `/receptionist` (free mode): rule-based engine in
+- AI receptionist (ADR 0003): Claude Haiku 5.5 + booking tools via `POST /api/receptionist`
+  (`packages/ai/src/receptionist/`). Two-step booking enforced in code (proposal card, then a
+  deterministic clear-yes check). Falls back to the rule-based receptionist without a key.
+  Live evals: `packages/ai/evals/receptionist.eval.ts` (`pnpm eval`). Scan summary also Haiku 5.5.
+- Phase 3 Receptionist demo at `/receptionist` (basic mode): rule-based engine in
   `packages/receptionist` for the fictional Harbor Lane Dental; runs in the browser, nothing is
   booked. Hours/prices/location answers, booking with corrections and side questions, explicit
   yes before booking, demo cancel. 60 unit tests incl. rejected dates/times and corrections.
@@ -31,7 +35,8 @@ Last updated: 2026-10-19
 ## Last verification
 
 2026-10-19, local Windows, Node 24.20, pnpm 10.15: `pnpm verify` passed (harness check, Biome,
-typecheck in 5 packages, 99 unit tests, `next build`, 34 Playwright tests incl. full scan and booking flows).
+typecheck in 5 packages, 135 unit tests, `next build`, 38 Playwright tests incl. full scan and booking flows).
+AI mode verified only with scripted fake models; live evals not yet run (no API key configured).
 Visual check in a browser: site pages; scan steps and results (desktop dark).
 AI summary verified only with a fake client and the no-key path; no real Claude call made yet.
 GitHub CI passed on commit 678002e (before Phase 1); Phase 1 CI not yet confirmed.
@@ -40,8 +45,8 @@ GitHub CI passed on commit 678002e (before Phase 1); Phase 1 CI not yet confirme
 
 - Owner to confirm: About page founder wording, contact promises (reply time, no model training).
 - Set `NEXT_PUBLIC_BOOKING_URL` (Cal.com) and `NEXT_PUBLIC_CONTACT_EMAIL` once they exist.
-- AI summaries are OFF by choice (free mode). To switch on later: add `ANTHROPIC_API_KEY` in Vercel
-  (Production only) and redeploy; the route falls back to the free summary when over budget.
+- AI is OFF until the owner adds `ANTHROPIC_API_KEY` in Vercel (Production only) and redeploys.
+  Then run `pnpm eval` locally with the key and fix any failing scenario before promoting.
 - Phase 2 remainder: lead capture (email the report) needs a database + email provider.
 - Receptionist next steps: AI understanding (Claude) behind a key like the scan; voice; reuse
   of ReceptionAI's engine for real clients.

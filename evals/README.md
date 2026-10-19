@@ -1,5 +1,8 @@
 # Evals
 
+Live evals currently live next to the code they test: `packages/ai/evals/` (run `pnpm eval`
+with `ANTHROPIC_API_KEY` set). This folder documents the approach.
+
 Fixed scenarios that each AI demo must handle correctly. Unit tests prove code works;
 evals check that the AI behaviour is still right after a prompt or model change.
 

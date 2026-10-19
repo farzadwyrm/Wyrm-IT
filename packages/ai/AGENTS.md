@@ -7,5 +7,9 @@ Everything that talks to an AI model goes through this package.
   `check()` before the model call and `record()` after it. No exceptions.
 - API keys are read from the environment on the server only. Never import this package's
   provider code into client components, and never send keys to the browser.
-- Prompts for each demo live next to that demo's eval cases in `evals/<demo>/`.
-- A change to prompts or guards needs passing unit tests and a passing eval run (see `evals/`).
+- `src/receptionist/agent.ts` (AI receptionist turn loop) and `src/receptionist/tools.ts`
+  (its booking tools).
+  Booking safety lives in the tools, never only in the prompt (see `docs/adr/0003-ai-receptionist.md`).
+- Unit tests use fake clients only. Live evals are in `evals/` (`pnpm eval`, needs a key, costs
+  money, never in CI). A change to prompts, tools or models needs passing unit tests and a
+  passing eval run.

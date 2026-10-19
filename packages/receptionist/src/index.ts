@@ -1,6 +1,13 @@
-export type { Booking } from "./availability";
+export {
+  type Booking,
+  checkDay,
+  type DayCheck,
+  freeTimes,
+  nextOpenDays,
+} from "./availability";
 export { CLINIC, OPENING_HOURS, SERVICES, type Service } from "./clinic";
-export { formatDay, formatTime } from "./dates";
+export { isClearYes, isClearYesToCancel } from "./confirmation";
+export { addDays, formatDay, formatTime, toDayString, weekdayOf } from "./dates";
 export {
   type ConversationState,
   type Draft,

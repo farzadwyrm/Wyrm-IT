@@ -78,6 +78,9 @@ importers:
       '@wyrm/assessment':
         specifier: workspace:*
         version: link:../assessment
+      '@wyrm/receptionist':
+        specifier: workspace:*
+        version: link:../receptionist
     devDependencies:
       '@types/node':
         specifier: ^24.0.0

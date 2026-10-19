@@ -3,7 +3,7 @@ import { type AssessmentResult, PILLAR_INFO, readinessBand } from "@wyrm/assessm
 import { costInCents, MODELS } from "./models";
 
 /** Upper bound used for the demo budget check before the call is made. */
-export const REPORT_ESTIMATED_CENTS = 6;
+export const REPORT_ESTIMATED_CENTS = 1;
 
 const MAX_FINDINGS_IN_PROMPT = 8;
 
@@ -76,13 +76,11 @@ export async function writeReadinessReport(
   const model = MODELS.readinessReport;
 
   try {
-    const response = await client.beta.messages.create({
+    // Haiku has no server-side refusal fallback; a refusal falls back to the free summary.
+    const response = await client.messages.create({
       model,
       max_tokens: 4000,
       output_config: { effort: "low" },
-      // If Opus declines for policy reasons, Anthropic retries on its recommended fallback.
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
       system: REPORT_SYSTEM_PROMPT,
       messages: [{ role: "user", content: buildReportPrompt(result) }],
     });

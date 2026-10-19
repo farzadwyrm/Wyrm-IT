@@ -9,7 +9,7 @@ const result = scoreAssessment(QUESTIONS, allGaps);
 
 /** Minimal stand-in for the SDK client: only the call the report makes. */
 function fakeClient(create: (...args: unknown[]) => Promise<unknown>) {
-  return { beta: { messages: { create: vi.fn(create) } } } as unknown as Anthropic;
+  return { messages: { create: vi.fn(create) } } as unknown as Anthropic;
 }
 
 describe("buildReportPrompt", () => {
@@ -44,7 +44,7 @@ describe("writeReadinessReport", () => {
 
   it("returns the text and cost on success", async () => {
     const client = fakeClient(async () => ({
-      model: "claude-opus-5-5",
+      model: "claude-haiku-5-5",
       stop_reason: "end_turn",
       usage: { input_tokens: 1000, output_tokens: 500 },
       content: [
@@ -54,12 +54,13 @@ describe("writeReadinessReport", () => {
     }));
     const outcome = await writeReadinessReport(result, { client });
     expect(outcome).toMatchObject({ status: "ok", text: "Based on your answers..." });
-    expect(outcome.costCents).toBeCloseTo(1.4);
+    // Haiku 5.5: 1000 x $0.10/M + 500 x $0.50/M = $0.00035
+    expect(outcome.costCents).toBeCloseTo(0.035);
   });
 
   it("treats a refusal as unavailable but still counts its cost", async () => {
     const client = fakeClient(async () => ({
-      model: "claude-opus-5-5",
+      model: "claude-haiku-5-5",
       stop_reason: "refusal",
       usage: { input_tokens: 1000, output_tokens: 0 },
       content: [],

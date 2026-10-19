@@ -9,11 +9,11 @@ export const metadata: Metadata = {
 };
 
 const TRY_THIS = [
-  "Book a cleaning on Thursday at 10am",
+  "Talk naturally: “hi, my tooth's been killing me since the weekend”",
+  "Ask for “something after work on Wednesday”",
+  "Change your mind halfway: “actually, could my partner come instead on Friday?”",
   "Ask for a Sunday, or yesterday",
-  "Change your mind: “actually make it Friday”",
-  "Ask “where are you?” in the middle of booking",
-  "Say “I have a toothache”",
+  "Ask about parking in the middle of booking",
 ];
 
 export default function ReceptionistPage() {
@@ -22,7 +22,7 @@ export default function ReceptionistPage() {
       <PageHeader
         eyebrow="Live demo"
         title="Meet your AI receptionist"
-        intro="This receptionist works for Harbor Lane Dental, a fictional clinic. Ask it anything a patient would, or try to book an appointment. Nothing is really booked."
+        intro="An AI receptionist for Harbor Lane Dental, a fictional clinic. Talk to it the way a patient would: it understands natural language, checks the calendar and books appointments. Nothing is really booked."
       />
 
       <Container className="grid gap-10 pb-16 lg:grid-cols-[3fr_2fr]">
@@ -46,20 +46,22 @@ export default function ReceptionistPage() {
           <div>
             <h2 className="font-display text-xl font-semibold">What it always does</h2>
             <ul className="mt-3 space-y-2 text-ink-muted">
-              <li>Checks real opening hours and free slots before offering a time.</li>
+              <li>Checks the live calendar before offering a time; it never guesses.</li>
               <li>
                 Refuses past, closed or already-taken times, and suggests the nearest free ones.
               </li>
-              <li>Reads back the details and books only after you say yes.</li>
+              <li>Shows a confirmation card and books only after you clearly say yes.</li>
+              <li>Asks only for a first name: no phone, email or health details.</li>
             </ul>
           </div>
 
           <div className="rounded-2xl border border-line p-5 text-sm text-ink-muted">
             <p className="font-semibold text-ink">About this demo</p>
             <p className="mt-2">
-              This free version follows rules and runs entirely in your browser, so it understands
-              common phrasings but not everything. The version we install for clients uses AI to
-              understand natural speech, answers the phone, and connects to your real calendar.
+              The receptionist is an AI (Claude) that understands natural language, while our own
+              code checks every time slot and every booking, so the AI cannot invent availability or
+              book without your yes. If the AI is unavailable, a simpler rule-based version takes
+              over. For clients we connect it to the real calendar and phone line.
             </p>
           </div>
         </aside>
