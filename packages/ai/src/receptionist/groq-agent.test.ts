@@ -380,3 +380,68 @@ describe("deterministic booking on a clear yes (live bug 2026-10-19)", () => {
     expect(text).toContain("call book_appointment with that proposal_id");
   });
 });
+
+describe("reply guard in the loop (live bug 2026-10-19, turns 3 and 4)", () => {
+  const twelve = () => {
+    const out = executeTool(
+      "propose_booking",
+      { service_id: "checkup", day: THURSDAY, time: hhmm(FIRST_FREE), name: "Sam" },
+      { now: NOW, bookings: [], pendingFromEarlierTurn: null, latestVisitorMessage: "" },
+    );
+    if (out.event?.type !== "proposed") throw new Error("expected a proposal");
+    return out.event.proposal;
+  };
+  const four = freeTimes(THURSDAY, CHECKUP, NOW, []).find((t) => t >= 15 * 60) as number;
+
+  it("makes the model propose before reading back a new time", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { client } = fakeGroq([
+      { content: `Sure, ${formatTime(four)} on Thursday the 22nd works. Is that right?` },
+      {
+        content: null,
+        tool_calls: [
+          call("c1", "propose_booking", {
+            service_id: "checkup",
+            day: THURSDAY,
+            time: hhmm(four),
+            name: "Sam",
+          }),
+        ],
+      },
+      {
+        content: `So that's a check-up on Thursday the 22nd at ${formatTime(four)} for Sam. Is that right?`,
+      },
+    ]);
+    const outcome = await runGroqReceptionistTurn(
+      input(["check-up thursday", "That's 12 pm. Is that right?", "ok what about four instead"], {
+        pending: twelve(),
+      }),
+      { client },
+    );
+    if (outcome.status !== "ok") throw new Error("expected ok");
+    expect(outcome.events.map((e) => e.type)).toEqual(["proposed"]);
+    expect(outcome.text).toContain("Is that right?");
+    warn.mockRestore();
+  });
+
+  it("never lets a false 'booked' claim through; falls back to an honest line", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { client } = fakeGroq([
+      {
+        content:
+          "All done, your check-up is booked for Thursday at 4 pm, reference P-20261022-1600-checkup.",
+      },
+      { content: "Great, you're all set for Thursday at 4 pm!" },
+    ]);
+    const outcome = await runGroqReceptionistTurn(
+      input(["check-up thursday", "Sure, 4 pm works. Is that right?", "yes that's right"], {
+        pending: twelve(),
+      }),
+      { client },
+    );
+    if (outcome.status !== "ok") throw new Error("expected ok");
+    expect(outcome.events.filter((e) => e.type === "booked")).toHaveLength(0);
+    expect(outcome.text).toMatch(/^Just to be sure, nothing is booked yet/);
+    warn.mockRestore();
+  });
+});

@@ -21,6 +21,12 @@ re-checks every slot, and never lets the model invent one.
     visitor as a confirmation card) and only if the visitor's latest message passes the
     deterministic `isClearYes` check. The model cannot book in the turn it proposes.
   - Slots are re-checked at proposal and at booking.
+  - (Added after live testing, 2026-10-19.) Code books a read-back proposal itself when the
+    visitor's reply is a plain yes (`bookIfClearYes`), so booking never depends on the model
+    choosing the tool, and the model cannot book twice.
+  - Every reply is checked before the visitor sees it (`reply-guard.ts`): claims of a booking that
+    didn't happen, internal ids, and read-backs of unproposed times are sent back to the model
+    once to correct, then replaced with an honest line.
   - At most 6 tool rounds per turn; history capped at 30 messages of 600 characters.
   - The server re-validates everything the browser sends.
 - **No training or fine-tuning.** Quality comes from the prompt, tools and evals.

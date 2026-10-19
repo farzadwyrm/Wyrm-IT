@@ -16,6 +16,7 @@ import {
   RECEPTIONIST_SYSTEM_PROMPT,
   stateContext,
 } from "./agent";
+import { MAX_CORRECTIONS, reviewReply, safeReply } from "./reply-guard";
 import { executeTool, type Proposal, RECEPTIONIST_TOOLS, type ToolEvent } from "./tools";
 
 /**
@@ -114,6 +115,7 @@ async function runWithModel(
   const { bookings, events, justBooked } = prepared;
   let pending: Proposal | null = prepared.pending;
   const spoken: string[] = [];
+  let corrections = 0;
   const system = `${RECEPTIONIST_SYSTEM_PROMPT}\n\n${CHANNEL_PROMPTS[channel]}\n\n${stateContext(input.now, channel, bookings, pending, justBooked)}`;
   const messages = toMessages(input.history, system);
 
@@ -137,7 +139,19 @@ async function runWithModel(
       const calls = message.tool_calls ?? [];
       if (calls.length === 0) {
         const reply = spoken.join(" ").trim();
-        return reply ? { kind: "ok", text: reply, events } : { kind: "failed" };
+        if (!reply) return { kind: "failed" };
+        const issue = reviewReply(reply, { eventsThisTurn: events, pending, bookings });
+        if (!issue) return { kind: "ok", text: reply, events };
+        if (corrections >= MAX_CORRECTIONS) {
+          console.warn(`groq ${model.id} reply replaced after failed correction: ${issue.kind}`);
+          return { kind: "ok", text: safeReply(pending, bookings), events };
+        }
+        // Let the model fix its own reply once, before anything reaches the visitor.
+        corrections++;
+        spoken.length = 0;
+        messages.push({ role: "assistant", content: text });
+        messages.push({ role: "user", content: issue.correction });
+        continue;
       }
 
       messages.push({ role: "assistant", content: message.content ?? "", tool_calls: calls });

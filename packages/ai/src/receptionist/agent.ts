@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { type Booking, CLINIC, formatTime, SERVICES } from "@wyrm/receptionist";
 import { costInCents, MODELS } from "../models";
+import { MAX_CORRECTIONS, reviewReply, safeReply } from "./reply-guard";
 import {
   bookIfClearYes,
   calendarContext,
@@ -249,6 +250,7 @@ export async function runReceptionistTurn(
   let pending = prepared.pending;
   const spoken: string[] = [];
   let costCents = 0;
+  let corrections = 0;
 
   try {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -281,9 +283,25 @@ export async function runReceptionistTurn(
       );
       if (toolUses.length === 0) {
         const reply = spoken.join(" ").trim();
-        return reply
-          ? { status: "ok", text: reply, events, costCents, provider: "claude" }
-          : { status: "unavailable", reason: "empty", costCents };
+        if (!reply) return { status: "unavailable", reason: "empty", costCents };
+        const issue = reviewReply(reply, { eventsThisTurn: events, pending, bookings });
+        if (!issue) return { status: "ok", text: reply, events, costCents, provider: "claude" };
+        if (corrections >= MAX_CORRECTIONS) {
+          console.warn(`claude reply replaced after failed correction: ${issue.kind}`);
+          return {
+            status: "ok",
+            text: safeReply(pending, bookings),
+            events,
+            costCents,
+            provider: "claude",
+          };
+        }
+        // Let the model fix its own reply once, before anything reaches the visitor.
+        corrections++;
+        spoken.length = 0;
+        messages.push({ role: "assistant", content: response.content });
+        messages.push({ role: "user", content: issue.correction });
+        continue;
       }
 
       messages.push({ role: "assistant", content: response.content });
