@@ -2,12 +2,21 @@
 
 const env = (value: string | undefined) => (value && value.trim() !== "" ? value.trim() : null);
 
+function siteUrl(): string {
+  const explicit = env(process.env.NEXT_PUBLIC_SITE_URL);
+  if (explicit) return explicit;
+  // Set by Vercel at build time, e.g. "wyrm-it.vercel.app" (or the custom domain once added).
+  const vercel = env(process.env.VERCEL_PROJECT_PRODUCTION_URL);
+  return vercel ? `https://${vercel}` : "http://localhost:3000";
+}
+
 export const SITE = {
   name: "Wyrm IT",
   tagline: "Practical AI for small and medium businesses",
   description:
     "Wyrm IT helps small and medium businesses adopt AI safely: a readiness check of your IT foundations, then AI assistants that answer calls, find answers in your documents and automate busywork.",
-  url: env(process.env.NEXT_PUBLIC_SITE_URL) ?? "http://localhost:3000",
+  /** Public address: explicit setting first, then Vercel's production domain, then local dev. */
+  url: siteUrl(),
   /** Cal.com / Calendly link. When unset, the site shows "booking opens soon" instead of a dead link. */
   bookingUrl: env(process.env.NEXT_PUBLIC_BOOKING_URL),
   /** Public business email. When unset, no email address is shown. */

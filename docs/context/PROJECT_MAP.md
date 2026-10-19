@@ -13,6 +13,11 @@ Last updated: 2026-10-19
 - Playwright smoke tests (`apps/web/e2e/`): every page on desktop and phone, 404, navigation,
   no dead booking link. Included in `pnpm verify` and CI.
 
+## Live
+
+- Production: https://wyrm-it.vercel.app (Vercel, auto-deploys from `main`; root `apps/web`).
+  First deploy 2026-10-19: all pages 200, unknown path 404.
+
 ## Last verification
 
 2026-10-19, local Windows, Node 24.20, pnpm 10.15: `pnpm verify` passed (harness check, Biome,
@@ -24,7 +29,6 @@ GitHub CI passed on commit 678002e (before Phase 1); Phase 1 CI not yet confirme
 
 - Owner to confirm: About page founder wording, contact promises (reply time, no model training).
 - Set `NEXT_PUBLIC_BOOKING_URL` (Cal.com) and `NEXT_PUBLIC_CONTACT_EMAIL` once they exist.
-- Deploy to Vercel (owner signs in and imports the GitHub repo; steps in `docs/business/LAUNCH.md`).
 - Phase 2: Readiness Scan demo.
 
 ## Known limits
@@ -32,4 +36,3 @@ GitHub CI passed on commit 678002e (before Phase 1); Phase 1 CI not yet confirme
 - Demo guard is in-memory: not safe for multi-instance serverless until backed by Postgres/Redis.
 - No database, auth, email or analytics wired yet.
 - No domain yet; site URL comes from `NEXT_PUBLIC_SITE_URL`.
-- Not deployed anywhere yet.

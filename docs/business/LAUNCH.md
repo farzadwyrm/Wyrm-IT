@@ -8,8 +8,7 @@
 3. Settings on the import screen:
    - **Root Directory:** `apps/web` (click Edit and select it).
    - Framework is detected as **Next.js**. Leave build and install commands as default.
-   - **Environment Variables:** add `NEXT_PUBLIC_SITE_URL` = the `https://….vercel.app` address
-     (you can fill it after the first deploy and redeploy).
+   - **Environment Variables:** none needed; the site uses its Vercel address automatically.
 4. Click **Deploy**. After about a minute you get a public `….vercel.app` link.
 
 From then on, every push to `main` redeploys automatically, and every pull request gets its own
