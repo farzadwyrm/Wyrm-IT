@@ -15,6 +15,9 @@ pnpm dev
 
 Open http://127.0.0.1:3000.
 
+On Windows, `corepack enable` needs an Administrator terminal. Without it, prefix commands with
+`corepack`, for example `corepack pnpm install` and `corepack pnpm dev`.
+
 ## Checks
 
 ```bash

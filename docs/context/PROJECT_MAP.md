@@ -9,6 +9,12 @@ Last updated: 2026-10-19
 - `packages/ai`: model ids, in-memory demo guard (rate limit and daily budget) with tests.
 - `apps/web`: placeholder one-page home (hero, demos "coming soon", offer ladder, contact).
 
+## Last verification
+
+2026-10-19, local Windows, Node 24.20, pnpm 10.15: `pnpm verify` passed (harness check, Biome
+recommended rules, typecheck in 5 packages, 14 unit tests, `next build` of `/`).
+Not yet verified: CI on GitHub, deployment.
+
 ## In progress / next
 
 - Phase 1: real pages (Services, About, Contact with booking, blog skeleton), fonts, logo,

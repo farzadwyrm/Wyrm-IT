@@ -11,7 +11,8 @@ export const QUESTIONS: readonly Question[] = [
     pillar: "identity",
     phase: 1,
     weight: 3,
-    prompt: "Is two-step sign-in (MFA) required on email and every system reachable from the internet?",
+    prompt:
+      "Is two-step sign-in (MFA) required on email and every system reachable from the internet?",
     whyItMatters:
       "Most small-business breaches start with a stolen password. MFA blocks the large majority of them.",
   },
@@ -20,7 +21,8 @@ export const QUESTIONS: readonly Question[] = [
     pillar: "identity",
     phase: 1,
     weight: 2,
-    prompt: "Do administrators use a separate account for admin work, apart from their daily account?",
+    prompt:
+      "Do administrators use a separate account for admin work, apart from their daily account?",
     whyItMatters:
       "If a daily account is phished, a separate admin account keeps the attacker away from the keys to everything.",
   },
@@ -30,8 +32,7 @@ export const QUESTIONS: readonly Question[] = [
     phase: 2,
     weight: 2,
     prompt: "When someone leaves, is all of their access removed on their last day?",
-    whyItMatters:
-      "Former staff with working logins are a common, avoidable source of data leaks.",
+    whyItMatters: "Former staff with working logins are a common, avoidable source of data leaks.",
   },
   {
     id: "dev.managed-laptops",
@@ -48,15 +49,15 @@ export const QUESTIONS: readonly Question[] = [
     phase: 2,
     weight: 1,
     prompt: "Are guest Wi-Fi, office devices and servers kept on separate networks?",
-    whyItMatters:
-      "Separation stops one infected device or visitor from reaching everything else.",
+    whyItMatters: "Separation stops one infected device or visitor from reaching everything else.",
   },
   {
     id: "data.tested-backups",
     pillar: "data",
     phase: 1,
     weight: 3,
-    prompt: "Are backups taken automatically, kept off-site, and has a restore been tested in the last 6 months?",
+    prompt:
+      "Are backups taken automatically, kept off-site, and has a restore been tested in the last 6 months?",
     whyItMatters:
       "Untested backups often fail exactly when you need them, for example after ransomware.",
   },
@@ -74,25 +75,26 @@ export const QUESTIONS: readonly Question[] = [
     pillar: "applications",
     phase: 3,
     weight: 1,
-    prompt: "Is there an up-to-date list of the software subscriptions the company pays for, with an owner for each?",
-    whyItMatters:
-      "Unknown subscriptions waste money and keep data in places nobody is watching.",
+    prompt:
+      "Is there an up-to-date list of the software subscriptions the company pays for, with an owner for each?",
+    whyItMatters: "Unknown subscriptions waste money and keep data in places nobody is watching.",
   },
   {
     id: "app.ai-usage-policy",
     pillar: "applications",
     phase: 4,
     weight: 2,
-    prompt: "Do staff have clear guidance on which AI tools are approved and what data must never be pasted into them?",
-    whyItMatters:
-      "Without guidance, confidential customer data ends up in public AI tools.",
+    prompt:
+      "Do staff have clear guidance on which AI tools are approved and what data must never be pasted into them?",
+    whyItMatters: "Without guidance, confidential customer data ends up in public AI tools.",
   },
   {
     id: "app.ai-human-review",
     pillar: "applications",
     phase: 4,
     weight: 2,
-    prompt: "When AI produces something customers will see or rely on, does a person review it first?",
+    prompt:
+      "When AI produces something customers will see or rely on, does a person review it first?",
     whyItMatters:
       "AI can be confidently wrong. Human review protects your reputation while trust is built.",
   },
@@ -101,9 +103,9 @@ export const QUESTIONS: readonly Question[] = [
     pillar: "visibility",
     phase: 2,
     weight: 2,
-    prompt: "If a key system goes down or a suspicious login happens, does someone get alerted and act on it?",
-    whyItMatters:
-      "Problems found in minutes are cheap; problems found by customers are expensive.",
+    prompt:
+      "If a key system goes down or a suspicious login happens, does someone get alerted and act on it?",
+    whyItMatters: "Problems found in minutes are cheap; problems found by customers are expensive.",
   },
   {
     id: "fnd.critical-systems",

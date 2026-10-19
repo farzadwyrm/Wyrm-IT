@@ -14,7 +14,11 @@ const clock = (iso: string) => {
 describe("createDemoGuard", () => {
   it("blocks a request that would exceed the daily budget", () => {
     const c = clock("2026-10-19T10:00:00Z");
-    const guard = createDemoGuard({ dailyBudgetCents: 10, requestsPerVisitorPerHour: 100, now: c.now });
+    const guard = createDemoGuard({
+      dailyBudgetCents: 10,
+      requestsPerVisitorPerHour: 100,
+      now: c.now,
+    });
     guard.record("v1", 8);
     expect(guard.check("v2", 3)).toEqual({ allowed: false, reason: "daily_budget_exhausted" });
     expect(guard.check("v2", 2)).toEqual({ allowed: true });
@@ -22,7 +26,11 @@ describe("createDemoGuard", () => {
 
   it("resets the budget on a new UTC day", () => {
     const c = clock("2026-10-19T23:59:00Z");
-    const guard = createDemoGuard({ dailyBudgetCents: 10, requestsPerVisitorPerHour: 100, now: c.now });
+    const guard = createDemoGuard({
+      dailyBudgetCents: 10,
+      requestsPerVisitorPerHour: 100,
+      now: c.now,
+    });
     guard.record("v1", 10);
     expect(guard.check("v1", 1).allowed).toBe(false);
     c.advance(2 * 60 * 1000);
@@ -31,7 +39,11 @@ describe("createDemoGuard", () => {
 
   it("rate-limits a single visitor per rolling hour without affecting others", () => {
     const c = clock("2026-10-19T10:00:00Z");
-    const guard = createDemoGuard({ dailyBudgetCents: 1000, requestsPerVisitorPerHour: 2, now: c.now });
+    const guard = createDemoGuard({
+      dailyBudgetCents: 1000,
+      requestsPerVisitorPerHour: 2,
+      now: c.now,
+    });
     guard.record("v1", 1);
     guard.record("v1", 1);
     expect(guard.check("v1", 1)).toEqual({ allowed: false, reason: "visitor_rate_limited" });
@@ -42,7 +54,11 @@ describe("createDemoGuard", () => {
 
   it("ignores negative recorded costs", () => {
     const c = clock("2026-10-19T10:00:00Z");
-    const guard = createDemoGuard({ dailyBudgetCents: 5, requestsPerVisitorPerHour: 100, now: c.now });
+    const guard = createDemoGuard({
+      dailyBudgetCents: 5,
+      requestsPerVisitorPerHour: 100,
+      now: c.now,
+    });
     guard.record("v1", -100);
     expect(guard.check("v1", 6).allowed).toBe(false);
   });

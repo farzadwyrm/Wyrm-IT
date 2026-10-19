@@ -52,7 +52,10 @@ for (const file of agentsFiles) {
     if (!/\.(md|ts|tsx|mjs|json|ya?ml|css)$/.test(ref) && !ref.endsWith("/")) continue;
     const local = join(root, dirname(file), ref);
     if (!existsSync(local) && !existsSync(join(root, ref))) {
-      fail(`${file} references \`${ref}\`, which does not exist`, "fix the path or remove the reference");
+      fail(
+        `${file} references \`${ref}\`, which does not exist`,
+        "fix the path or remove the reference",
+      );
     }
   }
 }
@@ -78,4 +81,6 @@ if (failures.length > 0) {
   console.error(`Harness check failed (${failures.length}):\n${failures.join("\n")}`);
   process.exit(1);
 }
-console.log(`Harness check passed (${agentsFiles.length} AGENTS.md files, ${workspaces.length} workspaces).`);
+console.log(
+  `Harness check passed (${agentsFiles.length} AGENTS.md files, ${workspaces.length} workspaces).`,
+);

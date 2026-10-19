@@ -22,12 +22,14 @@ export const OFFERS: readonly Offer[] = [
   },
   {
     name: "IT & AI Assessment",
-    summary: "A structured review of your identity, devices, data, security and AI use, with a prioritised roadmap.",
+    summary:
+      "A structured review of your identity, devices, data, security and AI use, with a prioritised roadmap.",
     price: "Fixed fee",
   },
   {
     name: "AI Solutions",
-    summary: "AI receptionist, ask-your-documents assistant and workflow automation, built for your business.",
+    summary:
+      "AI receptionist, ask-your-documents assistant and workflow automation, built for your business.",
     price: "Per project",
   },
   {
@@ -54,7 +56,8 @@ export const DEMOS: readonly Demo[] = [
   {
     slug: "ai-receptionist",
     name: "AI Receptionist",
-    summary: "Talk to a receptionist for a fictional clinic that answers questions and books visits.",
+    summary:
+      "Talk to a receptionist for a fictional clinic that answers questions and books visits.",
     status: "coming-soon",
   },
   {

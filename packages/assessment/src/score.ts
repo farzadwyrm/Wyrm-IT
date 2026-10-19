@@ -25,7 +25,10 @@ function weightedPercent(items: { weight: number; points: number }[]): number | 
  * Score a set of answers. Unanswered and "not_applicable" questions are excluded
  * from the denominator so they neither help nor hurt the score.
  */
-export function scoreAssessment(questions: readonly Question[], answers: Answers): AssessmentResult {
+export function scoreAssessment(
+  questions: readonly Question[],
+  answers: Answers,
+): AssessmentResult {
   const scored: { question: Question; points: number }[] = [];
   const findings: Finding[] = [];
 
@@ -49,7 +52,9 @@ export function scoreAssessment(questions: readonly Question[], answers: Answers
     const inPillar = scored.filter((s) => s.question.pillar === pillar);
     return {
       pillar,
-      percent: weightedPercent(inPillar.map((s) => ({ weight: s.question.weight, points: s.points }))),
+      percent: weightedPercent(
+        inPillar.map((s) => ({ weight: s.question.weight, points: s.points })),
+      ),
       answered: inPillar.length,
     };
   });

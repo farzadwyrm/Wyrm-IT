@@ -13,12 +13,17 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "harness:check": "node scripts/check-harness.mjs",
-    "verify": "pnpm harness:check && pnpm lint && turbo run typecheck test build",
-    "verify:fast": "pnpm harness:check && pnpm lint && turbo run typecheck test"
+    "verify": "node scripts/check-harness.mjs && biome check . && turbo run typecheck test build",
+    "verify:fast": "node scripts/check-harness.mjs && biome check . && turbo run typecheck test"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.2.0",
+    "@biomejs/biome": "^2.5.15",
     "turbo": "^2.5.0",
     "typescript": "^5.9.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
