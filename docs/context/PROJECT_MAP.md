@@ -44,7 +44,8 @@ GitHub CI confirmed green by the owner on commit 678002e; later runs not checked
 ## In progress / next
 
 - Owner to confirm: About page founder wording, contact promises (reply time, no model training).
-- Set `NEXT_PUBLIC_BOOKING_URL` (Cal.com) and `NEXT_PUBLIC_CONTACT_EMAIL` once they exist.
+- Booking live: `NEXT_PUBLIC_BOOKING_URL` set in Vercel (Production) to the owner's Cal.com
+  30-minute event; Contact page verified on the live site. Still to do: `NEXT_PUBLIC_CONTACT_EMAIL`.
 - AI is OFF until the owner adds `ANTHROPIC_API_KEY` in Vercel (Production only) and redeploys.
   Then run `pnpm eval` locally with the key and fix any failing scenario before promoting.
 - Marketing: LinkedIn plan in `docs/business/marketing/LINKEDIN.md`, local outreach plan in
