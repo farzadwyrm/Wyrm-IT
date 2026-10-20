@@ -38,3 +38,13 @@ because plain code cannot read emails or PDFs reliably.
   they are visible to users and must be calibrated with real deployments.
 - Answers stay in the browser (localStorage draft); only the walk-through text is sent.
 - GDPR Art. 22 wording and an LLM run-cost model are open items.
+
+## Update 2026-10-20: simpler interface
+
+Owners found the first version confusing. The method is unchanged underneath, but the UI now
+asks six questions, one per screen (task, how it starts, times a week, the last time step by
+step, minutes per step, how often it goes off plan + optional hourly cost). AI-drafted step
+details sit under "More detail"; unasked fields use defaults. The result shows one number,
+a plain verdict per step ("AI does it", "AI does it, you check", "AI helps you", "You keep
+it"), one diagram, and the method and assumptions folded away.
+

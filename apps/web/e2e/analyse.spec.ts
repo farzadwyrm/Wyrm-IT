@@ -19,7 +19,7 @@ test("an agent page shows its workflow diagram", async ({ page }) => {
   await expect(diagram).toContainText("Human check");
 });
 
-test("the analyser interviews the owner and scores every step", async ({ page }) => {
+test("the analyser asks six simple questions and gives a clear result", async ({ page }) => {
   await page.goto("/");
   await page
     .getByRole("textbox", { name: "Name a task to analyse" })
@@ -27,47 +27,40 @@ test("the analyser interviews the owner and scores every step", async ({ page })
   await page.getByRole("button", { name: "Analyse", exact: true }).click();
   await expect(page).toHaveURL(/\/analyse\?q=/);
 
-  // 1 Scope
-  await expect(page.getByRole("textbox", { name: "What is the task?" })).toHaveValue(
+  // 1 The task (pre-filled from the home page)
+  await expect(page.getByRole("textbox", { name: "The task" })).toHaveValue(
     "Entering supplier invoices",
   );
-  await page
-    .getByRole("textbox", { name: "What you have when it's done" })
-    .fill("Invoice entered in Xero and scheduled");
-  await page.getByText("An email arrives").click();
-  await page.getByText("Nobody, it's record-keeping").click();
   await next(page);
 
-  // 2 Volume
-  await page.getByRole("spinbutton", { name: "How many" }).fill("40");
+  // 2 How it starts: one click moves on
+  await page.getByRole("button", { name: "An email" }).click();
+
+  // 3 How often
+  await page.getByRole("button", { name: "about 20" }).click();
+
+  // 4 Walk-through
+  await expect(page.getByText("Question 4 of 6")).toBeVisible();
+  await page.getByRole("button", { name: "Show me an example" }).click();
   await next(page);
 
-  // 3 Walk-through
-  await page.getByRole("button", { name: "Use an example" }).click();
-  await next(page, "Map my steps");
-
-  // 4 Steps (drafted without AI)
-  await expect(page.getByRole("status")).toContainText("without AI");
+  // 5 Minutes per step (drafted without AI in tests)
   const minutes = page.getByRole("spinbutton", { name: /^Minutes for step/ });
   await expect(minutes).toHaveCount(5);
   for (let i = 0; i < 5; i++) await minutes.nth(i).fill("4");
-  await expect(page.getByText(/20 min per item × 40 a week/)).toBeVisible();
   await next(page);
 
-  // 5 Exceptions
-  await page.getByRole("spinbutton", { name: "Exceptions out of 10" }).fill("1");
-  await next(page);
-
-  // 6 Value
-  await page.getByRole("spinbutton", { name: "Hourly cost" }).fill("30");
-  await next(page, "Analyse");
+  // 6 Off-plan share and optional cost
+  await page.getByRole("button", { name: "Almost never (0–1)" }).click();
+  await page.getByRole("spinbutton", { name: "Cost per hour in euros" }).fill("30");
+  await next(page, "See my result");
 
   // Result
-  await expect(page.getByRole("heading", { name: /h a week/ })).toBeVisible();
-  await expect(page.getByRole("table")).toContainText("VAT into Xero");
-  await expect(page.getByRole("table")).toContainText("Automate");
-  await expect(page.getByText("Assumptions behind the numbers")).toBeVisible();
+  await expect(page.getByText(/hours a week/).first()).toBeVisible();
+  await expect(page.getByText("What AI can do in each step")).toBeVisible();
+  await expect(page.getByText("AI does it").first()).toBeVisible();
   await expect(page.getByRole("figure", { name: /with AI agents/ })).toBeVisible();
+  await expect(page.getByText("How we worked this out")).toBeVisible();
 });
 
 test("the old planner address redirects to the analyser", async ({ page }) => {

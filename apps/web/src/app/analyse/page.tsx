@@ -5,7 +5,7 @@ import { Container, CtaBand, PageHeader } from "@/components/sections";
 export const metadata: Metadata = {
   title: "Workflow analysis",
   description:
-    "Analyse one of your workflows in about seven minutes: a process map, a verdict for every step (automate, AI agent, AI assist or keep human), a risk tier with guardrails, an agent design and the hours it would free up.",
+    "Six quick questions about one task: see which steps AI can do, where you stay in control, and how many hours a week it could free up.",
 };
 
 export default function AnalysePage() {
@@ -13,8 +13,8 @@ export default function AnalysePage() {
     <>
       <PageHeader
         eyebrow="workflow analysis"
-        title="Find out which steps an AI agent should take over"
-        intro="The same method automation consultants use, in about seven minutes: map one workflow from the last real case, time each step, and get a verdict per step, a risk tier with guardrails, an agent design and an honest range of hours saved."
+        title="See what AI could take off your plate"
+        intro="Answer six quick questions about one task. You get a clear answer: which steps AI can do, where you stay in control, and how many hours a week it could free up."
       />
       <Container className="pb-8">
         <WorkflowAnalyser />
