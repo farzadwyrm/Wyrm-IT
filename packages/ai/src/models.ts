@@ -11,6 +11,8 @@ export const MODELS = {
   readinessReport: "claude-haiku-5-5",
   /** The website's AI receptionist demo. */
   receptionist: "claude-haiku-5-5",
+  /** "IT explained" questions on the guide pages. */
+  guide: "claude-haiku-5-5",
 } as const;
 
 export type ModelRole = keyof typeof MODELS;

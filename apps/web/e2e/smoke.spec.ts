@@ -1,8 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { AREAS } from "@wyrm/guide";
 import { POSTS } from "../src/lib/posts";
 import { STATIC_ROUTES } from "../src/lib/site";
 
-const ROUTES = [...STATIC_ROUTES, ...POSTS.map((post) => `/blog/${post.slug}`)];
+const ROUTES = [
+  ...STATIC_ROUTES,
+  ...POSTS.map((post) => `/blog/${post.slug}`),
+  ...AREAS.map((area) => `/guide/${area.slug}`),
+];
 
 for (const route of ROUTES) {
   test(`${route} renders with one h1 and no horizontal scroll`, async ({ page }) => {

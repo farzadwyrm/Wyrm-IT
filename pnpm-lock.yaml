@@ -26,6 +26,9 @@ importers:
       '@wyrm/assessment':
         specifier: workspace:*
         version: link:../../packages/assessment
+      '@wyrm/guide':
+        specifier: workspace:*
+        version: link:../../packages/guide
       '@wyrm/receptionist':
         specifier: workspace:*
         version: link:../../packages/receptionist
@@ -78,6 +81,9 @@ importers:
       '@wyrm/assessment':
         specifier: workspace:*
         version: link:../assessment
+      '@wyrm/guide':
+        specifier: workspace:*
+        version: link:../guide
       '@wyrm/receptionist':
         specifier: workspace:*
         version: link:../receptionist
@@ -114,6 +120,21 @@ importers:
         version: 3.2.7(@types/node@24.19.2)(jiti@2.7.0)(lightningcss@1.32.0)
 
   packages/config: {}
+
+  packages/guide:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      '@wyrm/config':
+        specifier: workspace:*
+        version: link:../config
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.7(@types/node@24.19.2)(jiti@2.7.0)(lightningcss@1.32.0)
 
   packages/receptionist:
     devDependencies:

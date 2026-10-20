@@ -12,6 +12,15 @@
   --color-ember-strong: #9a3412;
   --color-moss: #3f6212;
 
+  /* One colour per IT pillar, for borders, icons and tags only (body text stays ink). */
+  --color-pillar-foundation: #4a5868;
+  --color-pillar-identity: #6d28d9;
+  --color-pillar-devices: #0369a1;
+  --color-pillar-network: #0f766e;
+  --color-pillar-applications: #a21caf;
+  --color-pillar-data: #3f6212;
+  --color-pillar-visibility: #b45309;
+
   /* --font-inter / --font-fraunces are set by next/font in the app layout. */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
@@ -27,5 +36,12 @@
     --color-ember: #fb923c;
     --color-ember-strong: #fdba74;
     --color-moss: #a3e635;
+    --color-pillar-foundation: #a8b0ba;
+    --color-pillar-identity: #c4b5fd;
+    --color-pillar-devices: #7dd3fc;
+    --color-pillar-network: #5eead4;
+    --color-pillar-applications: #f0abfc;
+    --color-pillar-data: #a3e635;
+    --color-pillar-visibility: #fcd34d;
   }
 }

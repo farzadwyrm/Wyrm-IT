@@ -24,11 +24,11 @@ export const SITE = {
 } as const;
 
 export const NAV = [
+  { href: "/guide", label: "IT explained" },
   { href: "/services", label: "Services" },
   { href: "/scan", label: "Free scan" },
   { href: "/#demos", label: "Demos" },
   { href: "/about", label: "About" },
-  { href: "/blog", label: "Blog" },
 ] as const;
 
 export interface Offer {
@@ -175,6 +175,7 @@ export const PRINCIPLES = [
 /** Every static page, used by the sitemap and the smoke tests. Add new pages here. */
 export const STATIC_ROUTES = [
   "/",
+  "/guide",
   "/services",
   "/scan",
   "/receptionist",

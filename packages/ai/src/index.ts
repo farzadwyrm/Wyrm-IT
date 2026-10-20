@@ -1,5 +1,12 @@
 export type { DemoGuard, DemoGuardOptions, GuardDecision } from "./demo-guard";
 export { createDemoGuard } from "./demo-guard";
+export type {
+  GuideOutcome,
+  GuideProvider,
+  GuideQuestion,
+  GuideTurn,
+} from "./guide-ask";
+export { askGuide, GUIDE_ANSWER_ESTIMATED_CENTS, isGuideAiConfigured } from "./guide-ask";
 export type { ModelRole } from "./models";
 export { costInCents, MODELS, type TokenUsage } from "./models";
 export type { ReportOutcome } from "./readiness-report";

@@ -1,6 +1,6 @@
 # Project map (current state)
 
-Last updated: 2026-10-19
+Last updated: 2026-10-20
 
 ## Done
 
@@ -30,6 +30,11 @@ Last updated: 2026-10-19
   yes before booking, demo cancel. 60 unit tests incl. rejected dates/times and corrections.
 - Playwright smoke tests (`apps/web/e2e/`): every page on desktop and phone, 404, navigation,
   no dead booking link. Included in `pnpm verify` and CI.
+
+- "IT explained" guide (ADR 0006): `packages/guide` (19 plain-language areas, 7 pillars, phases
+  1-4), `/guide` and `/guide/[slug]` static pages, home page redesign around it, Ask AI panel
+  (`components/guide/ask-panel.tsx`) via `POST /api/ask` (`packages/ai/src/guide-ask.ts`):
+  instant guide answers, then Claude/Groq with only the matched area's notes, then guide fallback.
 
 ## Live
 

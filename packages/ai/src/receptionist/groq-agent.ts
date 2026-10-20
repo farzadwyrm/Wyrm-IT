@@ -54,6 +54,16 @@ export function resetGroqCooldowns(): void {
   restingUntil.clear();
 }
 
+/** True while a model is cooling down after a rate limit (shared by every Groq feature). */
+export function isGroqModelResting(id: string, now = Date.now()): boolean {
+  return (restingUntil.get(id) ?? 0) > now;
+}
+
+/** Records a rate limit so every Groq feature skips this model until it may be used again. */
+export function restGroqModel(id: string, err: unknown, now = Date.now()): void {
+  restingUntil.set(id, now + retryAfterMs(err));
+}
+
 /** Removes any reasoning a model leaks into its visible text. */
 export function stripReasoning(text: string): string {
   return text

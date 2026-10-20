@@ -23,6 +23,11 @@ export function SiteFooter() {
                 </Link>
               </li>
             ))}
+            <li>
+              <Link href="/blog" className="hover:text-ink">
+                Blog
+              </Link>
+            </li>
           </ul>
         </div>
         <div>
