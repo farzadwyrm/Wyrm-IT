@@ -2,7 +2,7 @@
 
 import type { ToolEvent } from "@wyrm/ai";
 import { type FormEvent, useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { primaryButton, secondaryButton } from "@/components/scan/buttons";
+import { primaryButton, secondaryButton } from "@/components/buttons";
 import { createSpeakingEnvelope } from "@/lib/voice/envelope";
 import { type MicMeter, openMicMeter } from "@/lib/voice/mic-level";
 import { isRecognitionSupported, type ListenHandle, listenOnce } from "@/lib/voice/recognition";

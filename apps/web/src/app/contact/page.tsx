@@ -43,9 +43,9 @@ export default function ContactPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Contact"
+        eyebrow="contact"
         title="Book a free 30-minute call"
-        intro="Talk to an engineer, not a salesperson. We will find the one task where AI would save your team the most time."
+        intro="Talk to an engineer, not a salesperson. We will map one of your workflows and show how an agent would run it."
       />
 
       <Container className="grid gap-10 pb-20 md:grid-cols-[3fr_2fr]">

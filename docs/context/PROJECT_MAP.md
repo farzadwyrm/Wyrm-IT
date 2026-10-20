@@ -4,6 +4,13 @@ Last updated: 2026-10-20
 
 ## Done
 
+- 2026-10-20 PIVOT (ADR 0006): Wyrm is an AI agents company. Site = home (agents), `/agents` +
+  `/agents/[slug]` (catalogue in `packages/agents`), `/planner` (AI workflow planner, `POST
+  /api/plan`, `packages/ai/src/planner.ts`), `/receptionist` (live voice agent), services,
+  about, contact, blog. Dark technical design (`packages/ui/src/theme.css`). Removed: scan,
+  IT guide, `packages/assessment`, readiness report. Older bullets below mentioning the scan or
+  guide are history only.
+
 - Phase 0 scaffold: monorepo, harness docs, CI, Claude Code hooks.
 - `packages/assessment`: 12 starter questions across 7 pillars; scoring with tests.
 - `packages/ai`: model ids, in-memory demo guard (rate limit and daily budget) with tests.
@@ -31,13 +38,9 @@ Last updated: 2026-10-20
 - Playwright smoke tests (`apps/web/e2e/`): every page on desktop and phone, 404, navigation,
   no dead booking link. Included in `pnpm verify` and CI.
 
-- "IT explained" guide (ADR 0006): `packages/guide` (19 plain-language areas, 7 pillars, phases
-  1-4), `/guide` and `/guide/[slug]` static pages, home page redesign around it, Ask AI panel
-  (`components/guide/ask-panel.tsx`) via `POST /api/ask` (`packages/ai/src/guide-ask.ts`):
-  instant guide answers, then Claude/Groq with only the matched area's notes, then guide fallback.
-- Uptime: `.github/workflows/uptime.yml` runs `scripts/uptime-check.sh` hourly (home, guide
-  pages, instant and AI answers; each under 10 s). A failed run emails the owner. Provider
-  "guide" on the AI question means the AI is down, rate-limited or the key is missing.
+- Uptime: `.github/workflows/uptime.yml` runs `scripts/uptime-check.sh` hourly (home, agent
+  pages, planner, receptionist; template and AI plans; each under 10 s). A failed run emails the owner. Provider
+  "guide" on the AI plan means the AI is down, rate-limited or the key is missing.
 
 ## Live
 

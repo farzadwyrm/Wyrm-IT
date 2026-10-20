@@ -21,9 +21,9 @@ export default function ReceptionistPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Live demo"
-        title="Meet your AI receptionist"
-        intro="An AI receptionist for Harbor Lane Dental, a fictional clinic. Talk to it the way a patient would: it understands natural language, checks the calendar and books appointments. Nothing is really booked."
+        eyebrow="live demo · voice agent"
+        title="Call a voice agent"
+        intro="A voice agent for Harbor Lane Dental, a fictional clinic. Call it or chat the way a patient would: it understands natural speech, checks the calendar, books and confirms. Nothing is really booked."
       />
 
       <Container className="grid gap-10 pb-16 lg:grid-cols-[3fr_2fr]">

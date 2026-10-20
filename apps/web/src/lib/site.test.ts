@@ -1,6 +1,6 @@
-import { QUESTIONS } from "@wyrm/assessment";
+import { AGENTS } from "@wyrm/agents";
 import { describe, expect, it } from "vitest";
-import { DEMOS, OFFERS } from "./site";
+import { DEMOS, NAV, OFFERS, STATIC_ROUTES } from "./site";
 
 describe("site content", () => {
   it("has unique demo slugs that are URL-safe", () => {
@@ -9,11 +9,19 @@ describe("site content", () => {
     for (const slug of slugs) expect(slug).toMatch(/^[a-z0-9-]+$/);
   });
 
-  it("starts the offer ladder with the free scan", () => {
-    expect(OFFERS[0]?.price).toBe("Free");
+  it("has three offers, from discovery to managed agents", () => {
+    expect(OFFERS.map((o) => o.slug)).toEqual([
+      "workflow-sprint",
+      "build-deploy",
+      "managed-agents",
+    ]);
   });
 
-  it("can read the shared assessment package", () => {
-    expect(QUESTIONS.length).toBeGreaterThan(0);
+  it("links every nav item to a known page", () => {
+    for (const item of NAV) expect(STATIC_ROUTES).toContain(item.href);
+  });
+
+  it("can read the shared agent catalogue", () => {
+    expect(AGENTS.length).toBeGreaterThan(0);
   });
 });

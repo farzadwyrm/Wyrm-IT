@@ -19,8 +19,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
-    "@wyrm/assessment": "workspace:*",
-    "@wyrm/guide": "workspace:*",
+    "@wyrm/agents": "workspace:*",
     "@wyrm/receptionist": "workspace:*",
     "groq-sdk": "^1.6.0"
   }

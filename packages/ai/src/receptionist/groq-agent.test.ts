@@ -1,9 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { type Answers, QUESTIONS, scoreAssessment } from "@wyrm/assessment";
 import { formatTime, freeTimes, SERVICES, type Service } from "@wyrm/receptionist";
 import type Groq from "groq-sdk";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { writeReadinessReportWithGroq } from "../readiness-report";
 import { type ChatMessage, stateContext } from "./agent";
 import { compactToolResult } from "./compact";
 import {
@@ -262,32 +260,6 @@ describe("runReceptionist provider chain", () => {
       groq: { apiKey: "" },
     });
     expect(outcome).toMatchObject({ status: "unavailable", reason: "not_configured" });
-  });
-});
-
-describe("writeReadinessReportWithGroq", () => {
-  const result = scoreAssessment(
-    QUESTIONS,
-    Object.fromEntries(QUESTIONS.map((q) => [q.id, "gap"])) as Answers,
-  );
-
-  it("writes the summary for free and strips reasoning", async () => {
-    const { client } = fakeGroq([
-      { content: "<think>plan</think>Based on your answers, start with backups." },
-    ]);
-    expect(await writeReadinessReportWithGroq(result, { client })).toEqual({
-      status: "ok",
-      text: "Based on your answers, start with backups.",
-      costCents: 0,
-    });
-  });
-
-  it("tries the next model when one fails", async () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { client, models } = fakeGroq([{ error: 429 }, { content: "Summary." }]);
-    expect(await writeReadinessReportWithGroq(result, { client })).toMatchObject({ status: "ok" });
-    expect(models.length).toBe(2);
-    spy.mockRestore();
   });
 });
 

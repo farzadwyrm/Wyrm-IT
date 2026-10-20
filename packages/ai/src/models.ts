@@ -7,12 +7,10 @@
  * at about 40x the price.
  */
 export const MODELS = {
-  /** Written summary for the Readiness Scan. */
-  readinessReport: "claude-haiku-5-5",
   /** The website's AI receptionist demo. */
   receptionist: "claude-haiku-5-5",
-  /** "IT explained" questions on the guide pages. */
-  guide: "claude-haiku-5-5",
+  /** The AI workflow planner: designs an agent workflow from a visitor's task. */
+  planner: "claude-haiku-5-5",
 } as const;
 
 export type ModelRole = keyof typeof MODELS;

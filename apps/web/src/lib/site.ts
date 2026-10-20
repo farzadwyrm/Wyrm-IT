@@ -12,9 +12,9 @@ function siteUrl(): string {
 
 export const SITE = {
   name: "Wyrm IT",
-  tagline: "Practical AI for small and medium businesses",
+  tagline: "AI agents that run your workflows",
   description:
-    "Wyrm IT helps small and medium businesses adopt AI safely: a readiness check of your IT foundations, then AI assistants that answer calls, find answers in your documents and automate busywork.",
+    "Wyrm IT designs, deploys and runs AI agents for small and medium businesses: voice, inbox, sales, support and back-office agents with human checks and full audit trails.",
   /** Public address: explicit setting first, then Vercel's production domain, then local dev. */
   url: siteUrl(),
   /** Cal.com / Calendly link. When unset, the site shows "booking opens soon" instead of a dead link. */
@@ -24,10 +24,10 @@ export const SITE = {
 } as const;
 
 export const NAV = [
-  { href: "/guide", label: "IT explained" },
+  { href: "/agents", label: "Agents" },
+  { href: "/planner", label: "Workflow planner" },
+  { href: "/receptionist", label: "Live demo" },
   { href: "/services", label: "Services" },
-  { href: "/scan", label: "Free scan" },
-  { href: "/#demos", label: "Demos" },
   { href: "/about", label: "About" },
 ] as const;
 
@@ -43,54 +43,41 @@ export interface Offer {
 /** The offer ladder from docs/business/OFFER.md. Keep both in sync. */
 export const OFFERS: readonly Offer[] = [
   {
-    slug: "readiness-scan",
-    name: "AI-Readiness Scan",
-    summary: "Answer a short questionnaire and get an instant score plus your top fixes.",
-    price: "Free",
-    forWho: "Any business curious about AI that wants a quick, honest starting point.",
-    deliverables: [
-      "Score across seven areas of your IT foundations",
-      "Your top fixes, ordered by risk",
-      "A written summary you can share with your team",
-    ],
-  },
-  {
-    slug: "assessment",
-    name: "IT & AI Assessment",
+    slug: "workflow-sprint",
+    name: "Agent Discovery Sprint",
     summary:
-      "A structured review of your identity, devices, data, security and AI use, with a prioritised roadmap.",
+      "Two weeks to map your workflows, find where agents pay off and design the first one in detail.",
     price: "Fixed fee",
-    forWho: "Teams that want AI but are not sure their accounts, data and backups are ready.",
+    forWho: "Teams that know AI could help but not where to start.",
     deliverables: [
-      "Interviews with the people who run your systems day to day",
-      "Findings marked in place, partial or gap, with priority",
-      "A roadmap: what to fix first, and which AI use cases pay off",
+      "Workshops with the people who do the work today",
+      "Your workflows mapped, with time spent and agent fit for each",
+      "A detailed design of the first agent: steps, systems, guardrails, success measures",
     ],
   },
   {
-    slug: "solutions",
-    name: "AI Solutions",
+    slug: "build-deploy",
+    name: "Agent Build & Deploy",
     summary:
-      "AI receptionist, ask-your-documents assistant and workflow automation, built for your business.",
-    price: "Per project",
-    forWho:
-      "Businesses with a clear time sink: missed calls, repeated questions, manual data entry.",
+      "We build the agent, connect it to your systems, test it on real cases and put it live.",
+    price: "Per agent",
+    forWho: "Businesses with a clear, repetitive workflow: calls, email, leads, invoices, support.",
     deliverables: [
-      "A working assistant connected to your calendar, documents or tools",
-      "Guardrails: what the AI may and may not do, with human review where it matters",
-      "Training for your team and a handover document",
+      "A working agent connected to your phone, inbox, CRM or accounting",
+      "Guardrails and human approval steps where money, customers or safety are involved",
+      "Evaluation on real examples before go-live, and team training",
     ],
   },
   {
-    slug: "managed",
-    name: "Managed AI",
-    summary: "We run, monitor and improve your AI assistants every month so you never have to.",
+    slug: "managed-agents",
+    name: "Managed Agents",
+    summary: "We run, monitor and improve your agents every month, so they keep getting better.",
     price: "Monthly",
-    forWho: "Clients who want results without hiring an AI or IT specialist.",
+    forWho: "Clients who want agents working every day without hiring an AI team.",
     deliverables: [
-      "Hosting, monitoring and model updates",
-      "Monthly review of conversations and accuracy",
-      "Priority support and small improvements included",
+      "Hosting, monitoring, alerts and model updates",
+      "Monthly review of conversations, accuracy and time saved",
+      "New skills and workflows added as your business changes",
     ],
   },
 ];
@@ -106,24 +93,24 @@ export interface Demo {
 
 export const DEMOS: readonly Demo[] = [
   {
-    slug: "readiness-scan",
-    name: "AI-Readiness Scan",
-    summary: "See how ready your IT foundations are for AI, scored across seven areas.",
-    status: "live",
-    href: "/scan",
-  },
-  {
-    slug: "ai-receptionist",
-    name: "AI Receptionist",
+    slug: "voice-agent",
+    name: "Voice agent",
     summary:
-      "Talk to a receptionist for a fictional clinic that answers questions and books visits.",
+      "Call or chat with a receptionist agent for a fictional clinic. It answers, books and confirms.",
     status: "live",
     href: "/receptionist",
   },
   {
-    slug: "ask-your-docs",
-    name: "Ask Your Documents",
-    summary: "Ask questions about a sample company handbook and get answers with sources.",
+    slug: "workflow-planner",
+    name: "Workflow planner",
+    summary: "Describe a task your team does by hand. The AI designs the agent workflow for it.",
+    status: "live",
+    href: "/planner",
+  },
+  {
+    slug: "knowledge-agent",
+    name: "Knowledge agent",
+    summary: "Ask questions about a sample company's documents and get answers with sources.",
     status: "coming-soon",
   },
 ];
@@ -138,47 +125,47 @@ export const USE_CASES: readonly UseCase[] = [
   {
     sector: "Clinics and practices",
     problem: "Phones ring during appointments and patients hang up.",
+    solution: "A voice agent answers every call, books visits and hands urgent cases to staff.",
+  },
+  {
+    sector: "Professional services",
+    problem: "The shared inbox and document searches eat hours every day.",
     solution:
-      "An AI receptionist answers every call, books visits and hands urgent cases to staff.",
+      "An inbox agent drafts replies; a knowledge agent answers from your files with sources.",
   },
   {
-    sector: "Law and accounting firms",
-    problem: "Staff spend hours searching old files and templates.",
-    solution: "An assistant that answers questions from your own documents and shows its sources.",
-  },
-  {
-    sector: "Trades and home services",
-    problem: "Quotes and follow-ups slip while the team is on site.",
-    solution: "Automations that capture enquiries, draft quotes and chase replies.",
+    sector: "Trades, retail and e-commerce",
+    problem: "Leads, orders and invoices pile up while the team is busy.",
+    solution: "Sales and back-office agents qualify leads, chase replies and enter the data.",
   },
 ];
 
 export const PRINCIPLES = [
   {
-    title: "Foundations first",
-    body: "We check accounts, backups and access before connecting AI to your data, so AI does not create new risk.",
+    title: "Agents with guardrails",
+    body: "Every agent has written limits. Money, customers and anything risky go through a human check.",
+  },
+  {
+    title: "Measured, not promised",
+    body: "We test every agent on your real cases before go-live, then report what it actually does each month.",
   },
   {
     title: "Engineers, not slideware",
-    body: "The people who advise you are the people who build and run the system.",
+    body: "The people who design your agents are the people who build, deploy and run them.",
   },
   {
-    title: "People stay in control",
-    body: "AI drafts and suggests; your team approves anything that matters to customers.",
-  },
-  {
-    title: "Plain language, fixed prices",
-    body: "You know what you get and what it costs before work starts.",
+    title: "Your data stays yours",
+    body: "Least-privilege access, full audit logs, and no training on your data without your say.",
   },
 ] as const;
 
 /** Every static page, used by the sitemap and the smoke tests. Add new pages here. */
 export const STATIC_ROUTES = [
   "/",
-  "/guide",
-  "/services",
-  "/scan",
+  "/agents",
+  "/planner",
   "/receptionist",
+  "/services",
   "/about",
   "/contact",
   "/blog",

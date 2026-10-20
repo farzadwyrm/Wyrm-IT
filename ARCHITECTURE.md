@@ -6,13 +6,14 @@ A pnpm + Turborepo monorepo. Apps are deployable; packages are shared, framework
 
 ```
 apps/
-  web/              Next.js 16 marketing site + public AI demos (deployed to Vercel)
-  portal/           (planned, Phase 6) client dashboard: assessments, reports, managed AI
+  web/              Next.js 16 site: agent catalogue, workflow planner, live agent demos (Vercel)
+  portal/           (planned) client dashboard: deployed agents, runs, metrics
 packages/
   config/           shared TypeScript presets
   ui/               brand tokens (Tailwind v4 theme) + shared React components
-  assessment/       readiness-scan question bank + pure scoring
-  ai/               model ids, demo guardrails; (Phase 2) AI SDK client + prompts
+  agents/           agent catalogue + workflow model (pure: matching, validation)
+  receptionist/     rule-based receptionist engine for the voice-agent demo (pure)
+  ai/               model ids, demo guard, Claude/Groq chains: receptionist, workflow planner
   db/               (planned, Phase 2) Drizzle schema + migrations for Supabase Postgres
 evals/              fixed scenarios that every AI demo must pass
 scripts/            repo tooling (harness check)
@@ -22,7 +23,7 @@ docs/               context, decisions, business docs
 ## Dependency rules
 
 - `apps/*` may import any `packages/*`. Packages never import from `apps/*`.
-- `assessment` is pure: no I/O, no React, no AI calls.
+- `agents` and `receptionist` are pure: no I/O, no React, no AI calls.
 - `ai` is server-only: never imported by client components.
 - `ui` has no business logic and no data fetching.
 - Workspace packages export TypeScript source; `apps/web` compiles them via `transpilePackages`.

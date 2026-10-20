@@ -6,16 +6,16 @@ import { OFFERS } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Services",
   description:
-    "From a free AI-readiness scan to fully managed AI assistants: how Wyrm IT helps small and medium businesses adopt AI safely.",
+    "From a discovery sprint to fully managed AI agents: how Wyrm designs, deploys and runs AI agents for small and medium businesses.",
 };
 
 export default function ServicesPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Services"
-        title="From first question to AI that runs every day"
-        intro="Four steps, each useful on its own. Most clients start with the free scan or a call, and only move on when the next step clearly pays for itself."
+        eyebrow="services"
+        title="From one workflow to agents that run every day"
+        intro="Three steps, each useful on its own. Most clients start with one workflow and add agents only when the first one clearly pays for itself."
       />
 
       <Container className="pb-8">
@@ -24,7 +24,7 @@ export default function ServicesPage() {
             <li
               key={offer.slug}
               id={offer.slug}
-              className="scroll-mt-24 rounded-3xl border border-line bg-paper-raised p-6 sm:p-10"
+              className="scroll-mt-24 rounded-3xl border border-line bg-paper-raised/80 p-6 sm:p-10"
             >
               <div className="flex flex-wrap items-baseline justify-between gap-3">
                 <h2 className="font-display text-2xl font-semibold">
@@ -55,9 +55,9 @@ export default function ServicesPage() {
                   </ul>
                 </div>
               </div>
-              {offer.slug === "readiness-scan" && (
-                <ButtonLink href="/scan" className="mt-8">
-                  Start the free scan
+              {offer.slug === "workflow-sprint" && (
+                <ButtonLink href="/planner" className="mt-8" variant="secondary">
+                  Sketch a workflow with the AI planner
                 </ButtonLink>
               )}
             </li>

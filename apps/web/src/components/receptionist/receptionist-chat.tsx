@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { primaryButton } from "@/components/scan/buttons";
+import { primaryButton } from "@/components/buttons";
 import { EventCard, eventKey } from "./event-card";
 import type { ReceptionistSession } from "./use-receptionist-session";
 

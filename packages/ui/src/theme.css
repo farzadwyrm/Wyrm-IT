@@ -1,47 +1,28 @@
 /*
- * Wyrm IT brand tokens (Tailwind v4 theme). Change brand colours here only.
- * Apps import this file after `@import "tailwindcss";`.
+ * Wyrm brand tokens (Tailwind v4 theme). Change brand colours here only.
+ * Dark, technical look in every colour scheme. "ember" is the primary accent (violet),
+ * "signal" the secondary (cyan). Apps import this file after `@import "tailwindcss";`.
  */
 @theme {
-  --color-ink: #0f1720;
-  --color-ink-muted: #4a5868;
-  --color-paper: #fbfaf7;
-  --color-paper-raised: #ffffff;
-  --color-line: #e3e0d8;
-  --color-ember: #c2410c;
-  --color-ember-strong: #9a3412;
-  --color-moss: #3f6212;
+  --color-ink: #e6edf3;
+  --color-ink-muted: #8f9cad;
+  --color-paper: #06080c;
+  --color-paper-raised: #0d1219;
+  --color-line: #1c2632;
+  --color-ember: #8b7cff;
+  --color-ember-strong: #b1a7ff;
+  --color-signal: #22d3ee;
+  --color-moss: #3ddc97;
 
-  /* One colour per IT pillar, for borders, icons and tags only (body text stays ink). */
-  --color-pillar-foundation: #4a5868;
-  --color-pillar-identity: #6d28d9;
-  --color-pillar-devices: #0369a1;
-  --color-pillar-network: #0f766e;
-  --color-pillar-applications: #a21caf;
-  --color-pillar-data: #3f6212;
-  --color-pillar-visibility: #b45309;
+  /* Workflow diagram node kinds: borders, icons and labels only. */
+  --color-node-trigger: #22d3ee;
+  --color-node-agent: #8b7cff;
+  --color-node-tool: #f5b453;
+  --color-node-human: #3ddc97;
+  --color-node-output: #f472b6;
 
-  /* --font-inter / --font-fraunces are set by next/font in the app layout. */
+  /* --font-inter / --font-grotesk / --font-mono-jb are set by next/font in the app layout. */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-ink: #ece8df;
-    --color-ink-muted: #a8b0ba;
-    --color-paper: #11161c;
-    --color-paper-raised: #182029;
-    --color-line: #2a333d;
-    --color-ember: #fb923c;
-    --color-ember-strong: #fdba74;
-    --color-moss: #a3e635;
-    --color-pillar-foundation: #a8b0ba;
-    --color-pillar-identity: #c4b5fd;
-    --color-pillar-devices: #7dd3fc;
-    --color-pillar-network: #5eead4;
-    --color-pillar-applications: #f0abfc;
-    --color-pillar-data: #a3e635;
-    --color-pillar-visibility: #fcd34d;
-  }
+  --font-display: var(--font-grotesk), var(--font-inter), ui-sans-serif, sans-serif;
+  --font-mono: var(--font-mono-jb), ui-monospace, SFMono-Regular, Menlo, monospace;
 }

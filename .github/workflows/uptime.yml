@@ -1,6 +1,6 @@
 name: Uptime
 
-# Hourly check of the live guide pages and the Ask AI (scripts/uptime-check.sh).
+# Hourly check of the live agent pages and the AI workflow planner (scripts/uptime-check.sh).
 # A failed run makes GitHub email the repository owner. About 1 Actions minute per run.
 on:
   schedule:
@@ -20,5 +20,5 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Check site and Ask AI
+      - name: Check site and workflow planner
         run: bash scripts/uptime-check.sh https://wyrm-it.vercel.app

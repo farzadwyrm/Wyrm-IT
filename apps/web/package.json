@@ -12,9 +12,8 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@wyrm/agents": "workspace:*",
     "@wyrm/ai": "workspace:*",
-    "@wyrm/assessment": "workspace:*",
-    "@wyrm/guide": "workspace:*",
     "@wyrm/receptionist": "workspace:*",
     "@wyrm/ui": "workspace:*",
     "next": "16.4.0",

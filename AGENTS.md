@@ -1,6 +1,7 @@
 # Wyrm IT — agent guide
 
-AI solutions company for small and medium businesses. This repo holds the website, AI demos and
+AI agents company: we design, deploy and run AI agents and workflows for small and medium
+businesses. This repo holds the website, agent demos and
 (later) the client portal. Read this map first, then only the files your task needs.
 
 ## Map
@@ -10,7 +11,8 @@ AI solutions company for small and medium businesses. This repo holds the websit
 - `docs/context/DECISIONS.md`: decisions already made; do not re-argue them without new facts.
 - `docs/business/`: offer, roadmap, ideal client. Read these before writing site copy.
 - `docs/adr/`: one file per architecture decision.
-- Nested guides: `apps/web/AGENTS.md`, `packages/ai/AGENTS.md`, `packages/assessment/AGENTS.md`.
+- Nested guides: `apps/web/AGENTS.md`, `packages/ai/AGENTS.md`, `packages/agents/AGENTS.md`,
+  `packages/receptionist/AGENTS.md`.
 
 ## Commands (run from repo root)
 

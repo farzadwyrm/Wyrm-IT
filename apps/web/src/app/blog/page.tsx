@@ -6,7 +6,8 @@ import { sortedPosts } from "@/lib/posts";
 
 export const metadata: Metadata = {
   title: "Blog",
-  description: "Practical, plain-language articles on AI and IT for small and medium businesses.",
+  description:
+    "Practical articles on AI agents and workflow automation for small and medium businesses.",
 };
 
 export default function BlogIndexPage() {
@@ -14,9 +15,9 @@ export default function BlogIndexPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Blog"
-        title="Practical AI, explained plainly"
-        intro="Short articles for business owners and office managers. No hype, no jargon."
+        eyebrow="blog"
+        title="Notes on building AI agents"
+        intro="Short, practical articles on deploying agents in real businesses. No hype."
       />
       <Container className="pb-8">
         <ul className="divide-y divide-line border-y border-line">
