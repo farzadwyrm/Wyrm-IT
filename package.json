@@ -16,7 +16,8 @@
     "verify": "node scripts/check-harness.mjs && biome check . && turbo run typecheck test build e2e",
     "verify:fast": "node scripts/check-harness.mjs && biome check . && turbo run typecheck test",
     "e2e": "turbo run e2e",
-    "eval": "pnpm --filter @wyrm/ai eval"
+    "eval": "pnpm --filter @wyrm/ai eval",
+    "dev:portal": "turbo run dev --filter=@wyrm/portal"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

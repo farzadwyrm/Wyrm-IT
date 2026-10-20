@@ -1,0 +1,50 @@
+@import "tailwindcss";
+@import "@wyrm/ui/theme.css";
+
+@source "../../../../packages/ui/src";
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-paper);
+  /* Faint engineering grid with a violet glow at the top. */
+  background-image:
+    radial-gradient(60rem 30rem at 50% -10rem, rgb(139 124 255 / 0.16), transparent 70%),
+    linear-gradient(to right, rgb(255 255 255 / 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+  background-size:
+    auto,
+    48px 48px,
+    48px 48px;
+  background-attachment: scroll;
+  color: var(--color-ink);
+}
+
+/* A dot travelling along workflow connectors. Off when the visitor prefers less motion. */
+@keyframes flow {
+  from {
+    transform: translateY(-4px);
+    opacity: 0;
+  }
+  20%,
+  80% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(var(--flow-distance, 28px));
+    opacity: 0;
+  }
+}
+
+.flow-dot {
+  animation: flow 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-dot {
+    animation: none;
+    opacity: 0;
+  }
+}

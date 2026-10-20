@@ -7,14 +7,14 @@ A pnpm + Turborepo monorepo. Apps are deployable; packages are shared, framework
 ```
 apps/
   web/              Next.js 16 site: agent catalogue, workflow planner, live agent demos (Vercel)
-  portal/           (planned, docs/plans/customer-portal.md) invite-only client app at app.<domain>
+  portal/           invite-only client portal (Supabase Auth + Postgres); plan: docs/plans/customer-portal.md
 packages/
   config/           shared TypeScript presets
   ui/               brand tokens (Tailwind v4 theme) + shared React components
   agents/           agent catalogue + workflow model (pure: matching, validation)
   receptionist/     rule-based receptionist engine for the voice-agent demo (pure)
   ai/               model ids, demo guard, Claude/Groq chains: receptionist, workflow planner
-  db/               (planned, Phase 2) Drizzle schema + migrations for Supabase Postgres
+  db/               portal database: SQL migrations with row-level security, Drizzle types, RLS tests
 evals/              fixed scenarios that every AI demo must pass
 scripts/            repo tooling (harness check)
 docs/               context, decisions, business docs

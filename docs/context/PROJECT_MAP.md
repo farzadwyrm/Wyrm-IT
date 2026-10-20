@@ -10,6 +10,10 @@ Last updated: 2026-10-20
   about, contact, blog. Dark technical design (`packages/ui/src/theme.css`). Removed: scan,
   IT guide, `packages/assessment`, readiness report. Older bullets below mentioning the scan or
   guide are history only.
+- 2026-10-21 Portal P0 built locally (ADR 0009): `apps/portal` (magic-link sign-in, invite-only,
+  proxy + data access layer, dashboard, admin "create client + invite owner") and `packages/db`
+  (migration with row-level security, 9 PGlite isolation tests). NOT connected yet: needs the
+  owner's Supabase project, keys in `apps/portal/.env.local`, steps in docs/plans/portal-setup.md.
 - 2026-10-21 Receptionist template (ADR 0008): one `BusinessProfile` file per client in
   `packages/receptionist/src/clients/` drives engine, AI prompts/tools and UI;
   `/receptionist/[client]`; guide `docs/business/NEW_CLIENT.md`. Next for real clients:

@@ -1,0 +1,13 @@
+# packages/db
+
+Database for the customer portal (Supabase Postgres). Plan: docs/plans/customer-portal.md.
+
+- `migrations/*.sql`: the source of truth, including row-level security (RLS) policies. Run in
+  order in the Supabase SQL editor. Never edit an applied migration; add a new file.
+- `src/schema.ts`: typed Drizzle view of the same tables; keep in sync with the SQL.
+- `src/rls.test.ts`: runs the migrations in an in-memory Postgres (PGlite) with a stand-in for
+  Supabase's `auth` schema and proves tenant isolation. Every new table gets `org_id`, RLS
+  enabled, policies, and a test here.
+
+Rules: no customer data, secrets or real emails in migrations or tests; signed-out visitors
+see nothing; only Wyrm admins create organisations and agents.
