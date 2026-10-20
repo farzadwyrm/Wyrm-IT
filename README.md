@@ -1,4 +1,4 @@
-# Wyrm IT
+# Wyrm AI
 
 Practical AI for small and medium businesses: an IT and AI readiness assessment, then AI
 assistants (receptionist, ask-your-documents, workflow automation) built and run for the client.

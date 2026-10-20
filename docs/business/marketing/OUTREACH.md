@@ -75,7 +75,7 @@ Stop immediately if someone asks you to. Never more than 3 touches without a rep
 
 > Thanks for connecting, [Name].
 >
-> Quick context: I run Wyrm IT. We help small businesses check their IT basics and then add one practical AI assistant, often an AI receptionist that answers routine calls and books appointments, always with the team in control.
+> Quick context: I run Wyrm AI. We help small businesses check their IT basics and then add one practical AI assistant, often an AI receptionist that answers routine calls and books appointments, always with the team in control.
 >
 > I noticed [observation]. If that costs [Business] calls or time, I'd be glad to show you a 5-minute demo built for a (fictional) clinic: [receptionist link]
 >
@@ -97,7 +97,7 @@ Stop immediately if someone asks you to. Never more than 3 touches without a rep
 > Would a 20-minute call next week be useful? If not, reply "no thanks" and I won't write again.
 >
 > [Your name]
-> Wyrm IT · [website] · [phone]
+> Wyrm AI · [website] · [phone]
 
 ### Follow-up 1 (day 3)
 

@@ -5,7 +5,7 @@ import { PRINCIPLES } from "@/lib/site";
 export const metadata: Metadata = {
   title: "About",
   description:
-    "Wyrm IT is an engineering-led company that designs, deploys and runs AI agents for small and medium businesses.",
+    "Wyrm AI is an engineering-led company that designs, deploys and runs AI agents for small and medium businesses.",
 };
 
 export default function AboutPage() {
@@ -14,7 +14,7 @@ export default function AboutPage() {
       <PageHeader
         eyebrow="about"
         title="Engineers who build agents, deploy them and keep them running"
-        intro="Wyrm IT was started by an infrastructure and software engineer who saw the same pattern again and again: teams buried in repetitive work an AI agent could do, and nobody to design, build and run that agent safely."
+        intro="Wyrm AI was started by an infrastructure and software engineer who saw the same pattern again and again: teams buried in repetitive work an AI agent could do, and nobody to design, build and run that agent safely."
       />
 
       <Container className="grid gap-12 pb-8 md:grid-cols-[3fr_2fr]">

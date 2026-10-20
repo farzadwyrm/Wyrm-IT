@@ -11,10 +11,10 @@ function siteUrl(): string {
 }
 
 export const SITE = {
-  name: "Wyrm IT",
+  name: "Wyrm AI",
   tagline: "AI agents that run your workflows",
   description:
-    "Wyrm IT designs, deploys and runs AI agents for small and medium businesses: voice, inbox, sales, support and back-office agents with human checks and full audit trails.",
+    "Wyrm AI designs, deploys and runs AI agents for small and medium businesses: voice, inbox, sales, support and back-office agents with human checks and full audit trails.",
   /** Public address: explicit setting first, then Vercel's production domain, then local dev. */
   url: siteUrl(),
   /** Cal.com / Calendly link. When unset, the site shows "booking opens soon" instead of a dead link. */

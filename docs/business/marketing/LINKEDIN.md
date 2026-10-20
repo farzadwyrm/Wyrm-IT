@@ -1,6 +1,6 @@
 # LinkedIn: profile setup and first six posts
 
-Goal for the first two weeks: people in your network know what Wyrm IT does, and a few of them
+Goal for the first two weeks: people in your network know what Wyrm AI does, and a few of them
 try the free scan or the receptionist demo. Three posts a week (Tue, Wed, Thu mornings work for
 most B2B audiences; test your own).
 
@@ -17,13 +17,13 @@ most B2B audiences; test your own).
 
 ## Before the first post (one evening)
 
-1. **Headline:** `Engineer building practical AI for small businesses | Founder, Wyrm IT`
+1. **Headline:** `Engineer building practical AI for small businesses | Founder, Wyrm AI`
 2. **About:** 3 short paragraphs: who you help (small and medium businesses), the problem (they
    want AI but their IT basics are not ready, and they have no one to ask), what you do (check
    the basics, then build AI assistants that save hours). End with: "Try the free AI-Readiness Scan:
    wyrm-it.vercel.app/scan".
 3. **Featured section:** add the scan and the receptionist demo links.
-4. **Create a Wyrm IT company page** (logo = the wyrm mark from the website).
+4. **Create a Wyrm AI company page** (logo = the wyrm mark from the website).
 5. **Banner:** one line on a dark background: "Practical AI, on IT foundations you can trust."
 6. **Fix the website's booking first** (see `OUTREACH.md`, step 0): every post sends people there.
 
@@ -43,7 +43,7 @@ most B2B audiences; test your own).
 >
 > Big companies have teams for that. Small businesses usually have one busy person who "knows computers".
 >
-> So I've started Wyrm IT.
+> So I've started Wyrm AI.
 >
 > The idea is simple:
 > 1. First, check the basics: who can log in to what, where your data lives, whether backups would really work.
@@ -128,7 +128,7 @@ as a document post.
 - Slide 5: **Backups you have actually restored.** Untested backups fail exactly when you need them.
 - Slide 6: **Know where your data lives.** You can't safely give AI access to data you haven't found.
 - Slide 7: **A simple AI rule for staff.** Which tools are approved, and what never gets pasted in.
-- Final slide: "Score yourself in 4 minutes: free scan, link in comments. Wyrm IT"
+- Final slide: "Score yourself in 4 minutes: free scan, link in comments. Wyrm AI"
 
 Post text:
 

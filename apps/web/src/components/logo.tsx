@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SITE } from "@/lib/site";
 
-/** Wyrm IT mark: a single serpent stroke forming a "W", with an ember eye. */
+/** Wyrm AI mark: a single serpent stroke forming a "W", with an ember eye. */
 export function LogoMark({ className = "size-8" }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 32" className={className} aria-hidden="true" focusable="false">

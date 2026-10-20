@@ -6,7 +6,7 @@ import { SITE } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Book a call",
   description:
-    "Book a free 30-minute call with Wyrm IT to find where AI would save your business the most time.",
+    "Book a free 30-minute call with Wyrm AI to find where AI would save your business the most time.",
 };
 
 const STEPS = [

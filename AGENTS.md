@@ -1,4 +1,4 @@
-# Wyrm IT — agent guide
+# Wyrm AI — agent guide
 
 AI agents company: we design, deploy and run AI agents and workflows for small and medium
 businesses. This repo holds the website, agent demos and
@@ -28,7 +28,7 @@ businesses. This repo holds the website, agent demos and
   `.env.example` with an empty value.
 - Demos use fictional businesses and people only. No real client names or data anywhere.
 - Every public AI endpoint goes through `@wyrm/ai`'s demo guard (rate limit and spend cap).
-- Never copy text from third-party documents into the product; rewrite in Wyrm IT's words.
+- Never copy text from third-party documents into the product; rewrite in Wyrm AI's words.
 - Do not weaken or delete a test or check to make it pass. Fix the cause.
 - Local changes are not deployed changes. Say which one you mean.
 
