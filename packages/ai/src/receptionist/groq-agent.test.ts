@@ -478,14 +478,14 @@ describe("token savings", () => {
     expect(messages[1]?.content).toBe("hi");
   });
 
-  it("compacts tool results to plain times", () => {
+  it("compacts tool results to spoken times with the tool value", () => {
     const full = executeTool(
       "check_availability",
       { service_id: "checkup", day: THURSDAY, part_of_day: "any" },
       { now: NOW, bookings: [], pendingFromEarlierTurn: null, latestVisitorMessage: "" },
     ).content;
     const slim = compactToolResult(full);
-    expect(slim.length).toBeLessThan(full.length / 2);
-    expect(JSON.parse(slim).free_times[0]).toMatch(/^\d{2}:\d{2}$/);
+    expect(slim.length).toBeLessThan(full.length);
+    expect(JSON.parse(slim).free_times[0]).toMatch(/^\d{1,2}(:\d{2})? (am|pm) \[\d{2}:\d{2}\]$/);
   });
 });

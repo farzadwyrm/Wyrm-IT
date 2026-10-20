@@ -52,7 +52,7 @@ GitHub CI confirmed green by the owner on commit 678002e; later runs not checked
 - RESUME HERE (2026-10-20): token savings shipped (ADR 0005 "Token use"): instant code answers
   for plain FAQs (provider "instant", no AI call), fixed system prompt + append-only history with
   the booking state in the last user message (Groq prefix caching; cached tokens skip rate limits),
-  compact tool results, `max_completion_tokens` 600, `groq <model> tokens: in/out` logs. Verified by
+  compact tool results ("4 pm [16:00]": spoken label + tool value), `max_completion_tokens` 600, `groq <model> tokens: in/out` logs. Verified by
   unit tests only. Next: paced live voice test, read Vercel logs for token counts; then `pnpm eval`.
 - Old Groq key pasted in chat on 2026-10-19 must be deleted in the Groq console (owner).
 

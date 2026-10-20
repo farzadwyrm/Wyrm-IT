@@ -40,6 +40,6 @@ Groq's free tier allows 8K tokens/min per model, so every turn is kept small:
   volatile booking state (time, calendar, pending proposal) is put in the latest user message. Groq
   caches exact prefixes automatically and cached tokens do not count toward rate limits.
 - **Compact everything for Groq:** short prompt and tool descriptions, 10-day calendar, last 24
-  messages, tool results reduced to plain times, `max_completion_tokens` 600.
+  messages, tool results reduced to "4 pm [16:00]" (words to say, value for tools), `max_completion_tokens` 600.
 - **Measure.** Each call logs `groq <model> tokens: in N out M` (no conversation content).
 
