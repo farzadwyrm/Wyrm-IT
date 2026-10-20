@@ -35,6 +35,9 @@ Last updated: 2026-10-20
   1-4), `/guide` and `/guide/[slug]` static pages, home page redesign around it, Ask AI panel
   (`components/guide/ask-panel.tsx`) via `POST /api/ask` (`packages/ai/src/guide-ask.ts`):
   instant guide answers, then Claude/Groq with only the matched area's notes, then guide fallback.
+- Uptime: `.github/workflows/uptime.yml` runs `scripts/uptime-check.sh` hourly (home, guide
+  pages, instant and AI answers; each under 10 s). A failed run emails the owner. Provider
+  "guide" on the AI question means the AI is down, rate-limited or the key is missing.
 
 ## Live
 
