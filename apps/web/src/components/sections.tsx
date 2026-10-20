@@ -88,8 +88,8 @@ export function CtaBand() {
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <ButtonLink href="/contact">Book a free call</ButtonLink>
-          <ButtonLink href="/planner" variant="secondary">
-            Design a workflow now
+          <ButtonLink href="/analyse" variant="secondary">
+            Analyse a workflow now
           </ButtonLink>
         </div>
       </div>

@@ -9,8 +9,8 @@
 export const MODELS = {
   /** The website's AI receptionist demo. */
   receptionist: "claude-haiku-5-5",
-  /** The AI workflow planner: designs an agent workflow from a visitor's task. */
-  planner: "claude-haiku-5-5",
+  /** Workflow analyser: drafts process steps from an owner's walk-through. */
+  analyser: "claude-haiku-5-5",
 } as const;
 
 export type ModelRole = keyof typeof MODELS;

@@ -30,7 +30,7 @@ export const POSTS: readonly Post[] = [
       "Decide up front which steps the agent may complete alone and which need a human check. Money, refunds, legal wording and unhappy customers should start with approval.",
       "## 5. How will we know it works?",
       "Choose a few numbers before you start: calls answered, time to first reply, invoices processed, hours saved. Test the agent on real past cases before go-live, then measure every month.",
-      "If you can answer all five, you are ready for a first agent. Try describing your workflow in our AI workflow planner to see what it could look like.",
+      "If you can answer all five, you are ready for a first agent. Our free workflow analysis walks you through all five in about seven minutes.",
     ],
   },
 ];

@@ -95,8 +95,8 @@ export default async function AgentPage({ params }: PageProps<"/agents/[slug]">)
       <Container>
         <p className="text-ink-muted">
           Your process is different?{" "}
-          <Link href="/planner" className="font-semibold text-ember hover:text-ember-strong">
-            Describe it and let the AI design your workflow →
+          <Link href="/analyse" className="font-semibold text-ember hover:text-ember-strong">
+            Analyse your own workflow step by step →
           </Link>
         </p>
       </Container>

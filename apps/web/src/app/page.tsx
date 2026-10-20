@@ -58,18 +58,18 @@ export default function HomePage() {
             what matters.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink href="/planner">Design your workflow</ButtonLink>
+            <ButtonLink href="/analyse">Analyse a workflow</ButtonLink>
             <ButtonLink href="/agents" variant="secondary">
               See the agents
             </ButtonLink>
           </div>
           <search className="mt-8 max-w-xl">
             <form
-              action="/planner"
+              action="/analyse"
               className="flex gap-2 rounded-xl border border-line bg-paper-raised/80 p-1.5 focus-within:border-ember/60"
             >
               <label htmlFor="hero-task" className="sr-only">
-                Describe a task to automate
+                Name a task to analyse
               </label>
               <span aria-hidden="true" className="self-center pl-2 font-mono text-sm text-signal">
                 &gt;
@@ -78,14 +78,14 @@ export default function HomePage() {
                 id="hero-task"
                 name="q"
                 maxLength={600}
-                placeholder="We type supplier invoices into Xero every Monday…"
+                placeholder="e.g. Entering supplier invoices into Xero"
                 className="min-w-0 flex-1 bg-transparent px-1 py-2 outline-none placeholder:text-ink-muted/60"
               />
               <button
                 type="submit"
                 className="rounded-lg bg-ember/15 px-3 py-2 text-sm font-semibold text-ember-strong hover:bg-ember/25"
               >
-                Design
+                Analyse
               </button>
             </form>
           </search>

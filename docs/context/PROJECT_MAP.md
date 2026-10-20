@@ -10,6 +10,9 @@ Last updated: 2026-10-20
   about, contact, blog. Dark technical design (`packages/ui/src/theme.css`). Removed: scan,
   IT guide, `packages/assessment`, readiness report. Older bullets below mentioning the scan or
   guide are history only.
+- 2026-10-20 Workflow analysis (ADR 0007) replaces the planner: `/analyse` interview → step
+  drafting (`/api/analyse/steps`) → deterministic scoring, risk tiers, agent design and savings
+  range in `packages/agents/src/analysis/`. Research: `docs/research/`.
 
 - Phase 0 scaffold: monorepo, harness docs, CI, Claude Code hooks.
 - `packages/assessment`: 12 starter questions across 7 pillars; scoring with tests.
@@ -39,8 +42,8 @@ Last updated: 2026-10-20
   no dead booking link. Included in `pnpm verify` and CI.
 
 - Uptime: `.github/workflows/uptime.yml` runs `scripts/uptime-check.sh` hourly (home, agent
-  pages, planner, receptionist; template and AI plans; each under 10 s). A failed run emails the owner. Provider
-  "guide" on the AI plan means the AI is down, rate-limited or the key is missing.
+  pages, analyser, receptionist; AI step drafting; each under 10 s). A failed run emails the owner. Provider
+  "text" on the AI step drafting means the AI is down, rate-limited or the key is missing.
 
 ## Live
 

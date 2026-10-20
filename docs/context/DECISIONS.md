@@ -19,3 +19,4 @@ Short record of settled decisions. Details live in `docs/adr/`.
 | 2026-10-19 | Free smart AI: Groq free tier (gpt-oss-120b, qwen3.8-27b, gpt-oss-20b) as fallback chain after Claude, before the basic receptionist | 0005 |
 | 2026-10-19 | Legal setup (company, contracts, GDPR paperwork) deferred until first client commits | — |
 | 2026-10-20 | Pivot: Wyrm is an AI agents company. Removed the IT guide, readiness scan and assessment package; site is agent catalogue + AI workflow planner + live voice agent; dark technical design | 0006 |
+| 2026-10-20 | Workflow analysis method: interview (mini-PDD) + one AI drafting call + deterministic per-step scoring capped by risk tier; savings as ranges with visible assumptions | 0007 |

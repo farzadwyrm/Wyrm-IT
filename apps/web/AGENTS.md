@@ -19,9 +19,9 @@ conventions, file structure). Before writing Next.js code, read the relevant gui
   never real speech services. The call visual must never be the only carrier of state.
 - Tests never call paid AI APIs: Playwright starts the server with `ANTHROPIC_API_KEY` and `GROQ_API_KEY` empty,
   and unit tests pass a fake client. Keep it that way.
-- Agent pages (`/agents`) and the planner read agent content only from `@wyrm/agents`; never
-  write agent copy in components. The planner must always show something useful (standard
-  workflow fallback) even with no AI key.
+- Agent pages (`/agents`) and the workflow analyser (`/analyse`) read content and scoring only
+  from `@wyrm/agents`; never score or write agent copy in components. The analyser must work
+  with no AI key (text-based step drafting) and keep answers in the browser.
 - Pages must work at 375px width with no horizontal scroll.
 - Every new page goes in `STATIC_ROUTES` (`src/lib/site.ts`) so the sitemap and the
   Playwright smoke tests in `e2e/` cover it automatically.

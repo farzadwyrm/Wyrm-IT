@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Uptime check for the live site: agent pages and the AI workflow planner. Free: runs from GitHub Actions
+# Uptime check for the live site: agent pages and the workflow analyser. Free: runs from GitHub Actions
 # (.github/workflows/uptime.yml) or locally: `bash scripts/uptime-check.sh [base-url]`.
 # Uses fictional questions only. Fails (exit 1) on any problem, so GitHub emails the owner.
 set -uo pipefail
@@ -22,7 +22,7 @@ check_page() {
 # plan <name> <json> <expected providers regex>
 plan() {
   local name="$1" body="$2" want="$3" resp secs json status provider
-  resp=$(curl -s -w "\n%{time_total}" --max-time 30 -X POST "$BASE/api/plan" \
+  resp=$(curl -s -w "\n%{time_total}" --max-time 30 -X POST "$BASE/api/analyse/steps" \
     -H "content-type: application/json" -d "$body") || { fail "plan $name: no response"; return; }
   secs=$(tail -n1 <<<"$resp")
   json=$(sed '$d' <<<"$resp")
@@ -38,13 +38,11 @@ plan() {
 check_page /
 check_page /agents
 check_page /agents/voice-agent
-check_page /planner
+check_page /analyse
 check_page /receptionist
 
-# A standard workflow, no AI: must always work, even with no AI key.
-plan template '{"task":"answer our phones"}' '^template$'
-# Needs the AI: "guide" means the AI is down, rate-limited or the key is missing.
-plan ai '{"task":"Customers email us photos of damaged parcels and we fill in a claim form for each one by hand"}' '^(groq|claude)$'
+# Needs the AI: "text" means the AI is down, rate-limited or the key is missing.
+plan ai '{"walkthrough":"A customer emails photos of a damaged parcel. I check the order in Shopify. I fill in the carrier claim form. I email the customer a reference.","outcome":"Claim filed","trigger":"An email arrives"}' '^(groq|claude)$'
 
 if [ "$failures" -gt 0 ]; then echo "$failures check(s) failed for $BASE"; exit 1; fi
 echo "All checks passed for $BASE"

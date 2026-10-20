@@ -56,8 +56,8 @@ export default function ServicesPage() {
                 </div>
               </div>
               {offer.slug === "workflow-sprint" && (
-                <ButtonLink href="/planner" className="mt-8" variant="secondary">
-                  Sketch a workflow with the AI planner
+                <ButtonLink href="/analyse" className="mt-8" variant="secondary">
+                  Try the free workflow analysis
                 </ButtonLink>
               )}
             </li>

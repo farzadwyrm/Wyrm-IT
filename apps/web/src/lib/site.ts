@@ -25,7 +25,7 @@ export const SITE = {
 
 export const NAV = [
   { href: "/agents", label: "Agents" },
-  { href: "/planner", label: "Workflow planner" },
+  { href: "/analyse", label: "Workflow analysis" },
   { href: "/receptionist", label: "Live demo" },
   { href: "/services", label: "Services" },
   { href: "/about", label: "About" },
@@ -101,11 +101,12 @@ export const DEMOS: readonly Demo[] = [
     href: "/receptionist",
   },
   {
-    slug: "workflow-planner",
-    name: "Workflow planner",
-    summary: "Describe a task your team does by hand. The AI designs the agent workflow for it.",
+    slug: "workflow-analysis",
+    name: "Workflow analysis",
+    summary:
+      "Map one workflow in about seven minutes and see which steps an agent should take over.",
     status: "live",
-    href: "/planner",
+    href: "/analyse",
   },
   {
     slug: "knowledge-agent",
@@ -163,7 +164,7 @@ export const PRINCIPLES = [
 export const STATIC_ROUTES = [
   "/",
   "/agents",
-  "/planner",
+  "/analyse",
   "/receptionist",
   "/services",
   "/about",
