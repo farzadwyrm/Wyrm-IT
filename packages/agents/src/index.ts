@@ -25,7 +25,7 @@ export {
   type Tier,
 } from "./analysis/score";
 export type * from "./analysis/types";
-export { AGENTS, type Agent, getAgent } from "./catalogue";
+export { AGENTS, type Agent, type AgentCategory, CATEGORIES, getAgent } from "./catalogue";
 export { isTemplateTask, matchAgent } from "./match";
 export {
   extractJson,

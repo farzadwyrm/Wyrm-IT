@@ -1,7 +1,24 @@
+import { MORE_AGENTS } from "./more-agents";
 import type { Workflow } from "./workflow";
+
+export type AgentCategory = "customers" | "sales" | "operations" | "finance" | "team";
+
+/** Business areas, in display order. */
+export const CATEGORIES: { id: AgentCategory; name: string; intro: string }[] = [
+  {
+    id: "customers",
+    name: "Customers",
+    intro: "Answer, book and look after customers around the clock.",
+  },
+  { id: "sales", name: "Sales", intro: "Reply to leads fast, quote accurately and follow up." },
+  { id: "operations", name: "Operations", intro: "Keep inboxes, schedules and orders moving." },
+  { id: "finance", name: "Finance", intro: "Process invoices and get paid on time." },
+  { id: "team", name: "Your team", intro: "Give everyone answers, notes and numbers in seconds." },
+];
 
 export interface Agent {
   slug: string;
+  category: AgentCategory;
   name: string;
   /** One line for cards. */
   tagline: string;
@@ -18,9 +35,10 @@ export interface Agent {
   demo?: { href: string; label: string };
 }
 
-export const AGENTS: Agent[] = [
+const CORE_AGENTS: Agent[] = [
   {
     slug: "voice-agent",
+    category: "customers",
     name: "Voice agent",
     tagline: "Answers every call, books appointments and hands off what needs a person.",
     summary:
@@ -91,6 +109,7 @@ export const AGENTS: Agent[] = [
   },
   {
     slug: "inbox-agent",
+    category: "operations",
     name: "Inbox agent",
     tagline: "Reads, sorts and drafts replies to your email so your team only approves.",
     summary:
@@ -159,6 +178,7 @@ export const AGENTS: Agent[] = [
   },
   {
     slug: "knowledge-agent",
+    category: "team",
     name: "Knowledge agent",
     tagline: "Answers questions from your documents, with the source for every answer.",
     summary:
@@ -226,6 +246,7 @@ export const AGENTS: Agent[] = [
   },
   {
     slug: "sales-agent",
+    category: "sales",
     name: "Sales agent",
     tagline: "Qualifies new leads in minutes, follows up and books the meeting.",
     summary:
@@ -273,13 +294,12 @@ export const AGENTS: Agent[] = [
       "salesforce",
       "follow up",
       "follow-up",
-      "quotes",
-      "quote",
       "deals",
     ],
   },
   {
     slug: "back-office-agent",
+    category: "finance",
     name: "Back-office agent",
     tagline: "Moves data between systems: invoices, orders, receipts and reports.",
     summary:
@@ -343,6 +363,7 @@ export const AGENTS: Agent[] = [
   },
   {
     slug: "support-agent",
+    category: "customers",
     name: "Support agent",
     tagline: "Resolves customer questions in chat and WhatsApp, escalates the rest.",
     summary:
@@ -396,6 +417,8 @@ export const AGENTS: Agent[] = [
     ],
   },
 ];
+
+export const AGENTS: Agent[] = [...CORE_AGENTS, ...MORE_AGENTS];
 
 export function getAgent(slug: string): Agent | undefined {
   return AGENTS.find((a) => a.slug === slug);

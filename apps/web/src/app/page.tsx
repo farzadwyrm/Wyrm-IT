@@ -141,11 +141,11 @@ export default function HomePage() {
               title="Agents for the work that eats your week"
             />
             <Link href="/agents" className="font-mono text-sm text-ember hover:text-ember-strong">
-              all agents →
+              all {AGENTS.length} agents →
             </Link>
           </div>
           <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {AGENTS.map((agent, i) => (
+            {AGENTS.slice(0, 6).map((agent, i) => (
               <li key={agent.slug}>
                 <AgentCard agent={agent} index={i} />
               </li>

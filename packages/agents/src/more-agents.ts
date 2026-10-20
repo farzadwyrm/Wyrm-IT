@@ -1,0 +1,366 @@
+import type { Agent } from "./catalogue";
+
+/** Further catalogue agents. Same rules: a human check, 3+ guardrails, measures not promises. */
+export const MORE_AGENTS: Agent[] = [
+  {
+    slug: "quote-agent",
+    category: "sales",
+    name: "Quote agent",
+    tagline: "Turns enquiries into accurate quotes from your price list, ready to send.",
+    summary:
+      "A quoting agent that reads each enquiry, asks for any missing details, calculates the price from your own price list and rules, and drafts a professional quote for you to approve.",
+    capabilities: [
+      "Reads enquiries from email, forms and photos",
+      "Asks the customer for missing measurements or details",
+      "Prices from your list, rules and minimums",
+      "Drafts the quote in your template",
+    ],
+    workflow: {
+      title: "Enquiry to approved quote",
+      steps: [
+        {
+          kind: "trigger",
+          label: "Quote request arrives",
+          detail: "Website form, email or WhatsApp.",
+        },
+        {
+          kind: "agent",
+          label: "Collect the details",
+          detail: "Asks for anything missing, one question at a time.",
+        },
+        {
+          kind: "tool",
+          label: "Price it",
+          detail: "From your price list and rules, never guessed.",
+        },
+        {
+          kind: "agent",
+          label: "Draft the quote",
+          detail: "In your template, with clear line items.",
+        },
+        { kind: "human", label: "You approve", detail: "Edit or approve with one click." },
+        {
+          kind: "output",
+          label: "Quote sent",
+          detail: "And logged in your CRM with a follow-up date.",
+        },
+      ],
+      integrations: ["Gmail", "Outlook", "Google Sheets", "HubSpot", "Xero"],
+      guardrails: [
+        "Never sends a quote without your approval at first",
+        "No discounts outside your rules",
+        "Flags jobs it cannot price instead of guessing",
+      ],
+    },
+    measures: ["Time to quote", "Quotes sent", "Quotes won", "Edits before sending"],
+    keywords: [
+      "quote",
+      "quotes",
+      "quoting",
+      "estimate",
+      "estimates",
+      "price list",
+      "pricing",
+      "proposal",
+      "proposals",
+    ],
+  },
+  {
+    slug: "payment-reminder-agent",
+    category: "finance",
+    name: "Payment reminder agent",
+    tagline: "Chases overdue invoices politely, so you get paid without the awkward calls.",
+    summary:
+      "A collections agent that watches your unpaid invoices, sends friendly reminders at the right moments, answers simple questions about the invoice and hands disputes to you.",
+    capabilities: [
+      "Watches due dates in your accounting software",
+      "Sends polite, escalating reminders in your tone",
+      'Answers "can you resend the invoice?" style questions',
+      "Spots disputes and passes them to a person",
+    ],
+    workflow: {
+      title: "Overdue invoice to payment",
+      steps: [
+        { kind: "trigger", label: "Invoice becomes overdue", detail: "Checked every morning." },
+        { kind: "tool", label: "Check the account", detail: "Payments, credit notes and history." },
+        {
+          kind: "agent",
+          label: "Write the reminder",
+          detail: "Friendly first, firmer later, always polite.",
+        },
+        { kind: "human", label: "Disputes go to you", detail: "Anything contested or unusual." },
+        {
+          kind: "output",
+          label: "Paid and reconciled",
+          detail: "Marked paid when the money arrives.",
+        },
+      ],
+      integrations: ["Xero", "QuickBooks", "Exact", "Gmail", "Stripe"],
+      guardrails: [
+        "Never threatens, charges fees or writes off debt on its own",
+        "Stops as soon as a customer disputes or asks to talk",
+        "Follows your reminder schedule and tone",
+      ],
+    },
+    measures: ["Days to get paid", "Overdue amount", "Reminders sent", "Disputes handed over"],
+    keywords: [
+      "overdue",
+      "unpaid",
+      "reminder",
+      "reminders",
+      "collections",
+      "late payment",
+      "late payments",
+      "chasing payment",
+      "debtors",
+      "outstanding",
+    ],
+  },
+  {
+    slug: "scheduling-agent",
+    category: "operations",
+    name: "Scheduling agent",
+    tagline: "Plans jobs, books visits and keeps customers and staff updated.",
+    summary:
+      "A scheduling agent for service businesses that books jobs into the right person's calendar, plans sensible routes, confirms with the customer and reshuffles the day when something changes.",
+    capabilities: [
+      "Books jobs by skill, location and availability",
+      "Confirms and reminds customers automatically",
+      "Reschedules when someone is ill or running late",
+      "Keeps staff calendars up to date",
+    ],
+    workflow: {
+      title: "Job request to scheduled visit",
+      steps: [
+        {
+          kind: "trigger",
+          label: "Job requested",
+          detail: "Call, form, email or your booking page.",
+        },
+        {
+          kind: "agent",
+          label: "Understand the job",
+          detail: "Type, location, urgency and duration.",
+        },
+        {
+          kind: "tool",
+          label: "Find the best slot",
+          detail: "Right skills, nearby, free in the calendar.",
+        },
+        {
+          kind: "human",
+          label: "Planner checks changes",
+          detail: "Big reshuffles are approved by a person.",
+        },
+        {
+          kind: "agent",
+          label: "Confirm with the customer",
+          detail: "Time window, reminders and updates.",
+        },
+        {
+          kind: "output",
+          label: "Visit booked",
+          detail: "In the technician's calendar with job notes.",
+        },
+      ],
+      integrations: ["Google Calendar", "Outlook", "Jobber", "ServiceM8", "WhatsApp"],
+      guardrails: [
+        "Never double-books or overrides a person's time off",
+        "Urgent and safety jobs are flagged to a person immediately",
+        "Customers can always reach a human",
+      ],
+    },
+    measures: ["Jobs scheduled", "Travel time", "No-shows", "Reschedules handled"],
+    keywords: [
+      "schedule",
+      "scheduling",
+      "dispatch",
+      "jobs",
+      "job",
+      "technician",
+      "technicians",
+      "rota",
+      "route",
+      "routes",
+      "visits",
+      "planning",
+    ],
+  },
+  {
+    slug: "reporting-agent",
+    category: "team",
+    name: "Reporting agent",
+    tagline: "Pulls your numbers together every week and explains what changed.",
+    summary:
+      "A reporting agent that collects figures from your tools, builds the weekly or monthly report, explains the changes in plain words and flags anything unusual.",
+    capabilities: [
+      "Collects figures from accounting, sales and booking tools",
+      "Builds the same report every week, on time",
+      "Explains changes in plain language",
+      "Flags unusual numbers for a person to look at",
+    ],
+    workflow: {
+      title: "Weekly numbers to clear report",
+      steps: [
+        { kind: "trigger", label: "Every Monday at 8:00", detail: "Or any schedule you choose." },
+        { kind: "tool", label: "Collect the figures", detail: "From your tools, read-only." },
+        {
+          kind: "agent",
+          label: "Spot the changes",
+          detail: "Compares with last week and last year.",
+        },
+        {
+          kind: "agent",
+          label: "Write the summary",
+          detail: "Plain words, with the numbers behind them.",
+        },
+        {
+          kind: "human",
+          label: "Owner reviews flags",
+          detail: "Unusual figures are checked by a person.",
+        },
+        { kind: "output", label: "Report delivered", detail: "By email, Slack or Teams." },
+      ],
+      integrations: ["Xero", "QuickBooks", "Google Sheets", "HubSpot", "Shopify", "Slack"],
+      guardrails: [
+        "Read-only access to your systems",
+        "Every number links back to its source",
+        "Says when data is missing instead of filling gaps",
+      ],
+    },
+    measures: ["Reports delivered on time", "Hours saved compiling", "Issues flagged early"],
+    keywords: [
+      "report",
+      "reports",
+      "reporting",
+      "kpi",
+      "kpis",
+      "dashboard",
+      "numbers",
+      "figures",
+      "weekly report",
+      "monthly report",
+      "analytics",
+    ],
+  },
+  {
+    slug: "reviews-agent",
+    category: "customers",
+    name: "Reviews agent",
+    tagline: "Replies to every online review and asks happy customers for one.",
+    summary:
+      "A reputation agent that drafts thoughtful replies to Google and other reviews, sends review requests after good experiences and alerts you straight away to unhappy customers.",
+    capabilities: [
+      "Drafts personal replies to every review",
+      "Asks happy customers for a review at the right time",
+      "Alerts you instantly about negative reviews",
+      "Summarises what customers praise and complain about",
+    ],
+    workflow: {
+      title: "New review to thoughtful reply",
+      steps: [
+        {
+          kind: "trigger",
+          label: "New review posted",
+          detail: "Google, Facebook, Trustpilot and more.",
+        },
+        {
+          kind: "agent",
+          label: "Read the review",
+          detail: "Tone, topic and anything that needs action.",
+        },
+        {
+          kind: "agent",
+          label: "Draft the reply",
+          detail: "Personal, in your voice, never generic.",
+        },
+        {
+          kind: "human",
+          label: "Approve negative replies",
+          detail: "Complaints always get your eyes first.",
+        },
+        {
+          kind: "output",
+          label: "Reply published",
+          detail: "Themes added to your monthly summary.",
+        },
+      ],
+      integrations: ["Google Business Profile", "Facebook", "Trustpilot", "Gmail"],
+      guardrails: [
+        "Negative reviews are never answered without approval",
+        "Never offers refunds or compensation on its own",
+        "No customer details beyond what they posted",
+      ],
+    },
+    measures: ["Reviews answered", "Reply time", "New reviews gained", "Average rating"],
+    keywords: [
+      "review",
+      "reviews",
+      "google reviews",
+      "reputation",
+      "rating",
+      "ratings",
+      "trustpilot",
+      "feedback",
+    ],
+  },
+  {
+    slug: "meeting-agent",
+    category: "team",
+    name: "Meeting notes agent",
+    tagline: "Turns calls and meetings into notes, action items and CRM updates.",
+    summary:
+      "A meeting agent that summarises calls and meetings, lists who does what by when, updates your CRM or task board, and reminds people of their actions.",
+    capabilities: [
+      "Summaries of calls and meetings in plain language",
+      "Action items with owners and due dates",
+      "Updates the CRM or project board automatically",
+      "Reminds people before actions are due",
+    ],
+    workflow: {
+      title: "Meeting to actions done",
+      steps: [
+        {
+          kind: "trigger",
+          label: "Meeting ends",
+          detail: "Teams, Zoom, Google Meet or a phone call.",
+        },
+        {
+          kind: "agent",
+          label: "Summarise the meeting",
+          detail: "Decisions, open questions, next steps.",
+        },
+        { kind: "agent", label: "Extract the actions", detail: "Who does what, by when." },
+        {
+          kind: "human",
+          label: "Host checks the notes",
+          detail: "Edit before anything is shared.",
+        },
+        { kind: "tool", label: "Update your tools", detail: "CRM notes, tasks and calendar." },
+        {
+          kind: "output",
+          label: "Everyone has their actions",
+          detail: "With reminders before they're due.",
+        },
+      ],
+      integrations: ["Microsoft Teams", "Zoom", "Google Meet", "HubSpot", "Asana", "Trello"],
+      guardrails: [
+        "Records only with everyone's consent",
+        "Notes are shared only after the host approves them",
+        "Recordings deleted on your schedule",
+      ],
+    },
+    measures: ["Meetings summarised", "Actions completed on time", "Admin time saved"],
+    keywords: [
+      "meeting",
+      "meetings",
+      "notes",
+      "minutes",
+      "action items",
+      "calls notes",
+      "zoom",
+      "summaries",
+      "summarise",
+    ],
+  },
+];

@@ -1,7 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { AGENTS, extractJson, isTemplateTask, matchAgent, parseWorkflow } from "./index";
+import {
+  AGENTS,
+  CATEGORIES,
+  extractJson,
+  isTemplateTask,
+  matchAgent,
+  parseWorkflow,
+} from "./index";
 
 describe("catalogue", () => {
+  it("has twelve agents, each in a known category", () => {
+    expect(AGENTS).toHaveLength(12);
+    for (const agent of AGENTS) expect(CATEGORIES.map((c) => c.id)).toContain(agent.category);
+  });
+
   it("has unique, URL-safe slugs", () => {
     const slugs = AGENTS.map((a) => a.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
@@ -24,6 +36,12 @@ describe("matchAgent", () => {
     ["follow up new leads from our website", "sales-agent"],
     ["typing supplier invoices into Xero", "back-office-agent"],
     ["customers ask about order status on WhatsApp", "support-agent"],
+    ["we write every quote by hand from our price list", "quote-agent"],
+    ["chasing unpaid invoices that are overdue", "payment-reminder-agent"],
+    ["planning which technician visits which job", "scheduling-agent"],
+    ["building the weekly report and KPIs", "reporting-agent"],
+    ["replying to Google reviews", "reviews-agent"],
+    ["writing up meeting notes and action items", "meeting-agent"],
   ])("%j → %s", (task, slug) => {
     expect(matchAgent(task)?.slug).toBe(slug);
   });
