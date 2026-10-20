@@ -7,7 +7,7 @@ A pnpm + Turborepo monorepo. Apps are deployable; packages are shared, framework
 ```
 apps/
   web/              Next.js 16 site: agent catalogue, workflow planner, live agent demos (Vercel)
-  portal/           (planned) client dashboard: deployed agents, runs, metrics
+  portal/           (planned, docs/plans/customer-portal.md) invite-only client app at app.<domain>
 packages/
   config/           shared TypeScript presets
   ui/               brand tokens (Tailwind v4 theme) + shared React components
