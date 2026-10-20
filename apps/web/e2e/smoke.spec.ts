@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { AGENTS } from "@wyrm/agents";
+import { DEMO_PROFILE, PROFILES } from "@wyrm/receptionist";
 import { POSTS } from "../src/lib/posts";
 import { STATIC_ROUTES } from "../src/lib/site";
 
@@ -7,6 +8,7 @@ const ROUTES = [
   ...STATIC_ROUTES,
   ...POSTS.map((post) => `/blog/${post.slug}`),
   ...AGENTS.map((agent) => `/agents/${agent.slug}`),
+  ...PROFILES.filter((p) => p.id !== DEMO_PROFILE.id).map((p) => `/receptionist/${p.id}`),
 ];
 
 for (const route of ROUTES) {

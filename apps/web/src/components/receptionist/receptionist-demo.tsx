@@ -11,8 +11,8 @@ type View = "chat" | "call";
  * The receptionist demo: one shared conversation, shown as a text chat or a simulated phone
  * call. Switching views keeps the conversation, the waiting proposal and any bookings.
  */
-export function ReceptionistDemo() {
-  const session = useReceptionistSession();
+export function ReceptionistDemo({ profileId }: { profileId?: string }) {
+  const session = useReceptionistSession(profileId);
   const [view, setView] = useState<View>("chat");
   // Remounting the call view on restart guarantees the microphone and speech are released.
   const [callKey, setCallKey] = useState(0);
@@ -40,9 +40,9 @@ export function ReceptionistDemo() {
     >
       <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
         <div className="min-w-0">
-          <p className="font-semibold">Harbor Lane Dental</p>
+          <p className="font-semibold">{session.profile.name}</p>
           <p className="truncate text-xs text-ink-muted">
-            Fictional clinic ·{" "}
+            {session.profile.demo ? "Fictional demo" : session.profile.kind} ·{" "}
             {session.mode === "basic"
               ? "basic receptionist (no AI)"
               : session.provider === "groq"

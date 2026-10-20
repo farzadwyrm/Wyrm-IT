@@ -81,7 +81,11 @@ export function callReducer(state: CallState, event: CallEvent): CallState {
 }
 
 /** Short status text for each phase; the visual is never the only carrier of state. */
-export function statusLabel(state: CallState, slowThinking: boolean): string {
+export function statusLabel(
+  state: CallState,
+  slowThinking: boolean,
+  businessName = "Harbor Lane Dental",
+): string {
   if (state.muted && LIVE_PHASES.includes(state.phase)) return "You're muted";
   switch (state.phase) {
     case "idle":
@@ -93,7 +97,7 @@ export function statusLabel(state: CallState, slowThinking: boolean): string {
     case "denied":
       return "Microphone blocked. Allow it in the address bar, or use the chat.";
     case "connecting":
-      return "Calling Harbor Lane Dental…";
+      return `Calling ${businessName}…`;
     case "speaking":
       return "Receptionist is speaking";
     case "listening":

@@ -2,15 +2,15 @@ import type Anthropic from "@anthropic-ai/sdk";
 import {
   addDays,
   type Booking,
-  CLINIC,
+  type BusinessProfile,
   checkDay,
+  DEMO_PROFILE,
   formatDay,
   formatTime,
   freeTimes,
   isClearYes,
   isClearYesToCancel,
   nextOpenDays,
-  SERVICES,
   type Service,
   toDayString,
 } from "@wyrm/receptionist";
@@ -32,7 +32,11 @@ export interface ToolContext {
   pendingFromEarlierTurn: Proposal | null;
   /** The visitor's latest message: the only source of a yes. */
   latestVisitorMessage: string;
+  /** The client this receptionist works for; the website demo when omitted. */
+  profile?: BusinessProfile;
 }
+
+const profileOf = (ctx: ToolContext) => ctx.profile ?? DEMO_PROFILE;
 
 export type ToolEvent =
   | { type: "proposed"; proposal: Proposal }
@@ -48,7 +52,6 @@ export interface ToolOutput {
 
 type PartOfDay = "any" | "morning" | "afternoon" | "evening";
 
-const SERVICE_IDS = SERVICES.map((s) => s.id);
 const PARTS: PartOfDay[] = ["any", "morning", "afternoon", "evening"];
 const DAY_PATTERN = "^\\d{4}-\\d{2}-\\d{2}$";
 
@@ -59,85 +62,101 @@ const partOfDayProperty = {
     "Use morning (before 12), afternoon (12 to 5 pm) or evening (from 5 pm) when the visitor asked for one; otherwise any.",
 } as const;
 
-export const RECEPTIONIST_TOOLS: Anthropic.Tool[] = [
-  {
-    name: "check_availability",
-    description:
-      "Returns the free start times for one treatment on one specific day, or why that day can't be booked (past, closed, too_far, full). Use it before offering or accepting any specific day or time, and never offer a time it didn't return. Each time comes with a 'say' label to use in your reply.",
-    strict: true,
-    input_schema: {
-      type: "object",
-      properties: {
-        service_id: { type: "string", enum: SERVICE_IDS },
-        day: { type: "string", description: "Calendar day as YYYY-MM-DD.", format: "date" },
-        part_of_day: partOfDayProperty,
+const toolsCache = new WeakMap<BusinessProfile, Anthropic.Tool[]>();
+
+/** The booking tools for one client: service ids come from its settings. */
+export function receptionistTools(profile: BusinessProfile = DEMO_PROFILE): Anthropic.Tool[] {
+  const cached = toolsCache.get(profile);
+  if (cached) return cached;
+  const SERVICE_IDS = profile.services.map((s) => s.id);
+  const tools: Anthropic.Tool[] = [
+    {
+      name: "check_availability",
+      description:
+        "Returns the free start times for one service on one specific day, or why that day can't be booked (past, closed, too_far, full). Use it before offering or accepting any specific day or time, and never offer a time it didn't return. Each time comes with a 'say' label to use in your reply.",
+      strict: true,
+      input_schema: {
+        type: "object",
+        properties: {
+          service_id: { type: "string", enum: SERVICE_IDS },
+          day: { type: "string", description: "Calendar day as YYYY-MM-DD.", format: "date" },
+          part_of_day: partOfDayProperty,
+        },
+        required: ["service_id", "day", "part_of_day"],
+        additionalProperties: false,
       },
-      required: ["service_id", "day", "part_of_day"],
-      additionalProperties: false,
     },
-  },
-  {
-    name: "find_next_available_days",
-    description:
-      "Finds the next three days, from a given day inclusive, that have free times for a treatment, with up to four times spread across each day. Use it when the visitor has no day in mind, asks for the earliest slot, or the day they wanted is full. Don't use it to check one specific day.",
-    strict: true,
-    input_schema: {
-      type: "object",
-      properties: {
-        service_id: { type: "string", enum: SERVICE_IDS },
-        from_day: { type: "string", description: "YYYY-MM-DD", format: "date" },
-        part_of_day: partOfDayProperty,
+    {
+      name: "find_next_available_days",
+      description:
+        "Finds the next three days, from a given day inclusive, that have free times for a service, with up to four times spread across each day. Use it when the visitor has no day in mind, asks for the earliest slot, or the day they wanted is full. Don't use it to check one specific day.",
+      strict: true,
+      input_schema: {
+        type: "object",
+        properties: {
+          service_id: { type: "string", enum: SERVICE_IDS },
+          from_day: { type: "string", description: "YYYY-MM-DD", format: "date" },
+          part_of_day: partOfDayProperty,
+        },
+        required: ["service_id", "from_day", "part_of_day"],
+        additionalProperties: false,
       },
-      required: ["service_id", "from_day", "part_of_day"],
-      additionalProperties: false,
     },
-  },
-  {
-    name: "propose_booking",
-    description:
-      "Validates a complete booking (treatment, day, time, first name) and shows it to the visitor as a confirmation card. Call it only once the visitor has chosen the time themselves, not when you are just suggesting one. Then read the details back in one natural sentence and ask if that's right. It does not book anything.",
-    strict: true,
-    input_schema: {
-      type: "object",
-      properties: {
-        service_id: { type: "string", enum: SERVICE_IDS },
-        day: { type: "string", description: "YYYY-MM-DD", format: "date" },
-        time: { type: "string", description: "Start time, 24-hour HH:MM, e.g. 09:30 or 14:00" },
-        name: { type: "string", description: "Visitor's first name as they gave it." },
+    {
+      name: "propose_booking",
+      description:
+        "Validates a complete booking (service, day, time, first name) and shows it to the visitor as a confirmation card. Call it only once the visitor has chosen the time themselves, not when you are just suggesting one. Then read the details back in one natural sentence and ask if that's right. It does not book anything.",
+      strict: true,
+      input_schema: {
+        type: "object",
+        properties: {
+          service_id: { type: "string", enum: SERVICE_IDS },
+          day: { type: "string", description: "YYYY-MM-DD", format: "date" },
+          time: { type: "string", description: "Start time, 24-hour HH:MM, e.g. 09:30 or 14:00" },
+          name: { type: "string", description: "Visitor's first name as they gave it." },
+        },
+        required: ["service_id", "day", "time", "name"],
+        additionalProperties: false,
       },
-      required: ["service_id", "day", "time", "name"],
-      additionalProperties: false,
     },
-  },
-  {
-    name: "book_appointment",
-    description:
-      "Books the waiting proposal. Call it only when the visitor's latest message is a plain yes to that proposal, with no change and no question. If they asked or changed something, handle that and propose again instead. The system independently checks the confirmation and the slot.",
-    strict: true,
-    input_schema: {
-      type: "object",
-      properties: {
-        proposal_id: { type: "string" },
+    {
+      name: "book_appointment",
+      description:
+        "Books the waiting proposal. Call it only when the visitor's latest message is a plain yes to that proposal, with no change and no question. If they asked or changed something, handle that and propose again instead. The system independently checks the confirmation and the slot.",
+      strict: true,
+      input_schema: {
+        type: "object",
+        properties: {
+          proposal_id: { type: "string" },
+        },
+        required: ["proposal_id"],
+        additionalProperties: false,
       },
-      required: ["proposal_id"],
-      additionalProperties: false,
     },
-  },
-  {
-    name: "cancel_appointment",
-    description:
-      "Cancels one of the visitor's bookings from this conversation by reference. Confirm which booking first, and call this only when the visitor's latest message clearly confirms the cancellation.",
-    strict: true,
-    input_schema: {
-      type: "object",
-      properties: {
-        reference: { type: "string", description: "Booking reference, e.g. HL-1234" },
+    {
+      name: "cancel_appointment",
+      description:
+        "Cancels one of the visitor's bookings from this conversation by reference. Confirm which booking first, and call this only when the visitor's latest message clearly confirms the cancellation.",
+      strict: true,
+      input_schema: {
+        type: "object",
+        properties: {
+          reference: {
+            type: "string",
+            description: `Booking reference, e.g. ${profile.booking.referencePrefix}-1234`,
+          },
+        },
+        required: ["reference"],
+        additionalProperties: false,
       },
-      required: ["reference"],
-      additionalProperties: false,
     },
-  },
-];
+  ];
+  toolsCache.set(profile, tools);
+  return tools;
+}
+
+/** The website demo's tools. */
+export const RECEPTIONIST_TOOLS: Anthropic.Tool[] = receptionistTools(DEMO_PROFILE);
 
 const toHHMM = (minutes: number) =>
   `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
@@ -190,14 +209,20 @@ export function sayDay(day: string): string {
   return `${weekday} the ${n}${suffix} of ${month}`;
 }
 
-function makeReference(proposal: Proposal, bookings: readonly Booking[]): string {
+function makeReference(
+  proposal: Proposal,
+  bookings: readonly Booking[],
+  profile: BusinessProfile,
+): string {
   const seed =
     (Number(proposal.day.replaceAll("-", "")) + proposal.time * 7 + bookings.length * 131) % 9000;
-  return `HL-${1000 + seed}`;
+  return `${profile.booking.referencePrefix}-${1000 + seed}`;
 }
 
 function freeIn(day: string, service: Service, ctx: ToolContext, part: PartOfDay): number[] {
-  return freeTimes(day, service, ctx.now, ctx.bookings).filter((t) => inPart(t, part));
+  return freeTimes(day, service, ctx.now, ctx.bookings, profileOf(ctx)).filter((t) =>
+    inPart(t, part),
+  );
 }
 
 /** Runs one tool call against the demo calendar. Never throws. */
@@ -206,14 +231,15 @@ export function executeTool(
   input: Record<string, unknown>,
   ctx: ToolContext,
 ): ToolOutput {
-  const service = SERVICES.find((s) => s.id === str(input, "service_id"));
+  const profile = profileOf(ctx);
+  const service = profile.services.find((s) => s.id === str(input, "service_id"));
 
   switch (name) {
     case "check_availability": {
       const day = str(input, "day");
       if (!service || !isDay(day)) return error("Invalid service_id or day.");
       const part = partOf(input);
-      const check = checkDay(day, service, ctx.now, ctx.bookings);
+      const check = checkDay(day, service, ctx.now, ctx.bookings, profile);
       const free = check.ok ? freeIn(day, service, ctx, part) : [];
       return {
         content: json({
@@ -246,7 +272,7 @@ export function executeTool(
       }[] = [];
       // Walk forward through open days until three have times in the requested part of the day.
       for (let guard = 0; guard < 12 && days.length < 3; guard++) {
-        const [next] = nextOpenDays(cursor, service, ctx.now, ctx.bookings, 1);
+        const [next] = nextOpenDays(cursor, service, ctx.now, ctx.bookings, 1, profile);
         if (!next) break;
         const free = freeIn(next, service, ctx, part);
         if (free.length > 0) {
@@ -273,10 +299,10 @@ export function executeTool(
         return error("Ask the visitor for a first name (letters only) before proposing.");
       }
       const minutes = fromHHMM(time);
-      const check = checkDay(day, service, ctx.now, ctx.bookings);
+      const check = checkDay(day, service, ctx.now, ctx.bookings, profile);
       if (!check.ok)
         return error(`Day not bookable: ${check.reason}. Offer the nearest alternatives.`);
-      if (!freeTimes(day, service, ctx.now, ctx.bookings).includes(minutes)) {
+      if (!freeTimes(day, service, ctx.now, ctx.bookings, profile).includes(minutes)) {
         return error("That time isn't free. Check availability and offer free times instead.");
       }
       const proposal: Proposal = {
@@ -311,15 +337,17 @@ export function executeTool(
           "Not booked: their last message wasn't a plain yes. Deal with what they asked or changed, or ask naturally whether to go ahead, e.g. 'Shall I book that for you?'",
         );
       }
-      const pendingService = SERVICES.find((s) => s.id === pending.serviceId);
+      const pendingService = profile.services.find((s) => s.id === pending.serviceId);
       if (
         !pendingService ||
-        !freeTimes(pending.day, pendingService, ctx.now, ctx.bookings).includes(pending.time)
+        !freeTimes(pending.day, pendingService, ctx.now, ctx.bookings, profile).includes(
+          pending.time,
+        )
       ) {
         return error("Not booked: that slot has just been taken. Apologise and offer other times.");
       }
       const booking: Booking = {
-        reference: makeReference(pending, ctx.bookings),
+        reference: makeReference(pending, ctx.bookings, profile),
         serviceId: pending.serviceId,
         day: pending.day,
         time: pending.time,
@@ -357,7 +385,11 @@ export function executeTool(
 }
 
 /** Three weeks of dates with weekday names, so the model never does calendar arithmetic. */
-export function calendarContext(now: Date, days = 21): string {
+export function calendarContext(
+  now: Date,
+  days = 21,
+  profile: BusinessProfile = DEMO_PROFILE,
+): string {
   const today = toDayString(now);
   const minutes = now.getHours() * 60 + now.getMinutes();
   const upcoming = Array.from({ length: days }, (_, i) => {
@@ -366,7 +398,7 @@ export function calendarContext(now: Date, days = 21): string {
   });
   return [
     `Current local time: ${formatDay(today)} (${today}), ${formatTime(minutes - (minutes % 5))}.`,
-    `Bookings are possible up to ${CLINIC.bookingWindowDays} days ahead; for later dates use the day_label the tools return.`,
+    `Bookings are possible up to ${profile.booking.windowDays} days ahead; for later dates use the day_label the tools return.`,
     "Upcoming days:",
     ...upcoming,
   ].join("\n");

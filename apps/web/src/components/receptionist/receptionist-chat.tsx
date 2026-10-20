@@ -56,7 +56,12 @@ export function ReceptionistChat({ session }: { session: ReceptionistSession }) 
                   {message.text}
                 </p>
                 {message.events?.map((event) => (
-                  <EventCard key={eventKey(event)} event={event} />
+                  <EventCard
+                    key={eventKey(event)}
+                    event={event}
+                    services={session.profile.services}
+                    demo={session.profile.demo}
+                  />
                 ))}
               </div>
             </li>

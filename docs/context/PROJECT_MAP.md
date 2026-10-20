@@ -10,6 +10,10 @@ Last updated: 2026-10-20
   about, contact, blog. Dark technical design (`packages/ui/src/theme.css`). Removed: scan,
   IT guide, `packages/assessment`, readiness report. Older bullets below mentioning the scan or
   guide are history only.
+- 2026-10-21 Receptionist template (ADR 0008): one `BusinessProfile` file per client in
+  `packages/receptionist/src/clients/` drives engine, AI prompts/tools and UI;
+  `/receptionist/[client]`; guide `docs/business/NEW_CLIENT.md`. Next for real clients:
+  calendar adapter, phone number (Twilio/Vapi), booking storage + notifications.
 - 2026-10-20 Workflow analysis (ADR 0007) replaces the planner: `/analyse` interview → step
   drafting (`/api/analyse/steps`) → deterministic scoring, risk tiers, agent design and savings
   range in `packages/agents/src/analysis/`. Research: `docs/research/`.

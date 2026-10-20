@@ -5,7 +5,8 @@ export {
   freeTimes,
   nextOpenDays,
 } from "./availability";
-export { CLINIC, OPENING_HOURS, SERVICES, type Service } from "./clinic";
+export { DEMO_PROFILE, getProfile, PROFILES } from "./clients";
+export { CLINIC, OPENING_HOURS, SERVICES } from "./clinic";
 export { isClearYes, isClearYesToCancel } from "./confirmation";
 export { addDays, formatDay, formatTime, toDayString, weekdayOf } from "./dates";
 export {
@@ -19,3 +20,11 @@ export {
   type Stage,
   type Turn,
 } from "./engine";
+export {
+  type BusinessProfile,
+  type DayHours,
+  hoursText,
+  openingHours,
+  type Service,
+  validateProfile,
+} from "./profile";

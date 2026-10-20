@@ -17,10 +17,10 @@ const STILL_THERE = "Sorry, I didn't catch anything. Are you still there?";
 const GOODBYE = "I'll let you go for now. Call back any time. Goodbye!";
 const SAY_AGAIN = "Sorry, could you say that again?";
 
-function spokenGreeting(): string {
+function spokenGreeting(businessName: string): string {
   const hour = new Date().getHours();
   const part = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  return `${part}, Harbor Lane Dental, you're speaking with the receptionist. How can I help?`;
+  return `${part}, ${businessName}, you're speaking with the receptionist. How can I help?`;
 }
 
 /** Plays a short UK-style ringback tone (two quiet rings) through Web Audio. */
@@ -261,7 +261,7 @@ export function ReceptionistCall({
     ]);
     void ringContext?.close();
     voice.current = chosen;
-    say(spokenGreeting());
+    say(spokenGreeting(session.profile.name));
   }
 
   function endCall() {
@@ -305,7 +305,7 @@ export function ReceptionistCall({
     return 0;
   }, [ringMode]);
 
-  const status = statusLabel(call, slowThinking);
+  const status = statusLabel(call, slowThinking, session.profile.name);
   const proposal = cards.find((c) => c.type === "proposed");
 
   return (
@@ -348,7 +348,12 @@ export function ReceptionistCall({
 
       <div className="px-5">
         {cards.map((event) => (
-          <EventCard key={eventKey(event)} event={event} />
+          <EventCard
+            key={eventKey(event)}
+            event={event}
+            services={session.profile.services}
+            demo={session.profile.demo}
+          />
         ))}
         {proposal && call.phase === "listening" && (
           <div className="mt-2 flex flex-wrap gap-2">
@@ -379,7 +384,14 @@ export function ReceptionistCall({
           {booked.length === 0 ? (
             <p className="mt-1 text-ink-muted">No appointment was booked on this call.</p>
           ) : (
-            booked.map((event) => <EventCard key={eventKey(event)} event={event} />)
+            booked.map((event) => (
+              <EventCard
+                key={eventKey(event)}
+                event={event}
+                services={session.profile.services}
+                demo={session.profile.demo}
+              />
+            ))
           )}
         </section>
       )}

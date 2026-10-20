@@ -20,3 +20,4 @@ Short record of settled decisions. Details live in `docs/adr/`.
 | 2026-10-19 | Legal setup (company, contracts, GDPR paperwork) deferred until first client commits | — |
 | 2026-10-20 | Pivot: Wyrm is an AI agents company. Removed the IT guide, readiness scan and assessment package; site is agent catalogue + AI workflow planner + live voice agent; dark technical design | 0006 |
 | 2026-10-20 | Workflow analysis method: interview (mini-PDD) + one AI drafting call + deterministic per-step scoring capped by risk tier; savings as ranges with visible assumptions | 0007 |
+| 2026-10-21 | Receptionist is a template: one BusinessProfile settings file per client; shared engine, prompts, tools and UI | 0008 |

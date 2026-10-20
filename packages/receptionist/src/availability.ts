@@ -1,5 +1,6 @@
-import { CLINIC, OPENING_HOURS, type Service } from "./clinic";
+import { DEMO_PROFILE } from "./clients";
 import { daysBetween, type PartOfDay, toDayString, weekdayOf } from "./dates";
+import { type BusinessProfile, openingHours, type Service } from "./profile";
 
 export interface Booking {
   reference: string;
@@ -28,16 +29,19 @@ export function freeTimes(
   service: Service,
   now: Date,
   bookings: readonly Booking[],
+  profile: BusinessProfile = DEMO_PROFILE,
 ): number[] {
-  const hours = OPENING_HOURS[weekdayOf(day)];
+  const hours = openingHours(profile)[weekdayOf(day)];
   if (!hours) return [];
   const [open, close] = hours;
   const today = toDayString(now);
   const earliest =
-    day === today ? now.getHours() * 60 + now.getMinutes() + CLINIC.minimumNoticeMinutes : 0;
+    day === today
+      ? now.getHours() * 60 + now.getMinutes() + profile.booking.minimumNoticeMinutes
+      : 0;
 
   const times: number[] = [];
-  for (let t = open; t + service.minutes <= close; t += CLINIC.slotMinutes) {
+  for (let t = open; t + service.minutes <= close; t += profile.booking.slotMinutes) {
     if (t < earliest) continue;
     if (takenByOthers(day, t)) continue;
     if (bookings.some((b) => b.day === day && b.time === t)) continue;
@@ -51,12 +55,14 @@ export function checkDay(
   service: Service,
   now: Date,
   bookings: readonly Booking[],
+  profile: BusinessProfile = DEMO_PROFILE,
 ): DayCheck {
   const ahead = daysBetween(toDayString(now), day);
   if (ahead < 0) return { ok: false, reason: "past" };
-  if (ahead > CLINIC.bookingWindowDays) return { ok: false, reason: "too_far" };
-  if (!OPENING_HOURS[weekdayOf(day)]) return { ok: false, reason: "closed" };
-  if (freeTimes(day, service, now, bookings).length === 0) return { ok: false, reason: "full" };
+  if (ahead > profile.booking.windowDays) return { ok: false, reason: "too_far" };
+  if (!openingHours(profile)[weekdayOf(day)]) return { ok: false, reason: "closed" };
+  if (freeTimes(day, service, now, bookings, profile).length === 0)
+    return { ok: false, reason: "full" };
   return { ok: true };
 }
 
@@ -79,14 +85,15 @@ export function nextOpenDays(
   now: Date,
   bookings: readonly Booking[],
   count = 3,
+  profile: BusinessProfile = DEMO_PROFILE,
 ): string[] {
   const days: string[] = [];
   const start = new Date(`${from}T00:00:00`);
-  for (let i = 0; i <= CLINIC.bookingWindowDays && days.length < count; i++) {
+  for (let i = 0; i <= profile.booking.windowDays && days.length < count; i++) {
     const date = new Date(start);
     date.setDate(start.getDate() + i);
     const day = toDayString(date);
-    if (checkDay(day, service, now, bookings).ok) days.push(day);
+    if (checkDay(day, service, now, bookings, profile).ok) days.push(day);
   }
   return days;
 }

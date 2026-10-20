@@ -7,7 +7,7 @@ import {
   RECEPTIONIST_TURN_ESTIMATED_CENTS,
   runReceptionist,
 } from "@wyrm/ai";
-import { type Booking, SERVICES } from "@wyrm/receptionist";
+import { type Booking, type BusinessProfile, DEMO_PROFILE, getProfile } from "@wyrm/receptionist";
 import type { ReceptionistRequest, ReceptionistResponse } from "@/lib/receptionist-api";
 
 export const maxDuration = 60;
@@ -19,7 +19,6 @@ const guard = createDemoGuard({
 });
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
-const SERVICE_IDS = new Set(SERVICES.map((s) => s.id));
 
 function visitorId(request: Request): string {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -42,10 +41,12 @@ function parseHistory(value: unknown): ChatMessage[] | null {
 
 function parseSlot(
   v: unknown,
+  profile: BusinessProfile,
 ): { serviceId: string; day: string; time: number; name: string } | null {
   if (!isRecord(v)) return null;
   const { serviceId, day, time, name } = v;
-  if (typeof serviceId !== "string" || !SERVICE_IDS.has(serviceId)) return null;
+  if (typeof serviceId !== "string" || !profile.services.some((s) => s.id === serviceId))
+    return null;
   if (typeof day !== "string" || !DAY.test(day)) return null;
   if (typeof time !== "number" || !Number.isInteger(time) || time < 0 || time >= 24 * 60)
     return null;
@@ -53,11 +54,11 @@ function parseSlot(
   return { serviceId, day, time, name };
 }
 
-function parseBookings(value: unknown): Booking[] | null {
+function parseBookings(value: unknown, profile: BusinessProfile): Booking[] | null {
   if (!Array.isArray(value) || value.length > 10) return null;
   const out: Booking[] = [];
   for (const b of value) {
-    const slot = parseSlot(b);
+    const slot = parseSlot(b, profile);
     if (!slot || !isRecord(b) || typeof b.reference !== "string" || b.reference.length > 12)
       return null;
     out.push({ ...slot, reference: b.reference });
@@ -65,9 +66,9 @@ function parseBookings(value: unknown): Booking[] | null {
   return out;
 }
 
-function parsePending(value: unknown): Proposal | null | undefined {
+function parsePending(value: unknown, profile: BusinessProfile): Proposal | null | undefined {
   if (value === null) return null;
-  const slot = parseSlot(value);
+  const slot = parseSlot(value, profile);
   if (!slot || !isRecord(value) || typeof value.id !== "string" || value.id.length > 60) {
     return undefined;
   }
@@ -102,9 +103,16 @@ export async function POST(request: Request) {
     return json({ status: "fallback", reason: "invalid_request" }, 400);
   }
 
+  const profile =
+    body.client === undefined
+      ? DEMO_PROFILE
+      : typeof body.client === "string"
+        ? getProfile(body.client)
+        : undefined;
+  if (!profile) return json({ status: "fallback", reason: "invalid_request" }, 400);
   const history = parseHistory(body.history);
-  const bookings = parseBookings(body.bookings ?? []);
-  const pending = parsePending(body.pending ?? null);
+  const bookings = parseBookings(body.bookings ?? [], profile);
+  const pending = parsePending(body.pending ?? null, profile);
   const now = parseClock(body.clock);
   const channel = body.channel === "voice" ? "voice" : "chat";
   if (!history || !bookings || pending === undefined || !now) {
@@ -118,7 +126,7 @@ export async function POST(request: Request) {
   const decision = guard.check(visitor, RECEPTIONIST_TURN_ESTIMATED_CENTS);
   if (!decision.allowed) return json({ status: "fallback", reason: decision.reason });
 
-  const outcome = await runReceptionist({ history, bookings, pending, now, channel });
+  const outcome = await runReceptionist({ history, bookings, pending, now, channel, profile });
   guard.record(visitor, outcome.costCents);
 
   return outcome.status === "ok"

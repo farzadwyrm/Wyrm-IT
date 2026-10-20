@@ -1,4 +1,10 @@
-import { type Booking, formatDay, formatTime, SERVICES } from "@wyrm/receptionist";
+import {
+  type Booking,
+  type BusinessProfile,
+  DEMO_PROFILE,
+  formatDay,
+  formatTime,
+} from "@wyrm/receptionist";
 import type { Proposal, ToolEvent } from "./tools";
 
 /**
@@ -42,6 +48,7 @@ export function reviewReply(
     eventsThisTurn: readonly ToolEvent[];
     pending: Proposal | null;
     bookings: readonly Booking[];
+    profile?: BusinessProfile;
   },
 ): ReplyIssue | null {
   const bookedNow = context.eventsThisTurn.some((e) => e.type === "booked");
@@ -82,9 +89,14 @@ export function reviewReply(
 }
 
 /** An honest reply to use if the model still gets it wrong after a correction. */
-export function safeReply(pending: Proposal | null, bookings: readonly Booking[]): string {
+export function safeReply(
+  pending: Proposal | null,
+  bookings: readonly Booking[],
+  profile: BusinessProfile = DEMO_PROFILE,
+): string {
   if (pending) {
-    const service = SERVICES.find((s) => s.id === pending.serviceId)?.name.toLowerCase() ?? "visit";
+    const service =
+      profile.services.find((s) => s.id === pending.serviceId)?.name.toLowerCase() ?? "visit";
     return `Just to be sure, nothing is booked yet. Would you like me to book a ${service} on ${formatDay(pending.day)} at ${formatTime(pending.time)} for ${pending.name}?`;
   }
   if (bookings.length > 0) {

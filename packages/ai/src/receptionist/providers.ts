@@ -26,7 +26,7 @@ export async function runReceptionist(
   // Cheapest path first: a short, plain question needs no model call at all.
   const latest = input.history.at(-1);
   if (latest?.role === "visitor" && !input.pending) {
-    const instant = answerSimpleQuestion(latest.text, input.now);
+    const instant = answerSimpleQuestion(latest.text, input.now, input.profile);
     if (instant)
       return { status: "ok", text: instant, events: [], costCents: 0, provider: "instant" };
   }

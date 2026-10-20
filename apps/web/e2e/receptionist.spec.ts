@@ -72,3 +72,26 @@ test("restart clears the conversation", async ({ page }) => {
   await chat(page).getByRole("button", { name: "Restart" }).click();
   await expect(conversation(page).getByRole("listitem")).toHaveCount(1);
 });
+
+test("the same receptionist runs a different business from its settings file", async ({ page }) => {
+  await page.goto("/receptionist/bright-cuts-salon");
+  await expect(conversation(page)).toContainText("Bright Cuts Salon");
+  await say(page, "where are you?");
+  await expect(conversation(page)).toContainText("48 Market Street");
+  await say(page, "book a men's cut");
+  await say(page, "Monday");
+  await expect(conversation(page)).toContainText("closed on Mondays");
+});
+
+test("receptionist API rejects an unknown client", async ({ request }) => {
+  const response = await request.post("/api/receptionist", {
+    data: {
+      history: [{ role: "visitor", text: "hello" }],
+      bookings: [],
+      pending: null,
+      clock: { day: "2026-10-19", minutes: 600 },
+      client: "not-a-client",
+    },
+  });
+  expect(response.status()).toBe(400);
+});

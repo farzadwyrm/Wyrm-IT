@@ -6,7 +6,7 @@ import {
   nextOpenDays,
   spread,
 } from "./availability";
-import { CLINIC, OPENING_HOURS, SERVICES, type Service } from "./clinic";
+import { DEMO_PROFILE } from "./clients";
 import {
   formatDay,
   formatTime,
@@ -17,6 +17,7 @@ import {
   toDayString,
   weekdayOf,
 } from "./dates";
+import { type BusinessProfile, hoursText, openingHours, type Service } from "./profile";
 
 /**
  * Rule-based receptionist for the free demo. Pure and deterministic: give it the
@@ -61,12 +62,15 @@ export function initialState(): ConversationState {
   return { stage: "idle", draft: {}, bookings: [] };
 }
 
-const IDLE_SUGGESTIONS = ["Book a check-up", "Opening hours", "Prices", "Where are you?"];
+function idleSuggestions(p: BusinessProfile): string[] {
+  const first = p.services[0]?.name.toLowerCase() ?? "appointment";
+  return [`Book a ${first}`, "Opening hours", "Prices", "Where are you?"];
+}
 
-export function greeting(): Reply {
+export function greeting(p: BusinessProfile = DEMO_PROFILE): Reply {
   return {
-    text: `Hello, you're through to ${CLINIC.name}. I can book an appointment or answer questions about opening hours, prices and how to find us. How can I help?`,
-    suggestions: IDLE_SUGGESTIONS,
+    text: `Hello, you're through to ${p.name}. I can book an appointment or answer questions about opening hours, prices and how to find us. How can I help?`,
+    suggestions: idleSuggestions(p),
   };
 }
 
@@ -77,8 +81,8 @@ const has = (t: string, pattern: RegExp) => pattern.test(t);
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Whole-word match, so a name like "Paine" never reads as "pain". */
-function detectService(t: string): Service | undefined {
-  return SERVICES.find((s) =>
+function detectService(t: string, p: BusinessProfile): Service | undefined {
+  return p.services.find((s) =>
     s.keywords.some((k) => new RegExp(`\\b${escapeRegExp(k)}\\b`).test(t)),
   );
 }
@@ -92,7 +96,7 @@ const isNo = (t: string) => has(t, /^\s*(no|nope|nah|not quite|wrong|not really)
 const isAbort = (t: string) =>
   has(t, /\b(never ?mind|forget it|stop|start over|restart|cancel (that|this|it|the booking))\b/);
 const isBookingIntent = (t: string) =>
-  has(t, /\b(book|booking|appointment|schedule|reserve|come in|see (a|the) dentist|visit)\b/);
+  has(t, /\b(book|booking|appointment|schedule|reserve|come in|see (a|the) \w+|visit)\b/);
 const isCancelIntent = (t: string) => has(t, /\b(cancel|reschedule|move my|change my)\b/);
 
 type Aside = "hours" | "location" | "price" | "services" | "human";
@@ -119,22 +123,22 @@ function detectAside(t: string): Aside | null {
   return null;
 }
 
-function answerAside(aside: Aside, t: string): string {
+function answerAside(aside: Aside, t: string, p: BusinessProfile): string {
   switch (aside) {
     case "hours":
-      return `We're open ${CLINIC.hoursText}`;
+      return `We're open ${hoursText(p)}`;
     case "location":
-      return `We're at ${CLINIC.address}. ${CLINIC.parking}`;
+      return `We're at ${p.address}. ${p.directions}`;
     case "price": {
-      const service = detectService(t);
+      const service = detectService(t, p);
       if (service)
         return `A ${service.name.toLowerCase()} costs ${service.price} and takes about ${service.minutes} minutes.`;
-      return `Our prices: ${SERVICES.map((s) => `${s.name.toLowerCase()} ${s.price}`).join(", ")}.`;
+      return `Our prices: ${p.services.map((s) => `${s.name.toLowerCase()} ${s.price}`).join(", ")}.`;
     }
     case "services":
-      return `We offer ${SERVICES.map((s) => s.name.toLowerCase()).join(", ")}.`;
+      return `We offer ${p.services.map((s) => s.name.toLowerCase()).join(", ")}.`;
     case "human":
-      return "In the real system I'd pass a message to the team and they'd call you back. In this demo I can only help with bookings and questions.";
+      return p.handoff;
   }
 }
 
@@ -154,9 +158,11 @@ function extractName(text: string): string | null {
 
 // ---------------------------------------------------------------- booking logic
 
-const serviceOf = (draft: Draft) => SERVICES.find((s) => s.id === draft.serviceId);
-/** For day checks before a treatment is chosen, use the shortest one. */
-const serviceForChecks = (draft: Draft): Service => serviceOf(draft) ?? (SERVICES[0] as Service);
+const serviceOf = (draft: Draft, p: BusinessProfile) =>
+  p.services.find((s) => s.id === draft.serviceId);
+/** For day checks before a service is chosen, use the first one. */
+const serviceForChecks = (draft: Draft, p: BusinessProfile): Service =>
+  serviceOf(draft, p) ?? (p.services[0] as Service);
 
 function closestTimes(times: readonly number[], target: number, count = 3): number[] {
   return [...times]
@@ -168,6 +174,7 @@ function closestTimes(times: readonly number[], target: number, count = 3): numb
 function describeDayProblem(
   reason: "past" | "closed" | "too_far" | "full",
   day: string | null,
+  p: BusinessProfile,
 ): string {
   switch (reason) {
     case "past":
@@ -175,14 +182,20 @@ function describeDayProblem(
     case "closed":
       return day ? `We're closed on ${formatDay(day).split(" ")[0]}s.` : "We're closed that day.";
     case "too_far":
-      return `I can only book up to ${CLINIC.bookingWindowDays} days ahead.`;
+      return `I can only book up to ${p.booking.windowDays} days ahead.`;
     case "full":
       return day ? `${formatDay(day)} is fully booked.` : "That day is fully booked.";
   }
 }
 
-function describeTimeProblem(day: string, time: number, now: Date, service: Service): string {
-  const hours = OPENING_HOURS[weekdayOf(day)];
+function describeTimeProblem(
+  day: string,
+  time: number,
+  now: Date,
+  service: Service,
+  p: BusinessProfile,
+): string {
+  const hours = openingHours(p)[weekdayOf(day)];
   const weekday = formatDay(day).split(" ")[0];
   if (hours && (time < hours[0] || time >= hours[1])) {
     return `We're open ${formatTime(hours[0])} to ${formatTime(hours[1])} on ${weekday}s, so ${formatTime(time)} doesn't work.`;
@@ -191,11 +204,15 @@ function describeTimeProblem(day: string, time: number, now: Date, service: Serv
     return `A ${service.name.toLowerCase()} at ${formatTime(time)} wouldn't finish before we close.`;
   }
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  if (day === toDayString(now) && time < nowMinutes + CLINIC.minimumNoticeMinutes) {
+  if (day === toDayString(now) && time < nowMinutes + p.booking.minimumNoticeMinutes) {
     return `${formatTime(time)} today has passed or is too soon for us to prepare.`;
   }
-  if (time % CLINIC.slotMinutes !== 0) {
-    return `Appointments start on the hour or half past, so ${formatTime(time)} isn't available.`;
+  if (time % p.booking.slotMinutes !== 0) {
+    const grid =
+      p.booking.slotMinutes === 30
+        ? "on the hour or half past"
+        : `every ${p.booking.slotMinutes} minutes`;
+    return `Appointments start ${grid}, so ${formatTime(time)} isn't available.`;
   }
   return `${formatTime(time)} is already taken.`;
 }
@@ -210,14 +227,19 @@ interface Applied {
 }
 
 /** Reads booking details from the message and validates them against the calendar. */
-function applyDetails(state: ConversationState, text: string, now: Date): Applied {
+function applyDetails(
+  state: ConversationState,
+  text: string,
+  now: Date,
+  p: BusinessProfile,
+): Applied {
   const t = text.toLowerCase();
   const draft: Draft = { ...state.draft };
   const problems: string[] = [];
   let nearest: number[] = [];
   let changed = false;
 
-  const service = detectService(t);
+  const service = detectService(t, p);
   if (service && service.id !== draft.serviceId) {
     draft.serviceId = service.id;
     changed = true;
@@ -233,16 +255,16 @@ function applyDetails(state: ConversationState, text: string, now: Date): Applie
   if (dayParse) {
     changed = true;
     if (dayParse.kind === "past") {
-      problems.push(describeDayProblem("past", null));
+      problems.push(describeDayProblem("past", null, p));
     } else if (dayParse.kind === "invalid") {
       problems.push("I couldn't find that date in the calendar. Could you check it?");
     } else {
-      const check = checkDay(dayParse.day, serviceForChecks(draft), now, state.bookings);
+      const check = checkDay(dayParse.day, serviceForChecks(draft, p), now, state.bookings, p);
       if (check.ok) {
         if (draft.day !== dayParse.day) delete draft.time;
         draft.day = dayParse.day;
       } else {
-        problems.push(describeDayProblem(check.reason, dayParse.day));
+        problems.push(describeDayProblem(check.reason, dayParse.day, p));
         delete draft.day;
         delete draft.time;
       }
@@ -261,17 +283,17 @@ function applyDetails(state: ConversationState, text: string, now: Date): Applie
 
   // Re-validate the time against the (possibly new) day and treatment.
   if (draft.day && draft.time !== undefined) {
-    const free = freeTimes(draft.day, serviceForChecks(draft), now, state.bookings);
+    const free = freeTimes(draft.day, serviceForChecks(draft, p), now, state.bookings, p);
     if (!free.includes(draft.time)) {
       const requested = draft.time;
-      problems.push(describeTimeProblem(draft.day, requested, now, serviceForChecks(draft)));
+      problems.push(describeTimeProblem(draft.day, requested, now, serviceForChecks(draft, p), p));
       delete draft.time;
       nearest = closestTimes(free, requested);
     }
   }
 
   // A treatment change can make the chosen day impossible (e.g. too long for Saturday).
-  if (service && draft.day && !checkDay(draft.day, service, now, state.bookings).ok) {
+  if (service && draft.day && !checkDay(draft.day, service, now, state.bookings, p).ok) {
     delete draft.day;
     delete draft.time;
   }
@@ -284,24 +306,28 @@ function applyDetails(state: ConversationState, text: string, now: Date): Applie
  * replaces the usual time suggestions (after a requested time was rejected).
  */
 function nextStep(
+  p: BusinessProfile,
   draft: Draft,
   bookings: Booking[],
   now: Date,
   nearestTimes: readonly number[] = [],
 ): { stage: Stage; reply: Reply } {
-  const service = serviceOf(draft);
+  const service = serviceOf(draft, p);
   if (!service) {
+    const names = p.services.map((s) => s.name.toLowerCase());
+    const list =
+      names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names.at(-1)}` : (names[0] ?? "");
     return {
       stage: "service",
       reply: {
-        text: "Which treatment is it for: a check-up, a hygiene cleaning, teeth whitening, or an urgent visit?",
-        suggestions: SERVICES.map((s) => s.name),
+        text: `Which ${p.serviceWord} is it for: ${list}?`,
+        suggestions: p.services.map((s) => s.name),
       },
     };
   }
 
   if (!draft.day) {
-    const days = nextOpenDays(toDayString(now), service, now, bookings);
+    const days = nextOpenDays(toDayString(now), service, now, bookings, 3, p);
     return {
       stage: "day",
       reply: {
@@ -322,7 +348,7 @@ function nextStep(
   }
 
   if (draft.time === undefined) {
-    const free = freeTimes(draft.day, service, now, bookings);
+    const free = freeTimes(draft.day, service, now, bookings, p);
     const inPart = filterByPart(free, draft.part ?? null);
     const options = spread(inPart.length > 0 ? inPart : free);
     const intro =
@@ -343,7 +369,7 @@ function nextStep(
     return {
       stage: "name",
       reply: {
-        text: "Great. What name should I put the booking under? (A made-up name is fine in this demo.)",
+        text: `Great. What name should I put the booking under?${p.demo ? " (A made-up name is fine in this demo.)" : ""}`,
         suggestions: ["Alex"],
       },
     };
@@ -363,14 +389,25 @@ function withPrefix(prefix: string[], reply: Reply): Reply {
   return { ...reply, text };
 }
 
-function makeReference(bookings: readonly Booking[], day: string, time: number): string {
+function makeReference(
+  bookings: readonly Booking[],
+  day: string,
+  time: number,
+  p: BusinessProfile,
+): string {
   const seed = (Number(day.replaceAll("-", "")) + time * 7 + bookings.length * 131) % 9000;
-  return `HL-${1000 + seed}`;
+  return `${p.booking.referencePrefix}-${1000 + seed}`;
 }
 
 // ---------------------------------------------------------------- main entry
 
-export function respond(state: ConversationState, message: string, now: Date): Turn {
+export function respond(
+  state: ConversationState,
+  message: string,
+  now: Date,
+  p: BusinessProfile = DEMO_PROFILE,
+): Turn {
+  const IDLE_SUGGESTIONS = idleSuggestions(p);
   const text = message.trim();
   const t = text.toLowerCase();
 
@@ -424,7 +461,7 @@ export function respond(state: ConversationState, message: string, now: Date): T
   // Side questions: answer, then carry on where we were.
   const aside = detectAside(t);
   if (aside && !(state.stage === "confirm" && isYes(t))) {
-    const answer = answerAside(aside, t);
+    const answer = answerAside(aside, t, p);
     if (!inBooking) {
       return {
         state,
@@ -434,7 +471,7 @@ export function respond(state: ConversationState, message: string, now: Date): T
         },
       };
     }
-    const step = nextStep(state.draft, state.bookings, now);
+    const step = nextStep(p, state.draft, state.bookings, now);
     return {
       state: { ...state, stage: step.stage },
       reply: withPrefix([answer, "Back to your booking:"], step.reply),
@@ -448,12 +485,14 @@ export function respond(state: ConversationState, message: string, now: Date): T
         return {
           state,
           reply: {
-            text: "I can't find a booking made in this conversation. In the real system I'd look it up by your phone number.",
+            text: p.demo
+              ? "I can't find a booking made in this conversation. In the real system I'd look it up by your phone number."
+              : "I can't find a booking made in this conversation. Could you tell me the day and time of your appointment?",
             suggestions: IDLE_SUGGESTIONS,
           },
         };
       }
-      const service = SERVICES.find((s) => s.id === booking.serviceId);
+      const service = p.services.find((s) => s.id === booking.serviceId);
       return {
         state: { ...state, stage: "cancel_confirm" },
         reply: {
@@ -464,19 +503,19 @@ export function respond(state: ConversationState, message: string, now: Date): T
     }
 
     const startsBooking =
-      isBookingIntent(t) || detectService(t) || parseDay(t, now) || parseTime(t) !== null;
+      isBookingIntent(t) || detectService(t, p) || parseDay(t, now) || parseTime(t) !== null;
     if (!startsBooking) {
       if (has(t, /\b(thanks|thank you|cheers|bye|goodbye)\b/)) {
         return {
           state,
           reply: {
-            text: `You're welcome. Have a lovely day from all of us at ${CLINIC.name}!`,
+            text: `You're welcome. Have a lovely day from all of us at ${p.name}!`,
             suggestions: IDLE_SUGGESTIONS,
           },
         };
       }
       if (has(t, /^\s*(hi|hello|hey|good (morning|afternoon|evening))\b/)) {
-        return { state, reply: greeting() };
+        return { state, reply: greeting(p) };
       }
       return {
         state,
@@ -489,13 +528,13 @@ export function respond(state: ConversationState, message: string, now: Date): T
   }
 
   // Confirmation: only an explicit yes books, and only when nothing new was said.
-  const applied = applyDetails(state, text, now);
+  const applied = applyDetails(state, text, now, p);
   if (state.stage === "confirm" && !applied.changed) {
     const draft = state.draft;
-    const service = serviceOf(draft);
+    const service = serviceOf(draft, p);
     if (isYes(t) && service && draft.day && draft.time !== undefined && draft.name) {
       const booking: Booking = {
-        reference: makeReference(state.bookings, draft.day, draft.time),
+        reference: makeReference(state.bookings, draft.day, draft.time, p),
         serviceId: service.id,
         day: draft.day,
         time: draft.time,
@@ -520,15 +559,15 @@ export function respond(state: ConversationState, message: string, now: Date): T
       }
       if (field === "treatment" || field === "service") delete draft2.serviceId;
       if (field === "name") delete draft2.name;
-      const step = nextStep(draft2, state.bookings, now);
+      const step = nextStep(p, draft2, state.bookings, now);
       return { state: { ...state, stage: step.stage, draft: draft2 }, reply: step.reply };
     }
     if (isNo(t)) {
       return {
         state,
         reply: {
-          text: "What would you like to change: the treatment, the day, the time or the name?",
-          suggestions: ["Change the time", "Change the day", "Change the treatment"],
+          text: `What would you like to change: the ${p.serviceWord}, the day, the time or the name?`,
+          suggestions: ["Change the time", "Change the day", `Change the ${p.serviceWord}`],
         },
       };
     }
@@ -561,11 +600,11 @@ export function respond(state: ConversationState, message: string, now: Date): T
     draft = { ...draft, name };
   }
 
-  if (serviceOf(draft)?.id === "urgent" && state.draft.serviceId !== "urgent") {
+  if (serviceOf(draft, p)?.urgent && !serviceOf(state.draft, p)?.urgent) {
     prefix.unshift("Sorry to hear you're in discomfort. I'll find you the earliest slot.");
   }
 
-  const step = nextStep(draft, state.bookings, now, applied.nearest);
+  const step = nextStep(p, draft, state.bookings, now, applied.nearest);
 
   // Nothing understood at a booking step: say so, then repeat the question.
   if (inBooking && !applied.changed && state.stage !== "name" && prefix.length === 0) {
@@ -589,7 +628,11 @@ export function respond(state: ConversationState, message: string, now: Date): T
  * any AI (saves a model call and its tokens). Returns null when the message needs real
  * understanding: booking intent, a day or time, or anything longer or unusual.
  */
-export function answerSimpleQuestion(message: string, now: Date): string | null {
+export function answerSimpleQuestion(
+  message: string,
+  now: Date,
+  p: BusinessProfile = DEMO_PROFILE,
+): string | null {
   const t = message.toLowerCase().trim();
   if (t.length === 0 || t.split(/\s+/).length > 12) return null;
   const aside = detectAside(t);
@@ -597,5 +640,5 @@ export function answerSimpleQuestion(message: string, now: Date): string | null 
   if (isBookingIntent(t) || isCancelIntent(t) || parseDay(t, now) || parseTime(t) !== null) {
     return null;
   }
-  return `${answerAside(aside, t)} Is there anything else I can help with?`;
+  return `${answerAside(aside, t, p)} Is there anything else I can help with?`;
 }

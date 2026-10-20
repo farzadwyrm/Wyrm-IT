@@ -1,3 +1,4 @@
+import { DEMO_PROFILE } from "@wyrm/receptionist";
 import Groq from "groq-sdk";
 import type { ChatCompletionMessageParam } from "groq-sdk/resources/chat/completions";
 import {
@@ -14,9 +15,9 @@ import {
   COMPACT_CALENDAR_DAYS,
   COMPACT_CHANNEL_PROMPTS,
   COMPACT_HISTORY,
-  COMPACT_SYSTEM_PROMPT,
-  COMPACT_TOOLS,
+  compactSystemPrompt,
   compactToolResult,
+  compactTools,
 } from "./compact";
 import { MAX_CORRECTIONS, reviewReply, safeReply } from "./reply-guard";
 import { executeTool, type Proposal, type ToolEvent } from "./tools";
@@ -124,13 +125,14 @@ async function runWithModel(
 ): Promise<ModelResult> {
   const prepared = prepareTurn(input, latest);
   const { bookings, events, justBooked } = prepared;
+  const profile = input.profile ?? DEMO_PROFILE;
   let pending: Proposal | null = prepared.pending;
   const spoken: string[] = [];
   let corrections = 0;
   // Cache-friendly order: Groq caches exact prefixes and cached tokens don't count toward rate
   // limits, so the fixed prompt and the (append-only) history come first and the changing state
   // goes only into the latest message.
-  const system = `${COMPACT_SYSTEM_PROMPT}\n${COMPACT_CHANNEL_PROMPTS[channel]}`;
+  const system = `${compactSystemPrompt(profile)}\n${COMPACT_CHANNEL_PROMPTS[channel]}`;
   const state = stateContext(
     input.now,
     channel,
@@ -138,6 +140,7 @@ async function runWithModel(
     pending,
     justBooked,
     COMPACT_CALENDAR_DAYS,
+    profile,
   );
   const messages = toMessages(input.history, system, state);
 
@@ -146,7 +149,7 @@ async function runWithModel(
       const response = await client.chat.completions.create({
         model: model.id,
         messages,
-        tools: COMPACT_TOOLS,
+        tools: compactTools(profile),
         tool_choice: "auto",
         temperature: 0.6,
         // Replies are one or two sentences; a small cap also keeps the per-minute budget free.
@@ -169,11 +172,11 @@ async function runWithModel(
       if (calls.length === 0) {
         const reply = spoken.join(" ").trim();
         if (!reply) return { kind: "failed" };
-        const issue = reviewReply(reply, { eventsThisTurn: events, pending, bookings });
+        const issue = reviewReply(reply, { eventsThisTurn: events, pending, bookings, profile });
         if (!issue) return { kind: "ok", text: reply, events };
         if (corrections >= MAX_CORRECTIONS) {
           console.warn(`groq ${model.id} reply replaced after failed correction: ${issue.kind}`);
-          return { kind: "ok", text: safeReply(pending, bookings), events };
+          return { kind: "ok", text: safeReply(pending, bookings, profile), events };
         }
         // Let the model fix its own reply once, before anything reaches the visitor.
         corrections++;
@@ -197,6 +200,7 @@ async function runWithModel(
           // Only a proposal from an earlier turn can be booked: never one made this turn.
           pendingFromEarlierTurn: prepared.bookablePending,
           latestVisitorMessage: latest.text,
+          profile,
         });
         const event = output.event;
         if (event) {

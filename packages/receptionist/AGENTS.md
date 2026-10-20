@@ -5,7 +5,12 @@ Pure TypeScript: no I/O, no AI calls, no React. It runs in the visitor's browser
 
 - `src/engine.ts`: conversation state machine (`respond(state, message, now)`).
 - `src/dates.ts`: day and time understanding. `src/availability.ts`: free times.
-- `src/clinic.ts`: the fictional clinic. Never use a real business, address or phone number.
+- `src/profile.ts`: `BusinessProfile`, `hoursText`, `openingHours`, `validateProfile`.
+- `src/clients/`: one file per client; `index.ts` lists them (`PROFILES`, `DEMO_PROFILE`).
+  Demo profiles are fictional (`demo: true`); never put customer data or secrets here.
+- `src/clinic.ts`: the old `CLINIC`/`SERVICES` names, derived from the demo profile.
+- Every function that depends on the business takes a profile (default: the demo), so code
+  must never hard-code a business name, service, hours or reference prefix.
 
 ## Safety rules (each has tests in `src/engine.test.ts`; never remove them)
 

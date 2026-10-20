@@ -10,6 +10,8 @@ export interface ReceptionistRequest {
   clock: { day: string; minutes: number };
   /** How the visitor is talking: typed chat, or a spoken (simulated phone) call. */
   channel?: "chat" | "voice";
+  /** Which client's receptionist (profile id); the website demo when omitted. */
+  client?: string;
 }
 
 export type ReceptionistResponse =

@@ -4,6 +4,8 @@ import type { ChatMessage, Proposal, ToolEvent } from "@wyrm/ai";
 import {
   type Booking,
   type ConversationState,
+  DEMO_PROFILE,
+  getProfile,
   greeting,
   initialState,
   respond,
@@ -59,11 +61,12 @@ function basicEvents(event: ReturnType<typeof respond>["reply"]["event"]): ToolE
  * State lives in refs (the source of truth) mirrored into React state for rendering, so the
  * asynchronous voice loop never reads a stale conversation.
  */
-export function useReceptionistSession() {
+export function useReceptionistSession(profileId: string = DEMO_PROFILE.id) {
+  const profile = getProfile(profileId) ?? DEMO_PROFILE;
   const [messages, setMessages] = useState<SessionMessage[]>(() => [
-    { id: 0, from: "receptionist", text: greeting().text },
+    { id: 0, from: "receptionist", text: greeting(profile).text },
   ]);
-  const [suggestions, setSuggestions] = useState<string[]>(() => greeting().suggestions);
+  const [suggestions, setSuggestions] = useState<string[]>(() => greeting(profile).suggestions);
   const [busy, setBusy] = useState(false);
   const [mode, setModeState] = useState<SessionMode>("ai");
   /** Which AI answered last: Claude (paid) or a free open model on Groq. */
@@ -100,14 +103,14 @@ export function useReceptionistSession() {
 
   const replyBasic = useCallback(
     (text: string): SessionReply => {
-      const turn = respond(basicRef.current, text, new Date());
+      const turn = respond(basicRef.current, text, new Date(), profile);
       basicRef.current = turn.state;
       setSuggestions(turn.reply.suggestions);
       const events = basicEvents(turn.reply.event);
       append({ from: "receptionist", text: turn.reply.text, ...(events.length ? { events } : {}) });
       return { text: turn.reply.text, events };
     },
-    [append],
+    [append, profile],
   );
 
   /** Sends a visitor message; resolves with the receptionist's reply (null if ignored). */
@@ -138,6 +141,7 @@ export function useReceptionistSession() {
             pending: pendingRef.current,
             clock: clock(),
             channel,
+            client: profile.id,
           } satisfies ReceptionistRequest),
         });
         data = (await response.json()) as ReceptionistResponse;
@@ -196,19 +200,19 @@ export function useReceptionistSession() {
       });
       return { text: data.text, events: data.events };
     },
-    [append, replyBasic, setMode],
+    [append, replyBasic, setMode, profile.id],
   );
 
   const restart = useCallback(() => {
     generation.current++;
-    commit([{ id: nextId.current++, from: "receptionist", text: greeting().text }]);
-    setSuggestions(greeting().suggestions);
+    commit([{ id: nextId.current++, from: "receptionist", text: greeting(profile).text }]);
+    setSuggestions(greeting(profile).suggestions);
     bookingsRef.current = [];
     pendingRef.current = null;
     basicRef.current = initialState();
-  }, [commit]);
+  }, [commit, profile]);
 
-  return { messages, suggestions, busy, mode, provider, send, restart, append };
+  return { messages, suggestions, busy, mode, provider, send, restart, append, profile };
 }
 
 export type ReceptionistSession = ReturnType<typeof useReceptionistSession>;
