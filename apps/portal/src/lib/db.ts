@@ -21,3 +21,17 @@ export function serverDb() {
     return null;
   }
 }
+
+/** Database health for /api/health: whether it's configured and answers. Never the URL itself. */
+export async function databaseStatus(): Promise<"missing" | "rejected" | "unreachable" | "ok"> {
+  if (!process.env.DATABASE_URL?.trim()) return "missing";
+  const db = serverDb();
+  if (!db) return "rejected";
+  try {
+    await db.execute("select 1");
+    return "ok";
+  } catch (cause) {
+    console.error("portal: database unreachable", cause instanceof Error ? cause.message : cause);
+    return "unreachable";
+  }
+}
