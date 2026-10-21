@@ -1,6 +1,6 @@
 # Roadmap: Agent Studio and a professional client portal
 
-Status: Phase 1 built and live (2026-10-21); phases 2–6 not started. Research behind it (every claim
+Status: phases 1–2 built and live (2026-10-21); phases 3–6 not started. Research behind it (every claim
 cited there): [agent-policies.md](../research/agent-policies.md),
 [agent-delivery.md](../research/agent-delivery.md),
 [agent-management-ia.md](../research/agent-management-ia.md),
@@ -242,3 +242,15 @@ Each phase ends with tests, a green CI run, a deploy and a check on the live sit
     readable summary. A blocked topic was stopped in code.
   - Limits: bookings are *requests* until the calendar connection exists (Phase 3). The Studio screens weren't
     checked while signed in as a customer.
+- **Phase 2 done (2026-10-21):**
+  - Migration 0006 is applied live.
+  - Storage-free turn engine: `runTurn` in `packages/core/src/runtime.ts`.
+  - Simulator, runner, starter tests and publish gate: `packages/core/src/testing.ts`.
+  - Free-model judge: `judgeReply` in `packages/ai/src/brain-models.ts`.
+  - Studio Tests tab and "Test & publish": `apps/portal/src/app/dashboard/agents/[id]/studio/`.
+  - "Why?" trace in test chats.
+  - Demo starter tests (`packages/db/seed/demo-tests.sql`) are loaded live.
+  - Live check: the chat works after the refactor; the trace is only returned to signed-in staff (a public test
+    request gets 403).
+  - Not yet run live in the portal: running the test pack and publishing through the gate both need a customer login
+    for the demo business.
