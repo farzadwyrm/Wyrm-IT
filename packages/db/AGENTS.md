@@ -12,8 +12,7 @@ Database for the customer portal (Supabase Postgres). Plan: docs/plans/customer-
 Every new table also needs explicit grants (see `0002_api_grants.sql`): Supabase no longer
 exposes new tables to the API by default. Never grant anything to `anon`.
 
-Applied to the live project (Wyrm-AI): 0001, 0002 (2026-10-21). 0003 (two-tier users) is NOT
-applied yet: it goes live together with the portal code that uses it (stage 3).
+Applied to the live project (Wyrm-AI): 0001, 0002, 0003 (two-tier users) (2026-10-21).
 
 Rules: no customer data, secrets or real emails in migrations or tests; signed-out visitors
 see nothing; only Wyrm admins create organisations and agents.
