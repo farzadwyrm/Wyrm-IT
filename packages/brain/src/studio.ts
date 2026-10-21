@@ -363,11 +363,26 @@ export function findConflicts(rules: readonly Rule[]): Conflict[] {
 // ---------------------------------------------------------------------------------------------
 // Limits, checked in code before any action.
 
+const stem = (w: string) => w.replace(/(ies|es|s)$/, "");
+
+/** A blocked topic matches when every word of it appears (plurals and singulars alike). */
 export function blockedTopic(text: string, limits: Limits): string | null {
-  const t = text.toLowerCase();
+  const words = new Set(
+    text
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean)
+      .map(stem),
+  );
   return (
-    limits.blockedTopics.find((topic) => topic.trim() && t.includes(topic.trim().toLowerCase())) ??
-    null
+    limits.blockedTopics.find((topic) => {
+      const parts = topic
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter(Boolean)
+        .map(stem);
+      return parts.length > 0 && parts.every((p) => words.has(p));
+    }) ?? null
   );
 }
 
@@ -473,7 +488,7 @@ export function buildInstructions(
           .join(", ") || "nothing"
       }.\n${
         missing.length
-          ? `Still needed: ${missing.map((f) => `${f.label} (${f.key}${f.type === "date" ? ", as YYYY-MM-DD" : f.type === "time" ? ", as HH:MM" : ""})`).join(", ")}. Ask for one or two at a time.`
+          ? `Still needed: ${missing.map((f) => `${f.label} (${f.key})`).join(", ")}. Ask for one or two at a time, in plain words; never ask the customer for a format. In fields, write dates as YYYY-MM-DD and times as HH:MM (24h).`
           : ctx.procedure.confirmBeforeActing
             ? "Everything is collected: read the details back and ask the customer to confirm. Set confirmed=true only if they clearly say yes."
             : "Everything is collected."

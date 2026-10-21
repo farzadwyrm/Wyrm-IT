@@ -426,6 +426,11 @@ describe("Agent Studio policies at runtime", () => {
     expect(conv?.outcome).toBe("lead");
     expect(conv?.flags).toContain("needs_attention");
     expect(conv?.state.done).toEqual(["book"]);
+    const [saved] = await rows<{ summary: string }>(
+      "select summary from conversations where id = $1",
+      [first.conversationId],
+    );
+    expect(saved?.summary).toBe("Book a visit: Name: Ana Example, Day: 2026-10-21, Time: 10:00");
     const tools = await rows<{ tool: string; outcome: string }>(
       "select tool, outcome from agent_decisions where conversation_id = $1 and decision = 'tool_authorize'",
       [first.conversationId],

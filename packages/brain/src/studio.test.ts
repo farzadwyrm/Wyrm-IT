@@ -132,6 +132,11 @@ describe("limits are checked in code", () => {
   it("spot blocked topics", () => {
     expect(blockedTopic("Does my INSURANCE cover this?", policy.limits)).toBe("insurance");
     expect(blockedTopic("When are you open?", policy.limits)).toBeNull();
+    const claims = { ...policy.limits, blockedTopics: ["insurance claims"] };
+    expect(blockedTopic("Does my insurance claim cover a filling?", claims)).toBe(
+      "insurance claims",
+    );
+    expect(blockedTopic("Do you accept insurance?", claims)).toBeNull();
   });
 });
 

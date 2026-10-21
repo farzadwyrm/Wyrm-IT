@@ -119,10 +119,12 @@ const dayString = (d: Date) => d.toISOString().slice(0, 10);
 const FRUSTRATION =
   /\b(ridiculous|useless|terrible|angry|furious|unacceptable|complain|complaint|worst)\b|!{3,}/i;
 
-const summaryOf = (fields: Record<string, string>) =>
-  Object.entries(fields)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join(", ");
+/** The collected details in the procedure's own order, with its labels. */
+const summaryOf = (fields: Record<string, string>, procedure?: Procedure | null) =>
+  (procedure
+    ? procedure.requiredInfo.filter((f) => fields[f.key]).map((f) => `${f.label}: ${fields[f.key]}`)
+    : Object.entries(fields).map(([k, v]) => `${k}: ${v}`)
+  ).join(", ");
 
 /** What the customer hears when a limit blocks an action. */
 function limitMessage(reason: string, limits: Policy["limits"]) {
@@ -312,6 +314,8 @@ export async function handleCustomerMessage(
   const result = await decide(event, state, deps.classifiers);
   const records: DecisionRecord[] = [...result.records];
   let convState = (conversation.state ?? {}) as ConversationState;
+  /** Set when a procedure finishes: what staff need to act on, shown in the portal. */
+  let summary: string | null = null;
   let reply: string;
   let outcome = conversation.outcome;
   const flags = new Set(conversation.flags);
@@ -465,7 +469,7 @@ export async function handleCustomerMessage(
                 conversationId: conversation.id,
                 action: `${procedure.template === "quote" ? "quote" : "booking"}.${procedure.template === "quote" ? "send" : "cancel"}`,
                 riskTier: 2,
-                summary: `${procedure.name}: ${summaryOf(collected)}`.slice(0, 500),
+                summary: `${procedure.name}: ${summaryOf(collected, procedure)}`.slice(0, 500),
                 payload,
                 payloadHash: hashPayload({ conversation: conversation.id, ...payload }),
                 requestedAt: now,
@@ -482,6 +486,11 @@ export async function handleCustomerMessage(
               approvalId: held?.id ?? null,
             });
             reply = `Thank you. I've passed this to the team${contact}; they'll review it and get back to you.`;
+            summary =
+              `${procedure.name} (needs approval): ${summaryOf(collected, procedure)}`.slice(
+                0,
+                2000,
+              );
             flags.add("needs_attention");
             outcome = procedure.template === "quote" ? "lead" : "handed_off";
             convState = {
@@ -497,6 +506,7 @@ export async function handleCustomerMessage(
               tool,
               riskTier: tier,
             });
+            summary = `${procedure.name}: ${summaryOf(collected, procedure)}`.slice(0, 2000);
             flags.add("needs_attention");
             topics.add(`${procedure.template} request`);
             outcome = procedure.template === "transfer" ? "handed_off" : "lead";
@@ -566,7 +576,7 @@ export async function handleCustomerMessage(
         topics: [...topics].slice(0, 10),
         aiDisclosed: conversation.aiDisclosed || Boolean(result.disclosure),
         state: convState,
-        summary: conversation.summary ?? text.slice(0, 200),
+        summary: summary ?? conversation.summary ?? text.slice(0, 200),
         endedAt: result.action.kind === "stop" ? now : null,
         status: result.action.kind === "stop" ? "ended" : "active",
       })
