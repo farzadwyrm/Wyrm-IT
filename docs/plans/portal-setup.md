@@ -36,5 +36,9 @@ http://localhost:3001.
 3. Sign in at http://localhost:3001: you'll see **Admin**, where you create clients.
 
 ## 6. Deploy (later)
-Vercel → Add New Project → same GitHub repo → Root Directory `apps/portal` → add the three
-environment variables → Deploy. Then update the Site URL and Redirect URLs in Supabase.
+Vercel → Add New Project → same GitHub repo → "Import single project" for `apps/portal`
+(project name `wyrm-portal`). Then Settings → Environment Variables:
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` as type **Config**
+  (Vercel refuses `NEXT_PUBLIC_` names as Secret; they are public by design).
+- `SUPABASE_SECRET_KEY` as type **Secret**, in its own form.
+Deploy, then set the Site URL and Redirect URLs in Supabase to the live address.
