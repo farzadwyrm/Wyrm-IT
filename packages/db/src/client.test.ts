@@ -30,3 +30,11 @@ describe("describeDbUrl", () => {
     expect(text).toContain("***@aws-1-eu-central-1.pooler.example.com:6543/postgres");
   });
 });
+
+describe("describeDbUrl on a mis-pasted value", () => {
+  it("reveals no characters of a value that isn't a URL (it may be the password)", () => {
+    const text = describeDbUrl("Secretpass1@");
+    expect(text).toBe("unparseable (12 chars, no postgresql:// prefix)");
+    expect(text).not.toMatch(/Secret|pass/);
+  });
+});

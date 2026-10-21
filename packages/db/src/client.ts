@@ -19,14 +19,20 @@ export function normalizeDbUrl(raw: string): string {
   return `${scheme}${user}:${encodeURIComponent(plain)}@${rest}`;
 }
 
-/** Shape of a connection string for logs, never the password itself. */
+/**
+ * Shape of a connection string for logs. Never any part of the value that could be secret: a
+ * mis-pasted setting may be the password alone, so unparseable values report only their shape.
+ */
 export function describeDbUrl(raw: string): string {
   const url = normalizeDbUrl(raw);
   try {
     const parsed = new URL(url);
     return `${parsed.protocol}//${parsed.username}:***@${parsed.host}${parsed.pathname}`;
   } catch {
-    return `unparseable (${url.length} chars, starts "${url.slice(0, 13)}")`;
+    const scheme = /^postgres(ql)?:\/\//.test(url)
+      ? "starts with postgresql://"
+      : "no postgresql:// prefix";
+    return `unparseable (${url.length} chars, ${scheme})`;
   }
 }
 
