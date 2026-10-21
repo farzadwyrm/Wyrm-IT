@@ -61,6 +61,16 @@ export default async function AgentPage({
         )}
       </div>
       <Notice params={query} />
+      <Link
+        href={`/dashboard/agents/${agent.id}/studio`}
+        className="flex items-center justify-between rounded-2xl border border-ember/50 bg-ember/10 p-4 hover:border-ember"
+      >
+        <span>
+          <strong>Agent Studio</strong>: facts, rules, procedures, limits and handoff. Decide
+          exactly how {agent.name} works.
+        </span>
+        <span aria-hidden="true">→</span>
+      </Link>
 
       <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
         <div className="space-y-4">

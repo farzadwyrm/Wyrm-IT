@@ -54,6 +54,8 @@ const DB_RULES: [RegExp, string, string][] = [
     "This person is already a member.",
   ],
   [/tenants_slug_key/, "slug_taken", "That short name is already taken."],
+  [/rule_limit/, "rule_limit", "An agent can have up to 15 rules. Remove or merge one first."],
+  [/agent_procedures_agent_id_template_key/, "already_added", "That procedure is already added."],
 ];
 
 /** Turns a database rule violation into a DomainError; rethrows anything else. */

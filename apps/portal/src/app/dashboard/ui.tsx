@@ -21,6 +21,12 @@ const ERRORS: Record<string, string> = {
   bad_budget: "Enter a monthly budget between $0 and $1,000.",
   tenant_suspended: "Your organisation is suspended.",
   no_turns: "That conversation has no customer messages to test with.",
+  note_required: "Say briefly what changed: a few words are enough.",
+  bad_rule: "A rule is 5 to 300 characters.",
+  rule_limit: "An agent can have up to 15 rules. Remove or merge one first.",
+  already_added: "That procedure is already added.",
+  bad_procedure: "Describe when to use the procedure in a sentence.",
+  bad_template: "Unknown procedure.",
   unknown: "Something went wrong. Nothing was changed.",
 };
 
