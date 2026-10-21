@@ -1,6 +1,6 @@
 # Plan: smart customer portal and the "main brain"
 
-Status: proposed (2026-10-21). Research behind it:
+Status: stages 1–4 and 6 built (2026-10-21); see "Progress" at the end. Research behind it:
 [main-brain-orchestration.md](../research/main-brain-orchestration.md),
 [agent-dashboard-products.md](../research/agent-dashboard-products.md).
 
@@ -116,3 +116,20 @@ stages 4–5 above where they fit.
 
 An AI supervisor planning every turn; agents chatting freely; vector memory; automatic refunds, payments or mass sends;
 self-rewriting prompts; paid monitoring tools; learning across customers.
+
+## Progress (2026-10-21)
+
+- Stage 1 done: migration 0004 applied live; PGlite tests (`packages/db/src/ops.test.ts`).
+- Stage 2 done: `packages/brain` (rules, thresholds, tiers, budget, switches, disclosure).
+- Stage 3 done: `packages/core/src/operations.ts` (+ tests).
+- Stage 4 done: `apps/portal/src/app/dashboard/*` (Home, Conversations, To-do, Teach, Agents,
+  Settings). Not yet checked live while signed in as a customer.
+- Stage 6 done in code: `/api/chat` + `packages/core/src/runtime.ts` + `packages/ai/src/brain-models.ts`;
+  public `/chat/[agentId]`, "Try it" on agent pages, admin client page with test chats and
+  "view as". Live AI answers need `GROQ_API_KEY` (free) and/or `ANTHROPIC_API_KEY` on the
+  wyrm-portal Vercel project; without them the brain answers taught questions and takes messages.
+- Stage 7: demo seed `packages/db/seed/demo-business.sql` (not yet run live). `/api/health`
+  reports database and AI configuration.
+- Not started: AI-written summaries per conversation, weekly digest emails (needs Resend),
+  running saved tests automatically, booking tools for the generic agent (bookings still only
+  in the receptionist demo), real phone/SMS/email channels (need Twilio/Resend accounts).
