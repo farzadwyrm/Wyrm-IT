@@ -86,6 +86,7 @@ beforeAll(async () => {
     "0002_api_grants.sql",
     "0003_two_tier_users.sql",
     "0004_agent_operations.sql",
+    "0005_agent_policies.sql",
   ])
     await client.exec(migration(m));
   await client.query(
@@ -266,5 +267,236 @@ describe("a customer message", () => {
       channel: "web_chat",
     });
     expect(r.status === "ok" && r.reply).toContain("paused");
+  });
+});
+
+describe("Agent Studio policies at runtime", () => {
+  const STUDIO = "20000000-0000-4000-8000-0000000000a9";
+  const policy = {
+    version: 2,
+    profile: {
+      timezone: "UTC",
+      hours: { mon: { open: "08:00", close: "18:00" }, tue: { open: "08:00", close: "18:00" } },
+    },
+    rules: [],
+    procedures: [
+      {
+        id: "p-book",
+        template: "book",
+        name: "Book a visit",
+        whenToUse: "New appointment.",
+        whenNotToUse: "",
+        requiredInfo: [
+          { key: "name", label: "Name", type: "text" },
+          { key: "date", label: "Day", type: "date" },
+          { key: "time", label: "Time", type: "time" },
+        ],
+        steps: ["Ask day and time.", "Confirm."],
+        confirmBeforeActing: true,
+        enabled: true,
+      },
+      {
+        id: "p-cancel",
+        template: "cancel",
+        name: "Cancel a visit",
+        whenToUse: "Cancel.",
+        whenNotToUse: "",
+        requiredInfo: [{ key: "name", label: "Name", type: "text" }],
+        steps: [],
+        confirmBeforeActing: false,
+        enabled: true,
+      },
+      {
+        id: "p-msg",
+        template: "message",
+        name: "Take a message",
+        whenToUse: "Message.",
+        whenNotToUse: "",
+        requiredInfo: [{ key: "name", label: "Name", type: "text" }],
+        steps: [],
+        confirmBeforeActing: false,
+        enabled: true,
+      },
+    ],
+    limits: {
+      minNoticeHours: 2,
+      bookingWindowDays: 30,
+      blockedTopics: ["insurance"],
+      afterHours: "take_message",
+      handoffContact: "Reception",
+    },
+  };
+  const monday10 = new Date("2026-10-19T10:00:00Z");
+
+  function studioDeps(intent: string, replies: Partial<Answer>[]) {
+    let i = 0;
+    const seen: { instructions?: string | undefined; collect?: string[] | undefined }[] = [];
+    const d: RuntimeDeps & { seen: typeof seen } = {
+      seen,
+      classifiers: [
+        {
+          provider: "groq",
+          paid: false,
+          async classify() {
+            return {
+              intent,
+              confidence: 0.95,
+              provider: "groq",
+              model: "fake",
+              inputTokens: 1,
+              outputTokens: 1,
+              costMicros: 0,
+              latencyMs: 1,
+            };
+          },
+        },
+      ],
+      async answer(knowledge) {
+        seen.push({ instructions: knowledge.instructions, collect: knowledge.collect });
+        const r = replies[Math.min(i++, replies.length - 1)] ?? {};
+        return {
+          reply: "Okay.",
+          answered: true,
+          topic: null,
+          lead: false,
+          provider: "groq",
+          model: "fake",
+          inputTokens: 1,
+          outputTokens: 1,
+          costMicros: 0,
+          latencyMs: 1,
+          ...r,
+        };
+      },
+    };
+    return d;
+  }
+
+  // Its own fictional business, so no other agent competes for the same requests.
+  const TENANT_C = "10000000-0000-4000-8000-00000000000c";
+  beforeAll(async () => {
+    await client.query(
+      "insert into tenants (id, name, slug, agent_limit) values ($1, 'Fictional Clinic C', 'clinic-c', 2)",
+      [TENANT_C],
+    );
+    await client.query(
+      "insert into agents (id, tenant_id, name, type, status, config) values ($1, $2, 'Studio desk', 'receptionist', 'live', $3)",
+      [STUDIO, TENANT_C, JSON.stringify(policy)],
+    );
+  });
+
+  it("collects details across messages, confirms, then records a booking request", async () => {
+    const d = studioDeps("booking", [
+      { reply: "Which day and time?", fields: { name: "Ana Example" } },
+      {
+        reply: "Wednesday 21 October at 10:00, correct?",
+        fields: { date: "2026-10-21", time: "10:00" },
+      },
+      { reply: "Great, the team will confirm.", confirmed: true },
+    ]);
+    const first = await handleCustomerMessage(db, d, {
+      agentId: STUDIO,
+      text: "I'm Ana, I'd like a check-up",
+      channel: "web_chat",
+      now: monday10,
+    });
+    if (first.status !== "ok") throw new Error("expected ok");
+    expect(d.seen[0]?.instructions).toContain('PROCEDURE "Book a visit"');
+    expect(d.seen[0]?.collect).toEqual(["name", "date", "time"]);
+    await handleCustomerMessage(db, d, {
+      agentId: STUDIO,
+      conversationId: first.conversationId,
+      text: "Wednesday at 10",
+      channel: "web_chat",
+      now: monday10,
+    });
+    const last = await handleCustomerMessage(db, d, {
+      agentId: STUDIO,
+      conversationId: first.conversationId,
+      text: "Yes",
+      channel: "web_chat",
+      now: monday10,
+    });
+    expect(last.status === "ok" && last.reply).toContain("team will confirm");
+    const [conv] = await rows<{
+      outcome: string;
+      flags: string[];
+      state: { procedure?: string; done?: string[] };
+    }>("select outcome, flags, state from conversations where id = $1", [first.conversationId]);
+    expect(conv?.outcome).toBe("lead");
+    expect(conv?.flags).toContain("needs_attention");
+    expect(conv?.state.done).toEqual(["book"]);
+    const tools = await rows<{ tool: string; outcome: string }>(
+      "select tool, outcome from agent_decisions where conversation_id = $1 and decision = 'tool_authorize'",
+      [first.conversationId],
+    );
+    expect(tools).toEqual([{ tool: "book.request", outcome: "ok" }]);
+  });
+
+  it("blocks a booking outside the limits in code, whatever the model says", async () => {
+    const d = studioDeps("booking", [
+      {
+        reply: "Booked for today at 11!",
+        fields: { name: "Ana", date: "2026-10-19", time: "11:00" },
+        confirmed: true,
+      },
+    ]);
+    const r = await handleCustomerMessage(db, d, {
+      agentId: STUDIO,
+      text: "Book me in for 11 today",
+      channel: "web_chat",
+      now: monday10,
+    });
+    expect(r.status === "ok" && r.reply).toContain("at least 2 hours");
+    const tools = await rows<{ outcome: string; reason: string }>(
+      "select outcome, reason from agent_decisions where conversation_id = $1 and decision = 'tool_authorize'",
+      [r.status === "ok" ? r.conversationId : ""],
+    );
+    expect(tools).toEqual([{ outcome: "denied", reason: "too_soon" }]);
+  });
+
+  it("holds a cancellation for staff approval", async () => {
+    const d = studioDeps("cancel", [
+      { reply: "I'll pass that on.", fields: { name: "Ana Example" } },
+    ]);
+    const r = await handleCustomerMessage(db, d, {
+      agentId: STUDIO,
+      text: "Please cancel my visit, Ana Example",
+      channel: "web_chat",
+      now: monday10,
+    });
+    if (r.status !== "ok") throw new Error("expected ok");
+    const held = await rows<{ action: string; risk_tier: number; status: string }>(
+      "select action, risk_tier, status from approvals where conversation_id = $1",
+      [r.conversationId],
+    );
+    expect(held).toEqual([{ action: "booking.cancel", risk_tier: 2, status: "pending" }]);
+  });
+
+  it("hands blocked topics to a person without asking the model", async () => {
+    const d = studioDeps("general_question", []);
+    const r = await handleCustomerMessage(db, d, {
+      agentId: STUDIO,
+      text: "Will my insurance pay for this?",
+      channel: "web_chat",
+      now: monday10,
+    });
+    expect(r.status === "ok" && r.reply).toContain("not able to help with insurance");
+    expect(d.seen).toEqual([]);
+  });
+
+  it("takes a message after hours", async () => {
+    const d = studioDeps("general_question", [
+      { reply: "We're closed now; can I take your name?" },
+    ]);
+    const sunday = new Date("2026-10-18T10:00:00Z");
+    await handleCustomerMessage(db, d, {
+      agentId: STUDIO,
+      text: "Hello, do you do crowns?",
+      channel: "web_chat",
+      now: sunday,
+    });
+    expect(d.seen[0]?.instructions).toContain('PROCEDURE "Take a message"');
+    expect(d.seen[0]?.instructions).toContain("closed right now");
   });
 });

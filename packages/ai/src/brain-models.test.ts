@@ -132,3 +132,35 @@ describe("firstJson", () => {
     expect(firstJson("{broken")).toBeNull();
   });
 });
+
+describe("answerAsAgent with Studio instructions", () => {
+  it("uses the instructions and returns only the requested details", async () => {
+    let system = "";
+    const anthropic = {
+      messages: {
+        create: async (req: { system: string }) => {
+          system = req.system;
+          return {
+            content: [
+              {
+                type: "text",
+                text: '{"reply":"Thursday at 10:00, Ana. Shall I send that to the team?","answered":true,"fields":{"name":"Ana Example","date":"2026-10-22","password":"x"},"confirmed":false}',
+              },
+            ],
+            usage: { input_tokens: 300, output_tokens: 30 },
+          };
+        },
+      },
+    } as unknown as NonNullable<ModelClients["anthropic"]>;
+    const a = await answerAsAgent(
+      { anthropic },
+      { ...knowledge, instructions: "SAFETY: rules first", collect: ["name", "date", "time"] },
+      [{ role: "customer", text: "Ana Example, Thursday please" }],
+      { allowPaid: true },
+    );
+    expect(system).toContain("SAFETY: rules first");
+    expect(system).not.toContain("Open Mon-Fri 9-17"); // free-text facts replaced by instructions
+    expect(a?.fields).toEqual({ name: "Ana Example", date: "2026-10-22" });
+    expect(a?.confirmed).toBe(false);
+  });
+});

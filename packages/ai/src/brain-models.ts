@@ -180,6 +180,11 @@ export interface AgentKnowledge {
   tone?: string;
   /** Answers the owner taught ("fix this answer"). */
   taught: readonly { topic: string | null; answer: string }[];
+  /** Agent Studio instructions built by the brain (precedence order). Used instead of the
+   * free-text fields above when present. */
+  instructions?: string;
+  /** Required-info keys to extract from the conversation into `fields`. */
+  collect?: readonly string[];
 }
 
 export interface AgentAnswer extends Omit<Completion, "text"> {
@@ -189,9 +194,28 @@ export interface AgentAnswer extends Omit<Completion, "text"> {
   topic: string | null;
   /** The customer left contact details or asked to be called back. */
   lead: boolean;
+  /** Details for the running procedure, by key (only keys that were asked for). */
+  fields: Record<string, string>;
+  /** The customer clearly confirmed the details read back to them. */
+  confirmed: boolean;
+}
+
+function studioSystem(k: AgentKnowledge) {
+  const taught = k.taught
+    .slice(0, 30)
+    .map((t) => `- ${t.topic ? `${t.topic}: ` : ""}${t.answer}`)
+    .join("\n");
+  const keys = (k.collect ?? []).join(", ");
+  return `${k.instructions}
+
+ANSWERS THE OWNER WROTE (use these when they fit):
+${taught || "(none)"}
+
+Reply with JSON only: {"reply": "<what to say>", "answered": <true if the facts covered it>, "topic": "<2-word topic>", "lead": <true if they left contact details or asked for a callback>, "fields": {${keys ? `<only these keys, when the customer gave them: ${keys}>` : ""}}, "confirmed": <true only if the customer clearly said yes to the details read back>}`;
 }
 
 function answerSystem(k: AgentKnowledge) {
+  if (k.instructions) return studioSystem(k);
   const taught = k.taught
     .slice(0, 30)
     .map((t) => `- ${t.topic ? `${t.topic}: ` : ""}${t.answer}`)
@@ -242,5 +266,21 @@ export async function answerAsAgent(
     answered: json?.answered !== false,
     topic: typeof json?.topic === "string" ? json.topic.toLowerCase().slice(0, 40) : null,
     lead: json?.lead === true,
+    fields: pickFields(json?.fields, knowledge.collect ?? []),
+    confirmed: json?.confirmed === true,
   };
+}
+
+/** Only the requested keys, as short strings: model output is untrusted. */
+function pickFields(raw: unknown, keys: readonly string[]): Record<string, string> {
+  if (!raw || typeof raw !== "object") return {};
+  const out: Record<string, string> = {};
+  for (const key of keys) {
+    const value = (raw as Record<string, unknown>)[key];
+    if (typeof value === "string" || typeof value === "number") {
+      const text = String(value).trim().slice(0, 200);
+      if (text) out[key] = text;
+    }
+  }
+  return out;
 }

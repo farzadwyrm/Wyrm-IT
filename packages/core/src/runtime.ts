@@ -1,16 +1,28 @@
 import {
   type AgentSpec,
   type BrainEvent,
+  blockedTopic,
   budgetLevel,
+  buildInstructions,
   type Classifier,
+  checkAction,
   type DecisionRecord,
   decide,
   type FaqEntry,
+  isOpen,
+  missingInfo,
+  type Policy,
+  type Procedure,
+  policyIntents,
+  procedureForIntent,
+  TEMPLATES,
+  type Template,
   type TenantState,
 } from "@wyrm/brain";
 import {
   agentDecisions,
   agents,
+  approvals,
   conversationMessages,
   conversations,
   corrections,
@@ -20,6 +32,8 @@ import {
 } from "@wyrm/db";
 import { and, asc, desc, eq, gte, isNull, or, sql } from "drizzle-orm";
 import type { Db } from "./context";
+import { hashPayload } from "./operations";
+import { policyFromConfig } from "./studio";
 
 /**
  * The runtime path for a customer message: no signed-in user, so these are system functions.
@@ -54,6 +68,10 @@ export interface Knowledge {
   businessFacts?: string;
   tone?: string;
   taught: { topic: string | null; answer: string }[];
+  /** Agent Studio instructions (precedence order); replaces the free-text fields when set. */
+  instructions?: string;
+  /** Required info keys the answer should extract into `fields`. */
+  collect?: string[];
 }
 
 export interface Answer {
@@ -67,6 +85,17 @@ export interface Answer {
   outputTokens: number;
   costMicros: number;
   latencyMs: number;
+  /** Details the customer gave for the running procedure (by key). */
+  fields?: Record<string, string>;
+  /** The customer clearly said yes to the details read back. */
+  confirmed?: boolean;
+}
+
+/** What a conversation remembers between messages. */
+export interface ConversationState {
+  procedure?: Template | undefined;
+  collected?: Record<string, string>;
+  done?: string[];
 }
 
 export interface RuntimeDeps {
@@ -86,6 +115,30 @@ const words = (topic: string) =>
     .slice(0, 3);
 
 const dayString = (d: Date) => d.toISOString().slice(0, 10);
+
+const FRUSTRATION =
+  /\b(ridiculous|useless|terrible|angry|furious|unacceptable|complain|complaint|worst)\b|!{3,}/i;
+
+const summaryOf = (fields: Record<string, string>) =>
+  Object.entries(fields)
+    .map(([k, v]) => `${k}: ${v}`)
+    .join(", ");
+
+/** What the customer hears when a limit blocks an action. */
+function limitMessage(reason: string, limits: Policy["limits"]) {
+  switch (reason) {
+    case "too_soon":
+      return `I'm sorry, we need at least ${limits.minNoticeHours} hours' notice. Could you choose a later day or time?`;
+    case "too_far_ahead":
+      return `We can book up to ${limits.bookingWindowDays} days ahead. Could you choose an earlier day?`;
+    case "needs_valid_date":
+      return "Could you tell me the exact day (for example 24 October) and a time?";
+    case "discount_over_limit":
+      return "I'm not able to offer that discount. I can pass your request to the team if you like.";
+    default:
+      return "I can't do that myself, but I can pass it to the team.";
+  }
+}
 
 /** Loads everything the brain needs for one organisation, entered through one agent. */
 export async function loadRuntime(db: Db, agentId: string, now = new Date(), testMode = false) {
@@ -129,7 +182,12 @@ export async function loadRuntime(db: Db, agentId: string, now = new Date(), tes
     type: a.type,
     // Staff testing a draft agent from the portal may talk to it before it goes live.
     status: testMode && a.id === agentId && a.status === "draft" ? "live" : a.status,
-    intents: INTENTS_BY_TYPE[a.type] ?? ["general_question"],
+    intents: (() => {
+      const policy = policyFromConfig(a.config);
+      return policy.procedures.length > 0
+        ? policyIntents(policy)
+        : (INTENTS_BY_TYPE[a.type] ?? ["general_question"]);
+    })(),
     tools: [],
   }));
   const faq: FaqEntry[] = taught
@@ -161,7 +219,8 @@ export async function loadRuntime(db: Db, agentId: string, now = new Date(), tes
         .map((c) => ({ topic: c.topic, answer: c.correctAnswer })),
     };
   };
-  return { tenantId, entry: entry.agent, state, knowledgeFor };
+  const policyFor = (id: string): Policy => policyFromConfig(all.find((x) => x.id === id)?.config);
+  return { tenantId, entry: entry.agent, state, knowledgeFor, policyFor };
 }
 
 export interface TurnInput {
@@ -252,6 +311,7 @@ export async function handleCustomerMessage(
 
   const result = await decide(event, state, deps.classifiers);
   const records: DecisionRecord[] = [...result.records];
+  let convState = (conversation.state ?? {}) as ConversationState;
   let reply: string;
   let outcome = conversation.outcome;
   const flags = new Set(conversation.flags);
@@ -261,6 +321,48 @@ export async function handleCustomerMessage(
   switch (result.action.kind) {
     case "route": {
       routedAgent = result.action.agentId;
+      const agentId = result.action.agentId;
+      const policy = runtime.policyFor(agentId);
+      const open = isOpen(policy.profile, now);
+      const limits = policy.limits;
+      const contact = limits.handoffContact ? ` (${limits.handoffContact})` : "";
+      const noteDecision = (
+        fields: Partial<DecisionRecord> & Pick<DecisionRecord, "decision" | "outcome" | "reason">,
+      ) => records.push({ ...base(records[0], state, conversation.id), agentId, ...fields });
+
+      // Hard limits first, in code: blocked topics, frustration, after-hours behaviour.
+      const topic = blockedTopic(text, limits);
+      const frustrated = limits.handoffWhen.includes("frustrated") && FRUSTRATION.test(text);
+      const afterHours = !open && !convState.procedure && limits.afterHours !== "answer";
+      if (topic || frustrated || (afterHours && limits.afterHours === "handoff")) {
+        reply = topic
+          ? `I'm not able to help with ${topic} here. I'll pass this to the team at ${state.businessName}${contact}. Could you leave your name and a phone number?`
+          : `I'm sorry about that. I'll pass you to a person at ${state.businessName}${contact}. Could you leave your name and a phone number?`;
+        noteDecision({
+          decision: "escalate",
+          outcome: "escalated",
+          reason: topic
+            ? "blocked_topic"
+            : frustrated
+              ? "customer_frustrated"
+              : "after_hours_handoff",
+          ruleId: topic ? "limit:blocked_topic" : null,
+        });
+        flags.add("needs_attention");
+        outcome = "handed_off";
+        break;
+      }
+
+      // The running procedure, or the one this request starts (after hours: take a message).
+      let procedure: Procedure | null = convState.procedure
+        ? (policy.procedures.find((p) => p.enabled && p.template === convState.procedure) ?? null)
+        : procedureForIntent(policy, result.action.intent);
+      if (!procedure && afterHours)
+        procedure = policy.procedures.find((p) => p.enabled && p.template === "message") ?? null;
+      const collected: Record<string, string> = {
+        ...(procedure && convState.procedure === procedure.template ? convState.collected : {}),
+      };
+
       const turns = [
         ...history.map((m) => ({
           role: m.role === "customer" ? ("customer" as const) : ("agent" as const),
@@ -268,37 +370,145 @@ export async function handleCustomerMessage(
         })),
         { role: "customer" as const, text },
       ];
-      const answer = await deps.answer(runtime.knowledgeFor(result.action.agentId), turns, {
-        allowPaid: budgetLevel(state.budget) === "normal",
-      });
-      if (answer) {
-        reply = answer.reply;
-        records.push({
-          ...base(records[0], state, conversation.id),
-          agentId: result.action.agentId,
-          decision: "answer_mode",
-          outcome: answer.answered ? "ok" : "escalated",
-          reason: answer.answered ? "agent_answered" : "agent_lacked_facts",
-          provider: answer.provider,
-          model: answer.model,
-          inputTokens: answer.inputTokens,
-          outputTokens: answer.outputTokens,
-          costMicros: answer.costMicros,
-          latencyMs: answer.latencyMs,
-        });
-        if (answer.topic) topics.add(answer.topic);
-        if (!answer.answered) {
-          flags.add("unanswered");
-          flags.add("needs_attention");
-        }
-        if (answer.lead) {
-          outcome = "lead";
-          flags.add("needs_attention");
-        } else if (answer.answered && !outcome) outcome = "resolved_assumed";
-      } else {
-        reply = `Thanks. I can't answer that right now, so I'll pass it to the team at ${state.businessName}. Could you leave your name and a phone number or email?`;
+      const knowledge = runtime.knowledgeFor(agentId);
+      const usesStudio =
+        policy.procedures.length > 0 ||
+        policy.rules.length > 0 ||
+        Boolean(policy.profile.hours && Object.keys(policy.profile.hours).length);
+      const answer = await deps.answer(
+        usesStudio || procedure
+          ? {
+              ...knowledge,
+              instructions: buildInstructions(policy, {
+                businessName: state.businessName,
+                agentName: knowledge.agentName,
+                situation: { channel: input.channel, open, returning: false },
+                procedure,
+                collected,
+                today: now.toISOString().slice(0, 10),
+              }),
+              collect: procedure?.requiredInfo.map((f) => f.key) ?? [],
+            }
+          : knowledge,
+        turns,
+        { allowPaid: budgetLevel(state.budget) === "normal" },
+      );
+      if (!answer) {
+        reply = `Thanks. I can't answer that right now, so I'll pass it to the team at ${state.businessName}${contact}. Could you leave your name and a phone number or email?`;
         flags.add("needs_attention");
         outcome = "handed_off";
+        break;
+      }
+      reply = answer.reply;
+      noteDecision({
+        decision: "answer_mode",
+        outcome: answer.answered ? "ok" : "escalated",
+        reason: procedure
+          ? `procedure_${procedure.template}`
+          : answer.answered
+            ? "agent_answered"
+            : "agent_lacked_facts",
+        ruleId: procedure ? `procedure:${procedure.template}` : null,
+        provider: answer.provider,
+        model: answer.model,
+        inputTokens: answer.inputTokens,
+        outputTokens: answer.outputTokens,
+        costMicros: answer.costMicros,
+        latencyMs: answer.latencyMs,
+      });
+      if (answer.topic) topics.add(answer.topic);
+      if (!procedure && !answer.answered) {
+        flags.add("unanswered");
+        flags.add("needs_attention");
+      }
+      if (answer.lead) {
+        outcome = "lead";
+        flags.add("needs_attention");
+      } else if (answer.answered && !outcome) outcome = "resolved_assumed";
+
+      if (procedure) {
+        for (const field of procedure.requiredInfo) {
+          const value = answer.fields?.[field.key];
+          if (typeof value === "string" && value.trim())
+            collected[field.key] = value.trim().slice(0, 200);
+        }
+        convState = { ...convState, procedure: procedure.template, collected };
+        const ready =
+          missingInfo(procedure, collected).length === 0 &&
+          (answer.confirmed === true || !procedure.confirmBeforeActing);
+        if (ready) {
+          const check = checkAction(procedure.template, collected, limits, now);
+          const tier = TEMPLATES[procedure.template].tier;
+          const tool = `${procedure.template}.request`;
+          if (!check.ok) {
+            noteDecision({
+              decision: "tool_authorize",
+              outcome: "denied",
+              reason: check.reason,
+              tool,
+              riskTier: tier,
+              ruleId: `limit:${check.reason}`,
+            });
+            reply = limitMessage(check.reason, limits);
+            if (check.reason !== "discount_over_limit") {
+              delete collected.date;
+              delete collected.time;
+            }
+            convState = { ...convState, collected };
+          } else if (check.needsApproval) {
+            const payload = { template: procedure.template, details: collected };
+            const [held] = await db
+              .insert(approvals)
+              .values({
+                tenantId,
+                agentId,
+                conversationId: conversation.id,
+                action: `${procedure.template === "quote" ? "quote" : "booking"}.${procedure.template === "quote" ? "send" : "cancel"}`,
+                riskTier: 2,
+                summary: `${procedure.name}: ${summaryOf(collected)}`.slice(0, 500),
+                payload,
+                payloadHash: hashPayload({ conversation: conversation.id, ...payload }),
+                requestedAt: now,
+                expiresAt: new Date(now.getTime() + 48 * 3_600_000),
+              })
+              .onConflictDoNothing()
+              .returning();
+            noteDecision({
+              decision: "tool_authorize",
+              outcome: "held",
+              reason: check.reason,
+              tool,
+              riskTier: 2,
+              approvalId: held?.id ?? null,
+            });
+            reply = `Thank you. I've passed this to the team${contact}; they'll review it and get back to you.`;
+            flags.add("needs_attention");
+            outcome = procedure.template === "quote" ? "lead" : "handed_off";
+            convState = {
+              procedure: undefined,
+              collected: {},
+              done: [...(convState.done ?? []), procedure.template],
+            };
+          } else {
+            noteDecision({
+              decision: "tool_authorize",
+              outcome: "ok",
+              reason: check.reason,
+              tool,
+              riskTier: tier,
+            });
+            flags.add("needs_attention");
+            topics.add(`${procedure.template} request`);
+            outcome = procedure.template === "transfer" ? "handed_off" : "lead";
+            if (!/team|confirm/i.test(reply))
+              reply = `${reply} The team will confirm shortly.`.trim();
+            convState = {
+              procedure: undefined,
+              collected: {},
+              done: [...(convState.done ?? []), procedure.template],
+            };
+          }
+        }
       }
       break;
     }
@@ -355,6 +565,7 @@ export async function handleCustomerMessage(
         flags: [...flags],
         topics: [...topics].slice(0, 10),
         aiDisclosed: conversation.aiDisclosed || Boolean(result.disclosure),
+        state: convState,
         summary: conversation.summary ?? text.slice(0, 200),
         endedAt: result.action.kind === "stop" ? now : null,
         status: result.action.kind === "stop" ? "ended" : "active",

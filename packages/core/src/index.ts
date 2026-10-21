@@ -9,5 +9,6 @@ export * from "./roles";
 export * from "./runtime";
 export * from "./security";
 export * from "./staff";
+export * from "./studio";
 export * from "./teams";
 export * from "./tenants";

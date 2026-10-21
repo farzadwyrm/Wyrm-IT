@@ -133,7 +133,11 @@ beforeAll(async () => {
   for (const m of ["0001_portal_foundations.sql", "0002_api_grants.sql"])
     await client.exec(migration(m));
   await client.query("insert into wyrm_admins (user_id) values ($1)", [people.super.id]);
-  for (const m of ["0003_two_tier_users.sql", "0004_agent_operations.sql"])
+  for (const m of [
+    "0003_two_tier_users.sql",
+    "0004_agent_operations.sql",
+    "0005_agent_policies.sql",
+  ])
     await client.exec(migration(m));
 
   const sup = await ctxFor(people.super);

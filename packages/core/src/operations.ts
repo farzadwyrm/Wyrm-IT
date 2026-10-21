@@ -41,7 +41,7 @@ function tenantSide(actor: Actor | null) {
 }
 
 /** Per-agent check that mirrors `can()`: Wyrm staff use platform permissions. */
-function gate(
+export function agentGate(
   ctx: Ctx,
   permission: Extract<Permission, "agents.logs" | "agents.use" | "agents.configure">,
   tenantId: string,
@@ -59,7 +59,7 @@ function gate(
 /** Agents whose conversations this actor may read: null = all of the tenant's. */
 export function visibleAgentIds(ctx: Ctx, tenantId: string): string[] | null {
   if (ctx.actor?.kind === "platform") {
-    gate(ctx, "agents.logs", tenantId, null);
+    agentGate(ctx, "agents.logs", tenantId, null);
     return null;
   }
   const me = tenantSide(ctx.actor);
@@ -127,7 +127,7 @@ export async function getConversation(ctx: Ctx, tenantId: string, conversationId
     .from(conversations)
     .where(and(eq(conversations.id, conversationId), eq(conversations.tenantId, tenantId)));
   if (!row) throw new DomainError("not_found", "Conversation not found.");
-  gate(ctx, "agents.logs", tenantId, row.agentId);
+  agentGate(ctx, "agents.logs", tenantId, row.agentId);
   const [messages, decisions] = await Promise.all([
     ctx.db
       .select()
@@ -155,7 +155,7 @@ export async function resolveAttention(ctx: Ctx, tenantId: string, conversationI
     .from(conversations)
     .where(and(eq(conversations.id, conversationId), eq(conversations.tenantId, tenantId)));
   if (!row) throw new DomainError("not_found", "Conversation not found.");
-  gate(ctx, "agents.use", tenantId, row.agentId);
+  agentGate(ctx, "agents.use", tenantId, row.agentId);
   await ctx.db
     .update(conversations)
     .set({ flags: sql`array_remove(${conversations.flags}, 'needs_attention')` })
@@ -206,7 +206,7 @@ export async function decideApproval(
     .from(approvals)
     .where(and(eq(approvals.id, input.approvalId), eq(approvals.tenantId, input.tenantId)));
   if (!row) throw new DomainError("not_found", "Approval not found.");
-  gate(ctx, "agents.configure", input.tenantId, row.agentId);
+  agentGate(ctx, "agents.configure", input.tenantId, row.agentId);
   if (row.riskTier >= 3 && ctx.actor?.kind !== "platform") {
     const d = check(ctx.actor, "security.manage", { tenantId: input.tenantId });
     if (!d.allowed) throw new ForbiddenError("security.manage", d.reason);
@@ -264,7 +264,7 @@ export async function addCorrection(
     question?: string;
   },
 ) {
-  gate(ctx, "agents.configure", input.tenantId, input.agentId);
+  agentGate(ctx, "agents.configure", input.tenantId, input.agentId);
   const correct = input.correctAnswer.trim();
   if (correct.length < 3)
     throw new DomainError("too_short", "Write the right answer (at least a few words).");
@@ -341,7 +341,7 @@ export async function retireCorrection(ctx: Ctx, tenantId: string, correctionId:
     .from(corrections)
     .where(and(eq(corrections.id, correctionId), eq(corrections.tenantId, tenantId)));
   if (!row) throw new DomainError("not_found", "Correction not found.");
-  gate(ctx, "agents.configure", tenantId, row.agentId);
+  agentGate(ctx, "agents.configure", tenantId, row.agentId);
   await ctx.db.update(corrections).set({ status: "retired" }).where(eq(corrections.id, row.id));
   await audit(ctx, {
     action: "correction.retired",
@@ -362,7 +362,7 @@ export async function testFromConversation(
     input.conversationId,
   );
   if (!conversation.agentId) throw new DomainError("no_agent", "This conversation had no agent.");
-  gate(ctx, "agents.configure", input.tenantId, conversation.agentId);
+  agentGate(ctx, "agents.configure", input.tenantId, conversation.agentId);
   const turns = messages
     .filter((m) => m.role === "customer")
     .map((m) => m.body.slice(0, 1000))
@@ -393,7 +393,7 @@ export async function testFromConversation(
 }
 
 export async function listTests(ctx: Ctx, tenantId: string, agentId: string) {
-  gate(ctx, "agents.logs", tenantId, agentId);
+  agentGate(ctx, "agents.logs", tenantId, agentId);
   return ctx.db
     .select()
     .from(agentTests)
@@ -405,7 +405,7 @@ export async function listTests(ctx: Ctx, tenantId: string, agentId: string) {
 // Settings versions: draft, publish, restore
 
 export async function listVersions(ctx: Ctx, tenantId: string, agentId: string) {
-  gate(ctx, "agents.logs", tenantId, agentId);
+  agentGate(ctx, "agents.logs", tenantId, agentId);
   return ctx.db
     .select()
     .from(agentSettingsVersions)
@@ -421,7 +421,7 @@ export async function saveDraft(
   ctx: Ctx,
   input: { tenantId: string; agentId: string; settings: Record<string, unknown> },
 ) {
-  gate(ctx, "agents.configure", input.tenantId, input.agentId);
+  agentGate(ctx, "agents.configure", input.tenantId, input.agentId);
   if (JSON.stringify(input.settings).length > 100_000)
     throw new DomainError("too_large", "These settings are too large.");
   const [version] = await guarded(() =>
@@ -450,7 +450,7 @@ export async function publishVersion(
   ctx: Ctx,
   input: { tenantId: string; agentId: string; versionId: string },
 ) {
-  gate(ctx, "agents.configure", input.tenantId, input.agentId);
+  agentGate(ctx, "agents.configure", input.tenantId, input.agentId);
   const [version] = await ctx.db
     .select()
     .from(agentSettingsVersions)
@@ -503,7 +503,7 @@ export async function publishVersion(
 // Wyrm staff can also switch off a tool or provider, or everything for everyone.
 
 export async function listSwitches(ctx: Ctx, tenantId: string) {
-  if (ctx.actor?.kind === "platform") gate(ctx, "agents.logs", tenantId, null);
+  if (ctx.actor?.kind === "platform") agentGate(ctx, "agents.logs", tenantId, null);
   else visibleAgentIds(ctx, tenantId);
   return ctx.db
     .select()
@@ -531,7 +531,7 @@ export async function setSwitch(
   if (reason.length < 3) throw new DomainError("reason_required", "Give a short reason.");
   if (input.scope === "agent") {
     if (!input.tenantId || !input.agentId) throw new DomainError("bad_switch", "Choose an agent.");
-    gate(ctx, "agents.configure", input.tenantId, input.agentId);
+    agentGate(ctx, "agents.configure", input.tenantId, input.agentId);
   } else if (input.scope === "tenant") {
     if (!input.tenantId) throw new DomainError("bad_switch", "Choose an organisation.");
     const d =
@@ -576,7 +576,7 @@ export async function clearSwitch(ctx: Ctx, switchId: string) {
   const [row] = await ctx.db.select().from(killSwitches).where(eq(killSwitches.id, switchId));
   if (!row || row.clearedAt) throw new DomainError("not_found", "Switch not found.");
   if (row.scope === "agent" && row.tenantId && row.agentId)
-    gate(ctx, "agents.configure", row.tenantId, row.agentId);
+    agentGate(ctx, "agents.configure", row.tenantId, row.agentId);
   else if (row.scope === "tenant" && row.tenantId && ctx.actor?.kind !== "platform") {
     const d = check(ctx.actor, "security.manage", { tenantId: row.tenantId });
     if (!d.allowed) throw new ForbiddenError("security.manage", d.reason);
