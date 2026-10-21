@@ -53,8 +53,7 @@ describe("slugs and emails", () => {
 
 describe("compact", () => {
   it("removes pasted line breaks and spaces from keys and URLs", () => {
-    expect(compact("sb_publishable_abc
-123 ")).toBe("sb_publishable_abc123");
+    expect(compact("sb_publishable_abc\n123 ")).toBe("sb_publishable_abc123");
     expect(compact(" https://x.supabase.co/ ")).toBe("https://x.supabase.co");
     expect(compact("   ")).toBeNull();
     expect(compact(undefined)).toBeNull();
