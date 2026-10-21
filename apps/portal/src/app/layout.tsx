@@ -45,7 +45,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                     Admin
                   </Link>
                 )}
-                <span className="hidden text-ink-muted sm:inline">{access.email}</span>
+                <Link
+                  href="/account/password"
+                  className="hidden text-ink-muted hover:text-ink sm:inline"
+                  title="Set or change your password"
+                >
+                  {access.email}
+                </Link>
                 <form action="/auth/sign-out" method="post">
                   <button type="submit" className="text-ink-muted hover:text-ink">
                     Sign out

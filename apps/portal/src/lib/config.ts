@@ -21,7 +21,7 @@ export function publicConfig(): PublicConfig | null {
 }
 
 /** The client area: the only paths that need signing in. Everything else is public. */
-export const PROTECTED_PATHS = ["/dashboard", "/admin"] as const;
+export const PROTECTED_PATHS = ["/dashboard", "/admin", "/account"] as const;
 
 export const isProtectedPath = (pathname: string) =>
   PROTECTED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -55,3 +55,12 @@ export const isValidSlug = (slug: string) => /^[a-z0-9-]{2,60}$/.test(slug);
 
 /** Loose but safe email check for forms (Supabase validates again). */
 export const isEmail = (email: string) => /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/.test(email);
+
+/** Why a new password isn't acceptable, or null if it is (Supabase checks again). */
+export function passwordProblem(password: string, confirm?: string): string | null {
+  if (password.length < 10) return "Use at least 10 characters.";
+  if (password.length > 72) return "Use at most 72 characters.";
+  if (/^(.)\1+$/.test(password)) return "Don't repeat one character.";
+  if (confirm !== undefined && confirm !== password) return "The two passwords don't match.";
+  return null;
+}

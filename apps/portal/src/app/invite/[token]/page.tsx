@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAccess } from "@/lib/auth";
 import { serverDb } from "@/lib/db";
-import { acceptInvite, sendInviteSignIn } from "./actions";
+import { acceptInvite, createAccountAndJoin } from "./actions";
 
 export const metadata: Metadata = { title: "Invitation" };
 
@@ -12,7 +12,10 @@ const ERRORS: Record<string, string> = {
   invalid: "This invitation is no longer valid. Ask for a new one.",
   invalid_invitation: "This invitation is no longer valid. Ask for a new one.",
   account: "We couldn't prepare your login. Try again or ask for a new invitation.",
-  email: "We couldn't send the sign-in email. Try again in a few minutes.",
+  password: "Use at least 10 characters (at most 72), and type the same password twice.",
+  weak: "Choose a stronger password.",
+  has_account: "You already have a portal account. Sign in below to accept.",
+  unknown: "Something went wrong. Try again.",
   signin: "Sign in first.",
   wrong_account: "You're signed in with a different email than the one invited.",
   identity_separation: "Wyrm staff accounts can't join a customer organisation.",
@@ -21,6 +24,8 @@ const ERRORS: Record<string, string> = {
   already_member: "You're already a member. Open your dashboard.",
 };
 
+const input =
+  "w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none focus-visible:border-ember";
 const button = "rounded-lg bg-ember px-5 py-2.5 font-semibold text-paper hover:bg-ember-strong";
 
 export default async function InvitePage({ params, searchParams }: PageProps<"/invite/[token]">) {
@@ -29,7 +34,7 @@ export default async function InvitePage({ params, searchParams }: PageProps<"/i
   const db = serverDb();
   const invite = db ? await findInvitation({ db, actor: null }, token) : null;
   const access = await getAccess();
-  const error = typeof query.error === "string" ? (ERRORS[query.error] ?? ERRORS.invalid) : null;
+  const error = typeof query.error === "string" ? (ERRORS[query.error] ?? ERRORS.unknown) : null;
 
   if (invite?.status !== "pending" || !invite.tenantActive) {
     return (
@@ -60,11 +65,6 @@ export default async function InvitePage({ params, searchParams }: PageProps<"/i
           {error}
         </p>
       )}
-      {query.sent === "1" && (
-        <p role="status" className="rounded-xl border border-moss/50 bg-moss/10 p-3">
-          Check {invite.email} for a sign-in link. It brings you back here.
-        </p>
-      )}
       {signedInAsInvitee ? (
         <form action={acceptInvite}>
           <input type="hidden" name="token" value={token} />
@@ -77,12 +77,47 @@ export default async function InvitePage({ params, searchParams }: PageProps<"/i
           You're signed in as a different account. Sign out, then open this link again.
         </p>
       ) : (
-        <form action={sendInviteSignIn}>
-          <input type="hidden" name="token" value={token} />
-          <button type="submit" className={button}>
-            Email me a sign-in link
-          </button>
-        </form>
+        <>
+          <form action={createAccountAndJoin} className="space-y-3">
+            <input type="hidden" name="token" value={token} />
+            <label htmlFor="password" className="block text-sm font-semibold">
+              Choose a password (at least 10 characters)
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={10}
+              maxLength={72}
+              autoComplete="new-password"
+              className={input}
+            />
+            <label htmlFor="confirm" className="block text-sm font-semibold">
+              Repeat it
+            </label>
+            <input
+              id="confirm"
+              name="confirm"
+              type="password"
+              required
+              autoComplete="new-password"
+              className={input}
+            />
+            <button type="submit" className={button}>
+              Create account and join
+            </button>
+          </form>
+          <p className="text-sm text-ink-muted">
+            Already have a portal account?{" "}
+            <Link
+              href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`}
+              className="font-semibold text-ember"
+            >
+              Sign in to accept
+            </Link>
+          </p>
+        </>
       )}
     </section>
   );

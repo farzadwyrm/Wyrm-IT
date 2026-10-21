@@ -22,8 +22,10 @@ relevant guide in `apps/web/node_modules/next/dist/docs/`. Do not rely on memory
   `requireAdmin()`, or a valid invitation for that exact email.
 - Two-step verification for Wyrm staff is off (`STAFF_MFA_ENFORCED`) until its set-up screen
   ships in stage 7.
-- No public sign-up: `signInWithOtp` uses `shouldCreateUser: false`; clients are invited by an
-  admin. Sign-in replies never reveal whether an email has an account.
+- Sign-in: email + password or Google (Supabase Auth). No public sign-up: sign-ups are off in
+  Supabase; accounts are created only from a valid invitation (`/invite/[token]`, password chosen
+  there) or by Wyrm. Sign-in errors never reveal whether an email has an account. Passwords:
+  `passwordProblem` (10–72 chars); reset via emailed link to `/account/password`.
 - Redirect targets go through `safeNext` (same-site paths only).
 - No customer data, secrets or real emails in code, tests or fixtures. Tests run with the
   Supabase variables empty and never call a real project.

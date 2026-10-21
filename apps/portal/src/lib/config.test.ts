@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { compact, isEmail, isProtectedPath, isValidSlug, safeNext, slugify } from "./config";
+import {
+  compact,
+  isEmail,
+  isProtectedPath,
+  isValidSlug,
+  passwordProblem,
+  safeNext,
+  slugify,
+} from "./config";
 
 describe("safeNext", () => {
   it.each([
@@ -58,5 +66,24 @@ describe("compact", () => {
     expect(compact(" https://x.supabase.co/ ")).toBe("https://x.supabase.co");
     expect(compact("   ")).toBeNull();
     expect(compact(undefined)).toBeNull();
+  });
+});
+
+describe("passwordProblem", () => {
+  it("accepts a long enough password that matches its confirmation", () => {
+    expect(passwordProblem("correct horse battery", "correct horse battery")).toBeNull();
+  });
+
+  it("rejects short, repeated, too long or mismatched passwords", () => {
+    expect(passwordProblem("short")).toMatch(/10 characters/);
+    expect(passwordProblem("aaaaaaaaaaaa")).toMatch(/repeat/);
+    expect(passwordProblem("x".repeat(40) + "y".repeat(40))).toMatch(/72/);
+    expect(passwordProblem("long enough pass", "different pass!")).toMatch(/match/);
+  });
+});
+
+describe("account pages", () => {
+  it("need sign-in", () => {
+    expect(isProtectedPath("/account/password")).toBe(true);
   });
 });
