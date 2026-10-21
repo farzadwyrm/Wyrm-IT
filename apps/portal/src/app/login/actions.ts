@@ -13,7 +13,7 @@ export async function sendSignInLink(formData: FormData) {
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase();
-  const next = safeNext(String(formData.get("next") ?? "/"));
+  const next = safeNext(String(formData.get("next") ?? "/dashboard"));
   if (!isEmail(email)) redirect(`/login?error=email&next=${encodeURIComponent(next)}`);
 
   const supabase = await userClient();

@@ -1,11 +1,28 @@
 import { expect, test } from "@playwright/test";
 
-// Without a Supabase project every page is locked: only the sign-in page loads.
+// Runs without a Supabase project: public pages work, the client area is locked.
 
-test("signed-out visitors are sent to sign in", async ({ page }) => {
-  for (const path of ["/", "/admin"]) {
+test("the platform home is open to everyone, with all tools and a sign-in for clients", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("AI agents");
+  for (const tool of [
+    "Workflow analysis",
+    "Live voice agent",
+    "Agent catalogue",
+    "Receptionist template",
+  ]) {
+    await expect(page.getByRole("heading", { name: tool })).toBeVisible();
+  }
+  await expect(page.getByRole("link", { name: "Sign in" }).first()).toBeVisible();
+});
+
+test("the client area sends signed-out visitors to sign in", async ({ page }) => {
+  for (const path of ["/dashboard", "/admin"]) {
     await page.goto(path);
-    await expect(page).toHaveURL(/\/login$/);
+    await expect(page).toHaveURL(/\/login/);
   }
 });
 
@@ -23,9 +40,4 @@ test("the portal is never indexed or framed", async ({ request }) => {
 test("an emailed link without a valid token goes back to sign in", async ({ page }) => {
   await page.goto("/auth/confirm?token_hash=x&type=email&next=https://evil.example");
   await expect(page).toHaveURL(/\/login/);
-});
-
-test("the invitation landing page is locked while the portal isn't connected", async ({ page }) => {
-  await page.goto("/auth/callback");
-  await expect(page).toHaveURL(/\/login$/);
 });

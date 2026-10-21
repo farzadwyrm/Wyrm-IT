@@ -14,7 +14,7 @@ export function FinishSignIn({ url, publishableKey }: { url: string; publishable
     // Remove tokens from the address bar and history straight away.
     window.history.replaceState(null, "", window.location.pathname);
 
-    const next = safeNext(query.get("next"));
+    const next = safeNext(query.get("next") ?? "/dashboard");
     const code = query.get("code");
     if (code) {
       window.location.replace(

@@ -25,3 +25,12 @@ Date: 2026-10-21. Status: accepted. Plan: docs/plans/customer-portal.md.
   real project.
 - P1 next: settings editor (BusinessProfile JSON in `profile_versions`) and the receptionist
   reading its profile from the database.
+
+## Update 2026-10-21: no mandatory sign-in
+
+The portal is open to everyone: `/` is a public platform home linking every tool (workflow
+analysis, live voice agent, agent catalogue, receptionist template). Sign-in is needed only for
+the client area: `/dashboard` (a client's own data) and `/admin` (client management). Deployed
+at https://wyrm-portal.vercel.app with Supabase (EU) connected; sign-in email delivery still to
+be confirmed end to end.
+

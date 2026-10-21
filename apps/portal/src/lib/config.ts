@@ -20,11 +20,15 @@ export function publicConfig(): PublicConfig | null {
   return url && publishableKey ? { url, publishableKey } : null;
 }
 
-/** Paths anyone may open without signing in. */
-export const PUBLIC_PATHS = ["/login", "/auth/confirm", "/auth/callback"] as const;
+/** The client area: the only paths that need signing in. Everything else is public. */
+export const PROTECTED_PATHS = ["/dashboard", "/admin"] as const;
 
-export const isPublicPath = (pathname: string) =>
-  PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+export const isProtectedPath = (pathname: string) =>
+  PROTECTED_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+/** The public website, where the tools live. */
+export const MAIN_SITE =
+  compact(process.env.NEXT_PUBLIC_MAIN_SITE_URL) ?? "https://wyrm-it.vercel.app";
 
 /**
  * Where to go after signing in. Only same-site paths are allowed, so a crafted link can never

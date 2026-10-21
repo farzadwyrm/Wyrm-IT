@@ -12,7 +12,7 @@ const ALLOWED: EmailOtpType[] = ["email", "magiclink", "invite"];
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const next = safeNext(searchParams.get("next"));
+  const next = safeNext(searchParams.get("next") ?? "/dashboard");
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;

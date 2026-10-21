@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compact, isEmail, isPublicPath, isValidSlug, safeNext, slugify } from "./config";
+import { compact, isEmail, isProtectedPath, isValidSlug, safeNext, slugify } from "./config";
 
 describe("safeNext", () => {
   it.each([
@@ -24,14 +24,15 @@ describe("safeNext", () => {
   });
 });
 
-describe("public paths", () => {
-  it("only the sign-in pages are public", () => {
-    expect(isPublicPath("/login")).toBe(true);
-    expect(isPublicPath("/auth/confirm")).toBe(true);
-    expect(isPublicPath("/auth/callback")).toBe(true);
-    expect(isPublicPath("/")).toBe(false);
-    expect(isPublicPath("/admin")).toBe(false);
-    expect(isPublicPath("/loginx")).toBe(false);
+describe("protected paths", () => {
+  it("only the client area needs signing in", () => {
+    expect(isProtectedPath("/dashboard")).toBe(true);
+    expect(isProtectedPath("/dashboard/settings")).toBe(true);
+    expect(isProtectedPath("/admin")).toBe(true);
+    expect(isProtectedPath("/")).toBe(false);
+    expect(isProtectedPath("/login")).toBe(false);
+    expect(isProtectedPath("/auth/callback")).toBe(false);
+    expect(isProtectedPath("/administrator-info")).toBe(false);
   });
 });
 

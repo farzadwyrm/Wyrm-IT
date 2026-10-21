@@ -62,6 +62,6 @@ export async function requireAccess(): Promise<Access> {
 
 export async function requireAdmin(): Promise<Access> {
   const access = await requireAccess();
-  if (!access.isAdmin) redirect("/");
+  if (!access.isAdmin) redirect("/dashboard");
   return access;
 }

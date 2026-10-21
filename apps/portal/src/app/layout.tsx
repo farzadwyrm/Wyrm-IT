@@ -27,8 +27,19 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <Link href="/" className="font-display text-lg font-semibold tracking-tight">
               Wyrm AI <span className="font-mono text-xs text-signal">portal</span>
             </Link>
+            {!access && (
+              <Link
+                href="/login"
+                className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold hover:border-ember/60"
+              >
+                Sign in
+              </Link>
+            )}
             {access && (
               <div className="flex items-center gap-4 text-sm">
+                <Link href="/dashboard" className="text-ink-muted hover:text-ink">
+                  Dashboard
+                </Link>
                 {access.isAdmin && (
                   <Link href="/admin" className="text-ink-muted hover:text-ink">
                     Admin

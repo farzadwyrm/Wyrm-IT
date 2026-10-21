@@ -1,10 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
-import { isPublicPath, publicConfig } from "./lib/config";
+import { isProtectedPath, publicConfig } from "./lib/config";
 
 /**
- * Runs before every page: refreshes the Supabase session cookie and sends signed-out visitors
- * to /login. This is only the first gate; every page and action checks access again on the
+ * Runs before every page: keeps the Supabase session cookie fresh and sends signed-out
+ * visitors to /login, but only for the client area (/dashboard, /admin). Everything else is
+ * public. This is only the first gate; client pages and actions check access again on the
  * server (lib/auth.ts), and the database enforces row-level security.
  */
 export async function proxy(request: NextRequest) {
@@ -13,8 +14,10 @@ export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   if (!config) {
-    // Not connected yet: only the sign-in page (which explains the setup) is reachable.
-    return pathname === "/login" ? response : NextResponse.redirect(new URL("/login", request.url));
+    // Not connected yet: the client area is closed; public pages still work.
+    return isProtectedPath(pathname)
+      ? NextResponse.redirect(new URL("/login", request.url))
+      : response;
   }
 
   const supabase = createServerClient(config.url, config.publishableKey, {
@@ -30,9 +33,9 @@ export async function proxy(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getClaims();
-  if (!data?.claims && !isPublicPath(pathname)) {
+  if (!data?.claims && isProtectedPath(pathname)) {
     const login = new URL("/login", request.url);
-    if (pathname !== "/") login.searchParams.set("next", pathname);
+    login.searchParams.set("next", pathname);
     return NextResponse.redirect(login);
   }
   return response;

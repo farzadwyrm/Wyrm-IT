@@ -10,7 +10,9 @@ relevant guide in `apps/web/node_modules/next/dist/docs/`. Do not rely on memory
 
 ## Security rules
 
-- Three layers, all required: `src/proxy.ts` (signed-out → /login), the data access layer
+- The portal home and tools are public; only the client area (`/dashboard`, `/admin`,
+  `PROTECTED_PATHS` in `src/lib/config.ts`) needs sign-in.
+- Three layers, all required: `src/proxy.ts` (signed-out → /login for the client area), the data access layer
   `src/lib/auth.ts` (`requireAccess` / `requireAdmin` in every page and server action), and
   row-level security in the database (`packages/db/migrations`).
 - Read data with `userClient()` (runs as the user, under RLS). Use `adminClient()` (secret
