@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isEmail, isPublicPath, isValidSlug, safeNext, slugify } from "./config";
+import { compact, isEmail, isPublicPath, isValidSlug, safeNext, slugify } from "./config";
 
 describe("safeNext", () => {
   it.each([
@@ -48,5 +48,15 @@ describe("slugs and emails", () => {
     expect(isEmail("owner@example.com")).toBe(true);
     expect(isEmail("not an email")).toBe(false);
     expect(isEmail("a@b")).toBe(false);
+  });
+});
+
+describe("compact", () => {
+  it("removes pasted line breaks and spaces from keys and URLs", () => {
+    expect(compact("sb_publishable_abc
+123 ")).toBe("sb_publishable_abc123");
+    expect(compact(" https://x.supabase.co/ ")).toBe("https://x.supabase.co");
+    expect(compact("   ")).toBeNull();
+    expect(compact(undefined)).toBeNull();
   });
 });

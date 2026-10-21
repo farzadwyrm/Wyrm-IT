@@ -2,7 +2,11 @@
  * Portal settings from the environment. Public values (URL, publishable key) are safe in the
  * browser; the secret key is read only in `supabase/admin.ts`, which is server-only.
  */
-const value = (v: string | undefined) => (v && v.trim() !== "" ? v.trim() : null);
+/** Keys and URLs never contain whitespace: drop any pasted line breaks or spaces. */
+export const compact = (v: string | undefined) => {
+  const cleaned = v?.replace(/\s+/g, "").replace(/\/+$/, "") ?? "";
+  return cleaned === "" ? null : cleaned;
+};
 
 export interface PublicConfig {
   url: string;
@@ -11,8 +15,8 @@ export interface PublicConfig {
 
 /** Null until the Supabase project is connected (`.env.local` or Vercel settings). */
 export function publicConfig(): PublicConfig | null {
-  const url = value(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const publishableKey = value(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
+  const url = compact(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const publishableKey = compact(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
   return url && publishableKey ? { url, publishableKey } : null;
 }
 

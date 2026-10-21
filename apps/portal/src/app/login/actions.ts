@@ -29,7 +29,11 @@ export async function sendSignInLink(formData: FormData) {
   });
   // Log failures for us, but never tell the visitor whether the address exists.
   if (error && error.status !== 422 && error.code !== "otp_disabled") {
-    console.warn(`sign-in link failed: ${error.status ?? ""} ${error.code ?? ""}`);
+    // Shape only, never the key itself: e.g. "sb_p… 46 chars" helps spot a bad paste.
+    const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
+    console.warn(
+      `sign-in link failed: status=${error.status ?? ""} code=${error.code ?? ""} name=${error.name} key=${key.slice(0, 4)}… ${key.length} chars`,
+    );
   }
   redirect("/login?sent=1");
 }
