@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getAccess } from "@/lib/auth";
 import { publicConfig, safeNext } from "@/lib/config";
 import { sendSignInLink } from "./actions";
+import { ForwardLink } from "./forward-link";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -29,6 +30,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
 
   return (
     <section className="mx-auto max-w-md">
+      <ForwardLink />
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-signal">client portal</p>
       <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight">Sign in</h1>
       {sent ? (
