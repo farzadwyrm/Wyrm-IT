@@ -6,19 +6,26 @@ import { userClient } from "@/lib/supabase/server";
 const ALLOWED: EmailOtpType[] = ["email", "magiclink", "invite"];
 
 /**
- * Landing page for emailed sign-in and invite links. The email templates send
- * `?token_hash=…&type=…`, which is verified here on the server (works in any browser).
+ * Landing page for emailed sign-in links. Supabase's standard emails send `?code=…` (the
+ * sign-in started in this browser); custom templates may send `?token_hash=…&type=…`. Both are
+ * verified here on the server. Invitations arrive at /auth/callback instead.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
+  const next = safeNext(searchParams.get("next"));
+  const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const next = safeNext(searchParams.get("next"));
 
   const supabase = await userClient();
-  if (supabase && tokenHash && type && ALLOWED.includes(type)) {
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
-    if (!error) return NextResponse.redirect(new URL(next, request.url));
+  if (supabase) {
+    if (code) {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (!error) return NextResponse.redirect(new URL(next, request.url));
+    } else if (tokenHash && type && ALLOWED.includes(type)) {
+      const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+      if (!error) return NextResponse.redirect(new URL(next, request.url));
+    }
   }
   return NextResponse.redirect(new URL("/login?error=link", request.url));
 }

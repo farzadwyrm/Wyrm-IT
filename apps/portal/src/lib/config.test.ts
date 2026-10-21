@@ -28,6 +28,7 @@ describe("public paths", () => {
   it("only the sign-in pages are public", () => {
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/auth/confirm")).toBe(true);
+    expect(isPublicPath("/auth/callback")).toBe(true);
     expect(isPublicPath("/")).toBe(false);
     expect(isPublicPath("/admin")).toBe(false);
     expect(isPublicPath("/loginx")).toBe(false);

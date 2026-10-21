@@ -24,3 +24,8 @@ test("an emailed link without a valid token goes back to sign in", async ({ page
   await page.goto("/auth/confirm?token_hash=x&type=email&next=https://evil.example");
   await expect(page).toHaveURL(/\/login/);
 });
+
+test("the invitation landing page is locked while the portal isn't connected", async ({ page }) => {
+  await page.goto("/auth/callback");
+  await expect(page).toHaveURL(/\/login$/);
+});

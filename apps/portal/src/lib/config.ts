@@ -17,7 +17,7 @@ export function publicConfig(): PublicConfig | null {
 }
 
 /** Paths anyone may open without signing in. */
-export const PUBLIC_PATHS = ["/login", "/auth/confirm"] as const;
+export const PUBLIC_PATHS = ["/login", "/auth/confirm", "/auth/callback"] as const;
 
 export const isPublicPath = (pathname: string) =>
   PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

@@ -40,7 +40,7 @@ export async function createClientOrg(formData: FormData) {
 
   const origin = (await headers()).get("origin") ?? "";
   const invite = await db.auth.admin.inviteUserByEmail(ownerEmail, {
-    redirectTo: `${origin}/auth/confirm`,
+    redirectTo: `${origin}/auth/callback`,
   });
   let ownerId = invite.data.user?.id ?? null;
   if (!ownerId) {

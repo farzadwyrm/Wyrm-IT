@@ -12,17 +12,16 @@ SQL Editor → New query → paste all of `packages/db/migrations/0001_portal_fo
 → Run. You should see "Success. No rows returned".
 
 ## 3. Sign-in settings
-Authentication → Sign In / Providers → Email: enabled. Turn **off** "Allow new users to sign up"
-(the portal is invite-only).
+Authentication → Sign In / Providers: turn **off** "Allow new users to sign up" (invite-only).
 
 Authentication → URL Configuration:
-- Site URL: `http://localhost:3001` (change to the live portal address when deployed)
-- Redirect URLs: add `http://localhost:3001/**` (and later the live address with `/**`)
+- Site URL: the live portal, `https://wyrm-portal.vercel.app`
+- Redirect URLs: `https://wyrm-portal.vercel.app/**` only (no localhost).
 
-Authentication → Emails → Templates: in **Magic link** and **Invite user**, replace the link
-with these (the portal verifies the link on its server, which works in any browser):
-- Magic link: `<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email">Sign in</a>`
-- Invite user: `<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite">Accept the invitation</a>`
+Email templates stay as Supabase's defaults: the portal handles them (`/auth/confirm` for
+sign-in links, `/auth/callback` for invitations). Supabase's built-in email sender only
+delivers to members of the Supabase organisation and a few emails per hour, so before
+inviting real clients set up custom SMTP (e.g. Resend) under Authentication → Emails.
 
 ## 4. Connect the portal on your computer
 Copy `apps/portal/.env.example` to `apps/portal/.env.local` and paste the three values from
