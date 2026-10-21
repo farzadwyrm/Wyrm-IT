@@ -3,6 +3,7 @@ export * from "./agents";
 export { type AuditEntry, audit, listAudit } from "./audit";
 export { type Ctx, type Db, DomainError, guarded, translateDbError } from "./context";
 export * from "./impersonation";
+export * from "./operations";
 export * from "./platform";
 export * from "./roles";
 export * from "./security";
