@@ -1,6 +1,6 @@
 # Roadmap: Agent Studio and a professional client portal
 
-Status: proposed (2026-10-21), awaiting the owner's approval. Research behind it (every claim
+Status: Phase 1 built and live (2026-10-21); phases 2–6 not started. Research behind it (every claim
 cited there): [agent-policies.md](../research/agent-policies.md),
 [agent-delivery.md](../research/agent-delivery.md),
 [agent-management-ia.md](../research/agent-management-ia.md),
@@ -228,3 +228,17 @@ Each phase ends with tests, a green CI run, a deploy and a check on the live sit
 - Resend account (free) for the digest and invitation emails.
 - Twilio account (paid per number and minute) for phone and SMS; WhatsApp needs Meta approval.
 - Pricing decision: a flat monthly plan with a usage allowance and an optional setup fee (recommended by the research).
+
+## Progress
+
+- **Phase 1 done (2026-10-21):**
+  - Migration 0005 (`packages/db/migrations/0005_agent_policies.sql`) is applied live.
+  - Policy model: `packages/brain/src/studio.ts`.
+  - Studio API: `packages/core/src/studio.ts`.
+  - Runtime procedures and limits: `packages/core/src/runtime.ts`.
+  - Studio screens: `apps/portal/src/app/dashboard/agents/[id]/studio/`.
+  - The demo policy (`packages/db/seed/demo-studio.sql`) is loaded live.
+  - Live check: a booking was collected across four messages, read back, confirmed and recorded as a request with a
+    readable summary. A blocked topic was stopped in code.
+  - Limits: bookings are *requests* until the calendar connection exists (Phase 3). The Studio screens weren't
+    checked while signed in as a customer.
