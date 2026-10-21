@@ -41,3 +41,9 @@ test("an emailed link without a valid token goes back to sign in", async ({ page
   await page.goto("/auth/confirm?token_hash=x&type=email&next=https://evil.example");
   await expect(page).toHaveURL(/\/login/);
 });
+
+test("an unknown invitation link explains it isn't valid", async ({ page }) => {
+  await page.goto("/invite/not-a-real-token");
+  await expect(page.getByRole("heading", { name: "Invitation not valid" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Sign in/ }).first()).toBeVisible();
+});

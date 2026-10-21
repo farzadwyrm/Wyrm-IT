@@ -13,10 +13,15 @@ relevant guide in `apps/web/node_modules/next/dist/docs/`. Do not rely on memory
 - The portal home and tools are public; only the client area (`/dashboard`, `/admin`,
   `PROTECTED_PATHS` in `src/lib/config.ts`) needs sign-in.
 - Three layers, all required: `src/proxy.ts` (signed-out → /login for the client area), the data access layer
-  `src/lib/auth.ts` (`requireAccess` / `requireAdmin` in every page and server action), and
-  row-level security in the database (`packages/db/migrations`).
-- Read data with `userClient()` (runs as the user, under RLS). Use `adminClient()` (secret
-  key, bypasses RLS) only after `requireAdmin()`, never in client components.
+  `src/lib/auth.ts` (`requireAccess` / `requireAdmin` in every page and server action, which
+  loads the verified actor), and `@wyrm/core`, which checks `can()` on every operation. Row-level
+  security (`packages/db/migrations`) still guards the Supabase API.
+- Reads and writes go through `@wyrm/core` with `coreContext(access)` over `DATABASE_URL`
+  (`src/lib/db.ts`, server only). Server actions stay thin: validate input, call core, explain
+  `DomainError`s. Use `adminClient()` (secret key) only for account actions: Wyrm staff after
+  `requireAdmin()`, or a valid invitation for that exact email.
+- Two-step verification for Wyrm staff is off (`STAFF_MFA_ENFORCED`) until its set-up screen
+  ships in stage 7.
 - No public sign-up: `signInWithOtp` uses `shouldCreateUser: false`; clients are invited by an
   admin. Sign-in replies never reveal whether an email has an account.
 - Redirect targets go through `safeNext` (same-site paths only).

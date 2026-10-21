@@ -1,45 +1,46 @@
+import { listTenants, platformStats } from "@wyrm/core";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth";
-import { userClient } from "@/lib/supabase/server";
-import { createClientOrg } from "./actions";
+import { coreContext, requireAdmin } from "@/lib/auth";
+import { changeClientStatus } from "./actions";
+import { CreateClientForm } from "./create-client-form";
 
 export const metadata: Metadata = { title: "Admin" };
 
-const input =
-  "w-full rounded-xl border border-line bg-paper px-4 py-2.5 outline-none focus-visible:border-ember";
+export default async function AdminPage() {
+  const access = await requireAdmin();
+  const ctx = await coreContext(access);
+  const [stats, { rows, total }] = await Promise.all([
+    platformStats(ctx),
+    listTenants(ctx, { limit: 50 }),
+  ]);
+  const role = access.actor?.kind === "platform" ? access.actor.role.replace("_", " ") : "";
 
-export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
-  await requireAdmin();
-  const params = await searchParams;
-  const supabase = await userClient();
-  // Admins see every organisation through row-level security; no secret key needed to read.
-  const { data: orgs } = supabase
-    ? await supabase
-        .from("organizations")
-        .select("id, name, slug, plan, created_at, memberships(count), agents(status)")
-        .order("created_at", { ascending: false })
-    : { data: [] };
+  const tiles = [
+    ["Active clients", stats.activeTenants],
+    ["Suspended", stats.suspendedTenants],
+    ["Customer staff", stats.activeUsers],
+    ["Live agents", stats.liveAgents],
+  ] as const;
 
   return (
     <section className="space-y-10">
       <div>
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-signal">admin</p>
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-signal">admin · {role}</p>
         <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight">Clients</h1>
       </div>
 
-      {typeof params.created === "string" && (
-        <p role="status" className="rounded-xl border border-moss/50 bg-moss/10 p-4">
-          Client "{params.created}" created and the owner has been invited by email.
-        </p>
-      )}
-      {typeof params.error === "string" && (
-        <p role="alert" className="rounded-xl border border-node-output/50 bg-node-output/10 p-4">
-          {params.error}
-        </p>
-      )}
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {tiles.map(([label, value]) => (
+          <li key={label} className="rounded-2xl border border-line bg-paper-raised/80 p-4">
+            <p className="text-sm text-ink-muted">{label}</p>
+            <p className="mt-1 font-display text-2xl font-semibold">{value}</p>
+          </li>
+        ))}
+      </ul>
 
       <div className="overflow-x-auto rounded-2xl border border-line">
         <table className="w-full min-w-[560px] text-left text-sm">
+          <caption className="sr-only">{total} clients</caption>
           <thead className="bg-paper-raised font-mono text-[11px] uppercase tracking-wider text-ink-muted">
             <tr>
               <th scope="col" className="px-4 py-3">
@@ -49,79 +50,50 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
                 Plan
               </th>
               <th scope="col" className="px-4 py-3">
-                People
+                Seats
               </th>
               <th scope="col" className="px-4 py-3">
-                Agents
+                Status
               </th>
             </tr>
           </thead>
           <tbody>
-            {(orgs ?? []).length === 0 && (
+            {rows.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-6 text-ink-muted">
                   No clients yet.
                 </td>
               </tr>
             )}
-            {(orgs ?? []).map((org) => {
-              const people = (org.memberships as unknown as { count: number }[])?.[0]?.count ?? 0;
-              const agents = (org.agents as unknown as { status: string }[]) ?? [];
-              return (
-                <tr key={org.id} className="border-t border-line">
-                  <td className="px-4 py-3">
-                    <p className="font-semibold">{org.name}</p>
-                    <p className="font-mono text-xs text-ink-muted">{org.slug}</p>
-                  </td>
-                  <td className="px-4 py-3">{org.plan}</td>
-                  <td className="px-4 py-3">{people}</td>
-                  <td className="px-4 py-3">{agents.map((a) => a.status).join(", ") || "none"}</td>
-                </tr>
-              );
-            })}
+            {rows.map((t) => (
+              <tr key={t.id} className="border-t border-line">
+                <td className="px-4 py-3">
+                  <p className="font-semibold">{t.name}</p>
+                  <p className="font-mono text-xs text-ink-muted">{t.slug}</p>
+                </td>
+                <td className="px-4 py-3">{t.plan}</td>
+                <td className="px-4 py-3">{t.seatLimit}</td>
+                <td className="px-4 py-3">
+                  <form action={changeClientStatus} className="flex items-center gap-3">
+                    <input type="hidden" name="tenantId" value={t.id} />
+                    <input
+                      type="hidden"
+                      name="status"
+                      value={t.status === "active" ? "suspended" : "active"}
+                    />
+                    <span>{t.status}</span>
+                    <button type="submit" className="text-ember hover:text-ember-strong">
+                      {t.status === "active" ? "Suspend" : "Reactivate"}
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
-      <form
-        action={createClientOrg}
-        className="max-w-lg space-y-4 rounded-2xl border border-line bg-paper-raised/80 p-6"
-      >
-        <h2 className="font-display text-xl font-semibold">New client</h2>
-        <div className="space-y-1">
-          <label htmlFor="name" className="text-sm font-semibold">
-            Business name
-          </label>
-          <input id="name" name="name" required maxLength={120} className={input} />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="slug" className="text-sm font-semibold">
-            Short name (optional)
-          </label>
-          <input
-            id="slug"
-            name="slug"
-            maxLength={60}
-            placeholder="made from the name"
-            className={input}
-          />
-        </div>
-        <div className="space-y-1">
-          <label htmlFor="ownerEmail" className="text-sm font-semibold">
-            Owner's email
-          </label>
-          <input id="ownerEmail" name="ownerEmail" type="email" required className={input} />
-        </div>
-        <p className="text-sm text-ink-muted">
-          Creates the business with a draft receptionist and emails the owner an invitation.
-        </p>
-        <button
-          type="submit"
-          className="rounded-lg bg-ember px-5 py-2.5 font-semibold text-paper hover:bg-ember-strong"
-        >
-          Create client and invite owner
-        </button>
-      </form>
+      <CreateClientForm />
     </section>
   );
 }

@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Workspace packages ship TypeScript source; Next compiles them.
-  transpilePackages: ["@wyrm/receptionist", "@wyrm/ui"],
+  transpilePackages: ["@wyrm/auth", "@wyrm/core", "@wyrm/db", "@wyrm/receptionist", "@wyrm/ui"],
   poweredByHeader: false,
   async headers() {
     return [

@@ -14,6 +14,9 @@
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
+    "@wyrm/auth": "workspace:*",
+    "@wyrm/core": "workspace:*",
+    "@wyrm/db": "workspace:*",
     "@wyrm/receptionist": "workspace:*",
     "@wyrm/ui": "workspace:*",
     "next": "16.4.0",

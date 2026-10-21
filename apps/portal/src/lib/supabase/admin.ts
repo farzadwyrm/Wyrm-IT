@@ -4,8 +4,8 @@ import { compact, publicConfig } from "../config";
 
 /**
  * Supabase client with the secret key: bypasses row-level security. Use only after
- * `requireAdmin()` has confirmed the caller is Wyrm staff, and only for actions RLS can't do
- * (inviting users, creating organisations). Never import this from a client component.
+ * the caller is authorised (Wyrm staff via `requireAdmin()`, or a valid invitation for that exact
+ * email), and only for account actions. Never import this from a client component.
  */
 export function adminClient() {
   const config = publicConfig();
