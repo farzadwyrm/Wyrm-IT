@@ -2,6 +2,7 @@ import { listAgents, listTests, listVersions } from "@wyrm/core";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChatBox } from "@/components/chat-box";
 import { requireTenant, when } from "@/lib/portal";
 import { agentStatusAction, publishAction, saveDraftAction } from "../../actions";
 import { Badge, Card, Empty, input, Notice, primary, secondary } from "../../ui";
@@ -151,6 +152,17 @@ export default async function AgentPage({
         </div>
 
         <aside className="space-y-3">
+          {page.can("agents.use", agent.id) && (
+            <ChatBox agentId={agent.id} test title="Try it (test chat, uses the live version)" />
+          )}
+          {agent.status === "live" && (
+            <p className="text-sm text-ink-muted">
+              Public chat link for your website:{" "}
+              <Link href={`/chat/${agent.id}`} className="break-all text-ember">
+                /chat/{agent.id}
+              </Link>
+            </p>
+          )}
           <h2 className="font-display text-xl font-semibold">Versions</h2>
           {versions.length === 0 ? (
             <Empty>No saved versions yet.</Empty>

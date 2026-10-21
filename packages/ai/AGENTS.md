@@ -16,3 +16,5 @@ Everything that talks to an AI model goes through this package.
 - Unit tests use fake clients only. Live evals are in `evals/` (`pnpm eval`, needs a key, costs
   money, never in CI). A change to prompts, tools or models needs passing unit tests and a
   passing eval run.
+- `src/brain-models.ts`: model calls for the main brain: `brainClassifiers` (Haiku, then Groq)
+  and `answerAsAgent` (answers only from the agent's facts and taught answers; never acts).

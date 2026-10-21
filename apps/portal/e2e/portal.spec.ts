@@ -47,3 +47,13 @@ test("an unknown invitation link explains it isn't valid", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Invitation not valid" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Sign in/ }).first()).toBeVisible();
 });
+
+test("the chat endpoint rejects bad input and unknown chat pages are not found", async ({
+  request,
+  page,
+}) => {
+  const bad = await request.post("/api/chat", { data: { agentId: "nope", message: "" } });
+  expect([400, 503]).toContain(bad.status());
+  const response = await page.goto("/chat/00000000-0000-4000-8000-000000000000");
+  expect(response?.status()).toBe(404);
+});

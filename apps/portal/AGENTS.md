@@ -29,3 +29,9 @@ relevant guide in `apps/web/node_modules/next/dist/docs/`. Do not rely on memory
 - Redirect targets go through `safeNext` (same-site paths only).
 - No customer data, secrets or real emails in code, tests or fixtures. Tests run with the
   Supabase variables empty and never call a real project.
+- Customer chat: `src/app/api/chat/route.ts` (public for live agents, per-IP limit; `test: true`
+  only for signed-in staff with access) runs `handleCustomerMessage` from `@wyrm/core` with the
+  brain (`@wyrm/brain`) and model calls from `@wyrm/ai`. `/chat/[agentId]` is the public page;
+  "Try it" on the agent page uses the same endpoint. Every turn is recorded for the portal.
+- Client area screens live in `src/app/dashboard/` (Home, Conversations, To-do, Teach, Agents,
+  Settings); `src/lib/portal.ts` (`requireTenant`) is the access check every page calls.

@@ -20,6 +20,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
     "@wyrm/agents": "workspace:*",
+    "@wyrm/brain": "workspace:*",
     "@wyrm/receptionist": "workspace:*",
     "groq-sdk": "^1.6.0"
   }

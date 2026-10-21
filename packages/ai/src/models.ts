@@ -11,6 +11,8 @@ export const MODELS = {
   receptionist: "claude-haiku-5-5",
   /** Workflow analyser: drafts process steps from an owner's walk-through. */
   analyser: "claude-haiku-5-5",
+  /** The main brain: routes customer messages and writes customer-agent answers. */
+  brain: "claude-haiku-5-5",
 } as const;
 
 export type ModelRole = keyof typeof MODELS;

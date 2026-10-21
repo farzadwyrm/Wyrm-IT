@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@wyrm/auth": "workspace:*",
+    "@wyrm/brain": "workspace:*",
     "@wyrm/db": "workspace:*",
     "drizzle-orm": "^0.45.4"
   },

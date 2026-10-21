@@ -26,9 +26,15 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.118.0
         version: 2.118.0(@opentelemetry/api@1.9.1)
+      '@wyrm/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@wyrm/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@wyrm/brain':
+        specifier: workspace:*
+        version: link:../../packages/brain
       '@wyrm/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -157,6 +163,9 @@ importers:
       '@wyrm/agents':
         specifier: workspace:*
         version: link:../agents
+      '@wyrm/brain':
+        specifier: workspace:*
+        version: link:../brain
       '@wyrm/receptionist':
         specifier: workspace:*
         version: link:../receptionist
@@ -214,6 +223,9 @@ importers:
       '@wyrm/auth':
         specifier: workspace:*
         version: link:../auth
+      '@wyrm/brain':
+        specifier: workspace:*
+        version: link:../brain
       '@wyrm/db':
         specifier: workspace:*
         version: link:../db

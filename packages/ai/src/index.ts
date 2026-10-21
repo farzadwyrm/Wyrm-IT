@@ -1,3 +1,12 @@
+export {
+  type AgentAnswer,
+  type AgentKnowledge,
+  answerAsAgent,
+  brainClassifiers,
+  clientsFromEnv,
+  firstJson,
+  type ModelClients,
+} from "./brain-models";
 export type { DemoGuard, DemoGuardOptions, GuardDecision } from "./demo-guard";
 export { createDemoGuard } from "./demo-guard";
 export type { ExtractOutcome, ExtractProvider } from "./extract-steps";
