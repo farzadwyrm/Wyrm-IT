@@ -36,5 +36,5 @@ relevant guide in `apps/web/node_modules/next/dist/docs/`. Do not rely on memory
 - Client area screens live in `src/app/dashboard/` (Home, Conversations, To-do, Teach, Agents,
   Settings); `src/lib/portal.ts` (`requireTenant`) is the access check every page calls.
 - Agent Studio: `src/app/dashboard/agents/[id]/studio/` (Facts, Rules, Procedures, Limits &
-  handoff, Changes, Publish) over `@wyrm/core` `studio.ts`. Every change needs a note; edits
+  handoff, Changes, Publish) over `packages/core/src/studio.ts`. Every change needs a note; edits
   are a draft until published; limits are enforced by the runtime, not the prompt.
