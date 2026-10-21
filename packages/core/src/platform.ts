@@ -1,6 +1,31 @@
 import { assertCan, checkPlatformStaffChange, ForbiddenError, type PlatformRole } from "@wyrm/auth";
-import { agents, auditLogs, platformUsers, tenants, tenantUsers } from "@wyrm/db";
-import { and, asc, count, eq, gte, ilike, or, type SQL } from "drizzle-orm";
+import {
+  agentLaunches,
+  agents,
+  approvals,
+  auditLogs,
+  calendarConnections,
+  conversations,
+  killSwitches,
+  platformUsers,
+  tenants,
+  tenantUsers,
+  usageDaily,
+} from "@wyrm/db";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  gte,
+  ilike,
+  isNotNull,
+  isNull,
+  ne,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm";
 import { audit } from "./audit";
 import { type Ctx, DomainError, guarded } from "./context";
 
@@ -122,4 +147,119 @@ export async function platformStats(ctx: Ctx) {
     newTenantsThisWeek: newTenants,
     signupsThisWeek: signups,
   };
+}
+
+export interface CustomerHealth {
+  tenantId: string;
+  name: string;
+  slug: string;
+  plan: string;
+  status: string;
+  agents: number;
+  liveAgents: number;
+  signedOff: number;
+  conversations7d: number;
+  handedOff7d: number;
+  waiting: number;
+  pendingApprovals: number;
+  spendMonthMicros: number;
+  budgetMicros: number;
+  lastConversationAt: Date | null;
+  calendarErrors: number;
+  stopped: number;
+}
+
+/** One row per client for Wyrm's back office: setup, activity, what's waiting and spend. */
+export async function customerHealth(ctx: Ctx, now = new Date()): Promise<CustomerHealth[]> {
+  assertCan(ctx.actor, "platform.dashboard");
+  const weekAgo = new Date(now.getTime() - 7 * 86_400_000);
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    .toISOString()
+    .slice(0, 10);
+  const n = (filter?: SQL) => sql<number>`count(*) filter (where ${filter ?? sql`true`})::int`;
+  const [list, agentRows, convRows, approvalRows, spendRows, launchRows, calRows, switchRows] =
+    await Promise.all([
+      ctx.db.select().from(tenants).orderBy(asc(tenants.name)).limit(200),
+      ctx.db
+        .select({ tenantId: agents.tenantId, all: n(), live: n(eq(agents.status, "live")) })
+        .from(agents)
+        .groupBy(agents.tenantId),
+      ctx.db
+        .select({
+          tenantId: conversations.tenantId,
+          week: n(gte(conversations.startedAt, weekAgo)),
+          handedOff: n(
+            and(gte(conversations.startedAt, weekAgo), eq(conversations.outcome, "handed_off")),
+          ),
+          waiting: n(sql`'needs_attention' = any(${conversations.flags})`),
+          last: sql<Date | null>`max(${conversations.startedAt})`,
+        })
+        .from(conversations)
+        .groupBy(conversations.tenantId),
+      ctx.db
+        .select({ tenantId: approvals.tenantId, pending: n() })
+        .from(approvals)
+        .where(eq(approvals.status, "pending"))
+        .groupBy(approvals.tenantId),
+      ctx.db
+        .select({
+          tenantId: usageDaily.tenantId,
+          cost: sql<number>`coalesce(sum(${usageDaily.costMicros}), 0)::bigint`,
+        })
+        .from(usageDaily)
+        .where(gte(usageDaily.day, monthStart))
+        .groupBy(usageDaily.tenantId),
+      ctx.db
+        .select({
+          tenantId: agentLaunches.tenantId,
+          signed: n(isNotNull(agentLaunches.signedOffAt)),
+        })
+        .from(agentLaunches)
+        .groupBy(agentLaunches.tenantId),
+      ctx.db
+        .select({
+          tenantId: calendarConnections.tenantId,
+          errors: n(ne(calendarConnections.status, "ok")),
+        })
+        .from(calendarConnections)
+        .groupBy(calendarConnections.tenantId),
+      ctx.db
+        .select({ tenantId: killSwitches.tenantId, stopped: n() })
+        .from(killSwitches)
+        .where(isNull(killSwitches.clearedAt))
+        .groupBy(killSwitches.tenantId),
+    ]);
+  const index = <T extends { tenantId: string | null }>(rows: T[]) =>
+    new Map(rows.map((r) => [r.tenantId ?? "", r]));
+  const [a, c, p, s, l, cal, sw] = [
+    index(agentRows),
+    index(convRows),
+    index(approvalRows),
+    index(spendRows),
+    index(launchRows),
+    index(calRows),
+    index(switchRows),
+  ];
+  return list.map((t) => {
+    const last = c.get(t.id)?.last;
+    return {
+      tenantId: t.id,
+      name: t.name,
+      slug: t.slug,
+      plan: t.plan,
+      status: t.status,
+      agents: Number(a.get(t.id)?.all ?? 0),
+      liveAgents: Number(a.get(t.id)?.live ?? 0),
+      signedOff: Number(l.get(t.id)?.signed ?? 0),
+      conversations7d: Number(c.get(t.id)?.week ?? 0),
+      handedOff7d: Number(c.get(t.id)?.handedOff ?? 0),
+      waiting: Number(c.get(t.id)?.waiting ?? 0),
+      pendingApprovals: Number(p.get(t.id)?.pending ?? 0),
+      spendMonthMicros: Number(s.get(t.id)?.cost ?? 0),
+      budgetMicros: t.aiMonthlyBudgetMicros,
+      lastConversationAt: last ? new Date(last) : null,
+      calendarErrors: Number(cal.get(t.id)?.errors ?? 0),
+      stopped: Number(sw.get(t.id)?.stopped ?? 0),
+    };
+  });
 }

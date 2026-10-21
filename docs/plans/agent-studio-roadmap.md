@@ -92,6 +92,11 @@ Each phase ends with tests, a green CI run, a deploy and a check on the live sit
 - Go-live gate: Required steps done, tests pass, 3 practice chats or calls; Wyrm signs off.
 
 ### Phase 4: Portal redesign (professional management)
+
+Progress 2026-10-21: navigation reorganised into Overview (monitoring), Inbox, My agent (all
+configuration as tabs) and Settings; back office has fleet health (part of phase 6). Still to
+do: Insights page, AI-suggested answers, conversation scores.
+
 - Navigation: Home, Conversations, To-do, Insights, Teach (Studio), Test & Publish, Settings,
   plus a "Try your agent" button and a live status pill (on/paused, version).
 - Conversations: dense table with outcome labels, channel, agent, score and why, a filter

@@ -39,7 +39,7 @@ export default async function LaunchPage({
   const studio = (tab: string) => `/dashboard/agents/${agent.id}/studio?tab=${tab}`;
   const linkFor = (where: string) =>
     where === "try"
-      ? `/dashboard/agents/${agent.id}`
+      ? studio("tests")
       : where === "launch"
         ? "#channels"
         : where === "settings"
@@ -57,20 +57,12 @@ export default async function LaunchPage({
 
   return (
     <section className="space-y-6">
-      <Link
-        href={`/dashboard/agents/${agent.id}`}
-        className="text-sm text-ink-muted hover:text-ink"
-      >
-        ← {agent.name}
-      </Link>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-semibold">Launch {agent.name}</h1>
+          <h2 className="font-display text-2xl font-semibold">Go live</h2>
           <p className="mt-1 text-ink-muted">
-            {setup.done} of {setup.total} steps done ·{" "}
-            <Badge tone={setup.status === "live" ? "good" : "plain"}>
-              {setup.status === "live" ? "live" : setup.status}
-            </Badge>
+            {setup.done} of {setup.total} setup steps done
+            {setup.status === "live" ? ". Your agent is answering customers." : "."}
           </p>
         </div>
         {canEdit && (

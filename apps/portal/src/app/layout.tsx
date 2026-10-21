@@ -22,7 +22,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <header className="border-b border-line bg-paper/90 backdrop-blur">
           <nav
             aria-label="Portal"
-            className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6"
+            className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6"
           >
             <Link href="/" className="font-display text-lg font-semibold tracking-tight">
               Wyrm AI <span className="font-mono text-xs text-signal">portal</span>
@@ -42,7 +42,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 </Link>
                 {access.isAdmin && (
                   <Link href="/admin" className="text-ink-muted hover:text-ink">
-                    Admin
+                    Back office
                   </Link>
                 )}
                 <Link
@@ -61,7 +61,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             )}
           </nav>
         </header>
-        <main id="main" className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+        <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
           {children}
         </main>
       </body>

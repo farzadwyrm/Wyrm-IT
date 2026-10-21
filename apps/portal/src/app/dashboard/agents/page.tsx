@@ -1,6 +1,7 @@
 import { listAgents, listSwitches } from "@wyrm/core";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireTenant } from "@/lib/portal";
 import { agentStatusAction } from "../actions";
 import { Badge, Card, Empty, Notice, PageHeader, secondary } from "../ui";
@@ -14,13 +15,15 @@ export default async function AgentsPage({ searchParams }: PageProps<"/dashboard
     listAgents(page.ctx, page.tenantId),
     listSwitches(page.ctx, page.tenantId),
   ]);
+  // One agent (the usual case): go straight to it.
+  if (agents.length === 1 && agents[0]) redirect(`/dashboard/agents/${agents[0].agent.id}`);
   const pausedAll = switches.some((s) => s.scope === "tenant" || s.scope === "global");
 
   return (
     <section className="space-y-6">
       <PageHeader
         title="Agents"
-        intro="Switch agents on or off, change what they say, test and publish."
+        intro="Open an agent to change what it knows, test it and publish."
       />
       <Notice params={params} />
       {pausedAll && (
@@ -64,7 +67,7 @@ export default async function AgentsPage({ searchParams }: PageProps<"/dashboard
                   )}
                   <div className="mt-auto flex flex-wrap gap-2">
                     <Link href={`/dashboard/agents/${agent.id}`} className={secondary}>
-                      {canConfigure ? "Settings & publish" : "Details"}
+                      {canConfigure ? "Configure" : "Details"}
                     </Link>
                     {canConfigure && agent.status !== "draft" && (
                       <form action={agentStatusAction}>

@@ -1,27 +1,46 @@
-import { homeMetrics } from "@wyrm/core";
+import { homeMetrics, listAgents, listSwitches } from "@wyrm/core";
 import type { ReactNode } from "react";
 import { coreContext, getAccess } from "@/lib/auth";
 import { endViewAsAction } from "../admin/actions";
-import { DashboardNav } from "./nav";
+import { agentState } from "./agent-state";
+import { DashboardNav, type NavAgent } from "./nav";
 
 /**
- * Client-area frame. The navigation only shows for customer staff; every page still checks
- * access itself (`requireTenant`), since layouts are not a security boundary.
+ * Client-area frame: sidebar (Overview, Inbox, My agent, Settings) for customer staff. Every page
+ * still checks access itself (`requireTenant`), since layouts are not a security boundary.
  */
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const access = await getAccess();
   const actor = access?.actor;
   const me = actor?.kind === "tenant" ? actor : actor?.kind === "impersonating" ? actor.as : null;
-  let todo = 0;
+  let waiting = 0;
+  let agents: NavAgent[] = [];
+  const business =
+    (me && access?.tenants.find((t) => t.tenantId === me.tenantId)?.name) || "Your business";
   if (access && me) {
     try {
-      todo = (await homeMetrics(await coreContext(access), me.tenantId)).needsAttention;
+      const ctx = await coreContext(access);
+      const [home, list, switches] = await Promise.all([
+        homeMetrics(ctx, me.tenantId),
+        listAgents(ctx, me.tenantId),
+        listSwitches(ctx, me.tenantId),
+      ]);
+      waiting = home.needsAttention;
+      const all = switches.some((s) => s.scope === "tenant" || s.scope === "global");
+      agents = list.map(({ agent }) => ({
+        id: agent.id,
+        name: agent.name,
+        state: agentState(
+          agent.status,
+          all || switches.some((s) => s.scope === "agent" && s.agentId === agent.id),
+        ),
+      }));
     } catch {
-      todo = 0;
+      waiting = 0;
     }
   }
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {actor?.kind === "impersonating" && (
         <p role="status" className="rounded-xl border border-signal/60 bg-signal/10 p-3 text-sm">
           Wyrm staff view{actor.readOnly ? " (view only)" : ""}: you're seeing the portal as this
@@ -33,8 +52,14 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         </p>
       )}
       {actor?.kind === "impersonating" && <form id="end-view-as" action={endViewAsAction} />}
-      {me && <DashboardNav todo={todo} />}
-      {children}
+      {me ? (
+        <div className="grid gap-6 lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
+          <DashboardNav business={business} waiting={waiting} agents={agents} />
+          <div className="min-w-0">{children}</div>
+        </div>
+      ) : (
+        children
+      )}
     </div>
   );
 }

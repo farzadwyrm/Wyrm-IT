@@ -724,6 +724,64 @@ export async function homeMetrics(ctx: Ctx, tenantId: string, now = new Date()) 
   };
 }
 
+export interface DayActivity {
+  /** UTC day, YYYY-MM-DD. */
+  day: string;
+  total: number;
+  /** Finished by the agent: resolved, booked or a lead taken. */
+  handled: number;
+  handedOff: number;
+}
+
+/** Conversations per UTC day for the last `days` days (oldest first, empty days included). */
+export async function activityByDay(
+  ctx: Ctx,
+  tenantId: string,
+  days = 14,
+  now = new Date(),
+): Promise<DayActivity[]> {
+  const ids = visibleAgentIds(ctx, tenantId);
+  const span = Math.min(Math.max(Math.trunc(days), 1), 90);
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const from = new Date(today - (span - 1) * 86_400_000);
+  const dayCol = sql<string>`to_char(${conversations.startedAt} at time zone 'UTC', 'YYYY-MM-DD')`;
+  const count = (filter?: SQL) => sql<number>`count(*) filter (where ${filter ?? sql`true`})::int`;
+  const rows = await ctx.db
+    .select({
+      day: dayCol,
+      total: count(),
+      handled: count(
+        inArray(conversations.outcome, [
+          "resolved_confirmed",
+          "resolved_assumed",
+          "booked",
+          "lead",
+        ]),
+      ),
+      handedOff: count(eq(conversations.outcome, "handed_off")),
+    })
+    .from(conversations)
+    .where(
+      and(
+        eq(conversations.tenantId, tenantId),
+        agentScope(conversations.agentId, ids),
+        gte(conversations.startedAt, from),
+      ),
+    )
+    .groupBy(dayCol);
+  const byDay = new Map(rows.map((r) => [r.day, r]));
+  return Array.from({ length: span }, (_, i) => {
+    const day = dayString(new Date(from.getTime() + i * 86_400_000));
+    const r = byDay.get(day);
+    return {
+      day,
+      total: Number(r?.total ?? 0),
+      handled: Number(r?.handled ?? 0),
+      handedOff: Number(r?.handedOff ?? 0),
+    };
+  });
+}
+
 /** Week-over-week change worth pointing out: at least 5 events and a 50% move. */
 export function notableChange(metric: Metric): "up" | "down" | null {
   const { current, previous } = metric;

@@ -1,8 +1,8 @@
 import { TEMPLATES, type Template } from "@wyrm/brain";
 import { getStudio, listAgents, listTestsWithResults } from "@wyrm/core";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChatBox } from "@/components/chat-box";
 import { requireTenant, when } from "@/lib/portal";
 import { Badge, Card, Empty, input, Notice, primary, secondary } from "../../../ui";
 import {
@@ -95,78 +95,46 @@ export default async function StudioPage({
 
   return (
     <section className="space-y-6">
-      <Link
-        href={`/dashboard/agents/${agent.id}`}
-        className="text-sm text-ink-muted hover:text-ink"
-      >
-        ← {agent.name}
-      </Link>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold">Agent Studio</h1>
-          <p className="mt-1 max-w-2xl text-ink-muted">
-            Decide what {agent.name} knows, the rules it follows, how it handles requests, and what
-            it must never do. Changes are a draft until you publish.
+      {canEdit && (
+        <form
+          action={publishAction}
+          className="flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-ember/40 bg-ember/5 p-3"
+        >
+          {hidden}
+          <p className="text-sm">
+            {draftChanges > 0 ? (
+              <strong>
+                {draftChanges} unpublished change{draftChanges === 1 ? "" : "s"}.
+              </strong>
+            ) : (
+              <strong>Everything is published.</strong>
+            )}{" "}
+            <span className="text-ink-muted">
+              {lastPublish
+                ? `Live version from ${when(lastPublish.createdAt)}: "${lastPublish.note}".`
+                : "Not published yet."}{" "}
+              Publishing runs your tests first.
+            </span>
           </p>
-        </div>
-        {canEdit && (
-          <form
-            action={publishAction}
-            className="flex flex-wrap items-end gap-2 rounded-2xl border border-ember/40 bg-ember/5 p-3"
-          >
-            {hidden}
+          <div className="flex flex-wrap items-end gap-2">
             <label>
-              <span className="text-sm font-semibold">
-                {draftChanges > 0
-                  ? `${draftChanges} unpublished change${draftChanges === 1 ? "" : "s"}`
-                  : "Publish"}
-              </span>
+              <span className="sr-only">Version note</span>
               <input
                 name="note"
                 required
                 minLength={3}
                 maxLength={500}
                 className={input}
-                placeholder="Version note"
+                placeholder="What changed? e.g. new prices"
               />
             </label>
             <button type="submit" className={primary}>
               Test &amp; publish
             </button>
-          </form>
-        )}
-      </div>
-      <Notice params={query} />
-      {lastPublish && (
-        <p className="text-sm text-ink-muted">
-          Live version published {when(lastPublish.createdAt)}: "{lastPublish.note}".
-        </p>
+          </div>
+        </form>
       )}
-
-      <nav aria-label="Studio sections" className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-        <ul className="flex min-w-max gap-1 border-b border-line">
-          {TABS.map((t) => (
-            <li key={t.key}>
-              <Link
-                href={`/dashboard/agents/${agent.id}/studio?tab=${t.key}`}
-                aria-current={t.key === tab ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center border-b-2 px-3 text-sm font-semibold ${
-                  t.key === tab
-                    ? "border-ember"
-                    : "border-transparent text-ink-muted hover:text-ink"
-                }`}
-              >
-                {t.label}
-                {t.key === "rules" && conflicts.length > 0 && (
-                  <span className="ml-2">
-                    <Badge tone="warn">{conflicts.length}</Badge>
-                  </span>
-                )}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <Notice params={query} />
 
       {!canEdit && (
         <p className="text-sm text-ink-muted">
@@ -698,7 +666,19 @@ export default async function StudioPage({
         </form>
       )}
 
-      {tab === "tests" && <TestsPanel agentId={agent.id} canEdit={canEdit} data={testData} />}
+      {tab === "tests" && (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <TestsPanel agentId={agent.id} canEdit={canEdit} data={testData} />
+          {page.can("agents.use", agent.id) && (
+            <aside className="space-y-2">
+              <ChatBox agentId={agent.id} test title="Try it (uses the live version)" />
+              <p className="text-xs text-ink-muted">
+                Test chats show why the agent answered. Customers never see that.
+              </p>
+            </aside>
+          )}
+        </div>
+      )}
 
       {tab === "changes" &&
         (changes.length === 0 ? (

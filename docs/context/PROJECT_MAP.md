@@ -1,8 +1,19 @@
 # Project map (current state)
 
-Last updated: 2026-10-20
+Last updated: 2026-10-21
 
 ## Done
+
+- 2026-10-21 Portal layout redesign (customer portal + back office). Customer sidebar:
+  Overview (monitoring: alerts, 4 KPIs, 14-day activity chart, latest chats, unanswered
+  questions, spend; `dashboard/page.tsx`, `activity-chart.tsx`, core `activityByDay`), Inbox
+  (Needs you + All conversations table; `dashboard/inbox`, old /todo and /conversations
+  redirect), My agent (one header + tabs: Business info, Answers, Rules, Tasks & booking,
+  Limits & handoff, Try & test, Go live, History; `agents/[id]/layout.tsx`, `agent-tabs.tsx`,
+  `answers/`; /teach redirects; legacy free-text settings form removed), Settings. Back office
+  `/admin`: health per client (`lib/health.ts` + test, core `customerHealth`), Needs you list,
+  filterable clients table; client page shows health strip. Verified: verify:fast + build
+  locally. Live check: see commit after deploy.
 
 - 2026-10-20 PIVOT (ADR 0006): Wyrm is an AI agents company. Site = home (agents), `/agents` +
   `/agents/[slug]` (catalogue in `packages/agents`), `/planner` (AI workflow planner, `POST

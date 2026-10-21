@@ -39,8 +39,8 @@ export default async function ConversationPage({
 
   return (
     <section className="space-y-6">
-      <Link href="/dashboard/conversations" className="text-sm text-ink-muted hover:text-ink">
-        ← All conversations
+      <Link href="/dashboard/inbox?view=all" className="text-sm text-ink-muted hover:text-ink">
+        ← Inbox
       </Link>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="font-display text-3xl font-semibold">{c.customerLabel || "Customer"}</h1>

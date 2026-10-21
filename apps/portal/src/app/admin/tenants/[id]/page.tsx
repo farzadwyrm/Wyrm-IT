@@ -1,4 +1,5 @@
 import {
+  customerHealth,
   DomainError,
   getTenant,
   listAgents,
@@ -11,7 +12,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ChatBox } from "@/components/chat-box";
 import { coreContext, requireAdmin } from "@/lib/auth";
-import { OUTCOME_LABELS, when } from "@/lib/portal";
+import { clientHealth } from "@/lib/health";
+import { money, OUTCOME_LABELS, when } from "@/lib/portal";
 import { adminAgentStatus, signOffAction, viewAsAction } from "../../actions";
 
 export const metadata: Metadata = { title: "Client" };
@@ -39,11 +41,14 @@ export default async function TenantPage({
     if (e instanceof DomainError) notFound();
     throw e;
   }
-  const [agents, staff, recent] = await Promise.all([
+  const [agents, staff, recent, healthRows] = await Promise.all([
     listAgents(ctx, id),
     listStaff(ctx, id),
     listConversations(ctx, id, { limit: 10 }),
+    customerHealth(ctx),
   ]);
+  const row = healthRows.find((r) => r.tenantId === id);
+  const health = row ? clientHealth(row) : null;
   const setups = new Map(
     await Promise.all(
       agents.map(async ({ agent }) => [agent.id, await setupStatus(ctx, id, agent.id)] as const),
@@ -54,7 +59,7 @@ export default async function TenantPage({
   return (
     <section className="space-y-8">
       <Link href="/admin" className="text-sm text-ink-muted hover:text-ink">
-        ← All clients
+        ← Back office
       </Link>
       <div>
         <h1 className="font-display text-3xl font-semibold">{tenant.name}</h1>
@@ -63,6 +68,40 @@ export default async function TenantPage({
           {tenant.agentLimit} agents
         </p>
       </div>
+      {row && health && (
+        <div className="space-y-3">
+          <p
+            className={`rounded-xl border p-3 text-sm ${
+              health.tone === "bad"
+                ? "border-node-output/50 bg-node-output/5"
+                : health.tone === "warn"
+                  ? "border-signal/50 bg-signal/5"
+                  : health.tone === "good"
+                    ? "border-moss/40 bg-moss/5"
+                    : "border-line"
+            }`}
+          >
+            <strong>{health.label}</strong>
+            {health.issues.length > 0 ? `: ${health.issues.join(" · ")}` : ""}
+          </p>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              ["Agents live", `${row.liveAgents} of ${row.agents}`],
+              ["Chats (7 days)", String(row.conversations7d)],
+              ["Waiting for client", String(row.waiting + row.pendingApprovals)],
+              [
+                "AI spend this month",
+                `${money(row.spendMonthMicros)} / ${money(row.budgetMicros)}`,
+              ],
+            ].map(([label, value]) => (
+              <li key={label} className="rounded-2xl border border-line bg-paper-raised/80 p-3">
+                <p className="text-xs text-ink-muted">{label}</p>
+                <p className="mt-1 font-display text-xl font-semibold">{value}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {typeof query.error === "string" && (
         <p role="alert" className="rounded-xl border border-node-output/50 bg-node-output/10 p-3">
           {query.error.slice(0, 200)}

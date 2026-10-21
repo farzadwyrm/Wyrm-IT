@@ -5,9 +5,11 @@ import { drizzle } from "drizzle-orm/pglite";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   acceptInvitation,
+  activityByDay,
   addCorrection,
   type Ctx,
   createTenant,
+  customerHealth,
   DomainError,
   decideApproval,
   getConversation,
@@ -430,6 +432,28 @@ describe("home numbers and usage", () => {
     expect(get("answered")?.current).toBe(4);
     const member = await homeMetrics(await ctxFor(people.memberA), tenantA);
     expect(member.metrics.find((m) => m.key === "leads")?.current).toBe(0); // quotes agent hidden
+  });
+
+  it("counts conversations per day, oldest first, with empty days", async () => {
+    const days = await activityByDay(await ctxFor(people.ownerA), tenantA, 14);
+    expect(days).toHaveLength(14);
+    expect(days.at(-1)?.day).toBe(new Date().toISOString().slice(0, 10));
+    expect(days.reduce((t, d) => t + d.total, 0)).toBe(5);
+    expect(days.reduce((t, d) => t + d.handedOff, 0)).toBe(1);
+    expect(days.reduce((t, d) => t + d.handled, 0)).toBe(4);
+    const member = await activityByDay(await ctxFor(people.memberA), tenantA, 14);
+    expect(member.reduce((t, d) => t + d.total, 0)).toBe(4); // quotes agent hidden
+    await expect(activityByDay(await ctxFor(people.ownerB), tenantA)).rejects.toThrow(
+      ForbiddenError,
+    );
+  });
+
+  it("gives Wyrm staff one health row per client; customers can't read it", async () => {
+    const rows = await customerHealth(await ctxFor(people.super));
+    const a = rows.find((r) => r.tenantId === tenantA);
+    expect(a).toMatchObject({ agents: 2, conversations7d: 4, waiting: 0, handedOff7d: 1 }); // resolved above
+    expect(rows.find((r) => r.tenantId === tenantB)?.conversations7d).toBe(1);
+    await expect(customerHealth(await ctxFor(people.ownerA))).rejects.toThrow(ForbiddenError);
   });
 
   it("flags only big week-over-week changes", () => {

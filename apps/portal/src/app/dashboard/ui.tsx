@@ -42,6 +42,16 @@ const ERRORS: Record<string, string> = {
   unknown: "Something went wrong. Nothing was changed.",
 };
 
+/** Badge colour for a conversation result. */
+export const outcomeTone = (o: string | null) =>
+  o === "booked" || o === "lead" || o === "resolved_confirmed"
+    ? "good"
+    : o === "handed_off"
+      ? "warn"
+      : o === "failed"
+        ? "bad"
+        : "plain";
+
 export function Notice({ params }: { params: Record<string, string | string[] | undefined> }) {
   const notice = typeof params.notice === "string" ? NOTICES[params.notice] : undefined;
   const error =
