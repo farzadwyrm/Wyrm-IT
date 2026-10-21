@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 /**
- * Typed view of the live schema after migrations 0001–0004. The SQL files are the source of
+ * Typed view of the live schema after migrations 0001–0005. The SQL files are the source of
  * truth (they also hold row-level security, constraints and triggers); keep both in sync.
  * Tested in `rls.test.ts`.
  */
@@ -232,6 +232,8 @@ export const conversations = pgTable("conversations", {
   startedAt: ts("started_at").notNull().defaultNow(),
   endedAt: ts("ended_at"),
   purgeAfter: ts("purge_after").notNull().defaultNow(),
+  /** Running procedure and the details collected so far (0005). */
+  state: jsonb("state").notNull().default({}),
 });
 
 export const conversationMessages = pgTable("conversation_messages", {
@@ -364,6 +366,96 @@ export const killSwitches = pgTable("kill_switches", {
   clearedBy: uuid("cleared_by"),
 });
 
+// Agent Studio (0005): facts, rules, procedures, limits and the change log.
+
+export const PROCEDURE_TEMPLATES = [
+  "book",
+  "reschedule",
+  "cancel",
+  "message",
+  "transfer",
+  "quote",
+] as const;
+export type ProcedureTemplate = (typeof PROCEDURE_TEMPLATES)[number];
+
+export const businessProfiles = pgTable("business_profiles", {
+  tenantId: uuid("tenant_id").primaryKey(),
+  profile: jsonb("profile").notNull().default({}),
+  updatedBy: uuid("updated_by"),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
+export const agentRules = pgTable("agent_rules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id").notNull(),
+  text: text("text").notNull(),
+  scope: jsonb("scope").notNull().default({}),
+  priority: smallint("priority").notNull().default(0),
+  enabled: boolean("enabled").notNull().default(true),
+  createdBy: uuid("created_by"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
+export const agentProcedures = pgTable("agent_procedures", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id").notNull(),
+  template: text("template", { enum: PROCEDURE_TEMPLATES }).notNull(),
+  name: text("name").notNull(),
+  whenToUse: text("when_to_use").notNull(),
+  whenNotToUse: text("when_not_to_use").notNull().default(""),
+  requiredInfo: jsonb("required_info").notNull().default([]),
+  steps: text("steps").array().notNull().default([]),
+  confirmBeforeActing: boolean("confirm_before_acting").notNull().default(true),
+  enabled: boolean("enabled").notNull().default(true),
+  createdBy: uuid("created_by"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
+export const agentLimits = pgTable("agent_limits", {
+  agentId: uuid("agent_id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  maxDiscountPercent: smallint("max_discount_percent").notNull().default(0),
+  bookingWindowDays: smallint("booking_window_days").notNull().default(30),
+  minNoticeHours: smallint("min_notice_hours").notNull().default(2),
+  cancellationNoticeHours: smallint("cancellation_notice_hours").notNull().default(24),
+  afterHours: text("after_hours", { enum: ["answer", "take_message", "handoff"] })
+    .notNull()
+    .default("take_message"),
+  blockedTopics: text("blocked_topics").array().notNull().default([]),
+  handoffContact: text("handoff_contact").notNull().default(""),
+  handoffWhen: text("handoff_when").array().notNull().default(["asked", "frustrated", "loop"]),
+  tone: text("tone", { enum: ["friendly", "formal", "brief"] })
+    .notNull()
+    .default("friendly"),
+  replyLength: text("reply_length", { enum: ["short", "medium"] })
+    .notNull()
+    .default("short"),
+  updatedBy: uuid("updated_by"),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
+export const policyChanges = pgTable("policy_changes", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id"),
+  objectType: text("object_type", {
+    enum: ["profile", "rule", "procedure", "limits", "publish", "restore"],
+  }).notNull(),
+  objectId: text("object_id"),
+  action: text("action", {
+    enum: ["create", "update", "delete", "enable", "disable", "publish", "restore"],
+  }).notNull(),
+  note: text("note").notNull(),
+  before: jsonb("before"),
+  after: jsonb("after"),
+  changedBy: uuid("changed_by"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
 export type PlatformUser = typeof platformUsers.$inferSelect;
 export type Tenant = typeof tenants.$inferSelect;
 export type Role = typeof roles.$inferSelect;
@@ -383,3 +475,8 @@ export type AgentTestRun = typeof agentTestRuns.$inferSelect;
 export type Correction = typeof corrections.$inferSelect;
 export type UsageDaily = typeof usageDaily.$inferSelect;
 export type KillSwitch = typeof killSwitches.$inferSelect;
+export type BusinessProfileRow = typeof businessProfiles.$inferSelect;
+export type AgentRule = typeof agentRules.$inferSelect;
+export type AgentProcedure = typeof agentProcedures.$inferSelect;
+export type AgentLimitsRow = typeof agentLimits.$inferSelect;
+export type PolicyChange = typeof policyChanges.$inferSelect;
