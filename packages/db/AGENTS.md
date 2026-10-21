@@ -19,3 +19,4 @@ see nothing; only Wyrm admins create organisations and agents.
 
 `seed/demo-business.sql`: fictional demo organisation (Bright Smile Dental (demo)) with agents,
 conversations, an approval and usage; idempotent; run in the Supabase SQL editor.
+`seed/demo-studio.sql`: published Agent Studio policy for the demo front desk (run after the above).
