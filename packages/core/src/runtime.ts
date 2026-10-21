@@ -237,7 +237,7 @@ export interface TurnInput {
 }
 
 export type TurnResult =
-  | { status: "ok"; conversationId: string; reply: string; kind: string }
+  | { status: "ok"; conversationId: string; reply: string; kind: string; trace: DecisionRecord[] }
   | { status: "unavailable" };
 
 export async function handleCustomerMessage(
@@ -299,40 +299,185 @@ export async function handleCustomerMessage(
       .where(eq(agentDecisions.conversationId, conversation.id))
       .orderBy(asc(agentDecisions.id)),
   ]);
+  const turn = await runTurn({
+    state,
+    policyFor: runtime.policyFor,
+    knowledgeFor: runtime.knowledgeFor,
+    deps,
+    channel: input.channel,
+    text,
+    now,
+    conversationId: conversation.id,
+    firstContact,
+    history: history.map((m) => ({
+      role: m.role === "customer" ? ("customer" as const) : ("agent" as const),
+      text: m.body,
+    })),
+    previous,
+    convState: (conversation.state ?? {}) as ConversationState,
+    current: {
+      outcome: conversation.outcome,
+      flags: conversation.flags,
+      topics: conversation.topics,
+      agentId: conversation.agentId,
+    },
+  });
+  const { reply, records, convState, summary, outcome, routedAgent } = turn;
+  if (turn.approval) {
+    const payload = turn.approval.payload;
+    const [held] = await db
+      .insert(approvals)
+      .values({
+        tenantId,
+        agentId: turn.approval.agentId,
+        conversationId: conversation.id,
+        action: turn.approval.action,
+        riskTier: 2,
+        summary: turn.approval.summary,
+        payload,
+        payloadHash: hashPayload({ conversation: conversation.id, ...payload }),
+        requestedAt: now,
+        expiresAt: new Date(now.getTime() + 48 * 3_600_000),
+      })
+      .onConflictDoNothing()
+      .returning();
+    const record = records[turn.approval.recordIndex];
+    if (record && held) record.approvalId = held.id;
+  }
+
+  const cost = records.reduce((sum, r) => sum + r.costMicros, 0);
+  const llmCalls = records.filter(
+    (r) => r.provider === "anthropic" || r.provider === "groq",
+  ).length;
+  await db.transaction(async (tx) => {
+    await tx.insert(conversationMessages).values([
+      { conversationId: conversation.id, tenantId, role: "customer", body: text, createdAt: now },
+      {
+        conversationId: conversation.id,
+        tenantId,
+        role: "agent",
+        body: reply.slice(0, 8000),
+        createdAt: new Date(now.getTime() + 1),
+      },
+    ]);
+    if (records.length) {
+      await tx.insert(agentDecisions).values(
+        records.map((r) => ({
+          ...r,
+          conversationId: conversation.id,
+          confidence: r.confidence,
+          riskTier: r.riskTier,
+        })),
+      );
+    }
+    await tx
+      .update(conversations)
+      .set({
+        agentId: routedAgent,
+        outcome,
+        flags: turn.flags,
+        topics: turn.topics,
+        aiDisclosed: conversation.aiDisclosed || turn.disclosed,
+        state: convState,
+        summary: summary ?? conversation.summary ?? text.slice(0, 200),
+        endedAt: turn.ended ? now : null,
+        status: turn.ended ? "ended" : "active",
+      })
+      .where(eq(conversations.id, conversation.id));
+    await tx.execute(sql`
+      insert into usage_daily (tenant_id, agent_id, day, conversations, llm_calls, input_tokens, output_tokens, cost_micros)
+      values (${tenantId}, ${routedAgent}, ${dayString(now)}, ${firstContact ? 1 : 0}, ${llmCalls},
+              ${records.reduce((s, r) => s + r.inputTokens, 0)}, ${records.reduce((s, r) => s + r.outputTokens, 0)}, ${cost})
+      on conflict (tenant_id, coalesce(agent_id, '00000000-0000-0000-0000-000000000000'::uuid), day) do update set
+        conversations = usage_daily.conversations + excluded.conversations,
+        llm_calls = usage_daily.llm_calls + excluded.llm_calls,
+        input_tokens = usage_daily.input_tokens + excluded.input_tokens,
+        output_tokens = usage_daily.output_tokens + excluded.output_tokens,
+        cost_micros = usage_daily.cost_micros + excluded.cost_micros`);
+  });
+  return { status: "ok", conversationId: conversation.id, reply, kind: turn.kind, trace: records };
+}
+
+/** Everything one turn needs, independent of storage (live chat or simulator). */
+export interface TurnContext {
+  state: TenantState;
+  policyFor: (agentId: string) => Policy;
+  knowledgeFor: (agentId: string) => Knowledge;
+  deps: RuntimeDeps;
+  channel: TurnInput["channel"];
+  text: string;
+  now: Date;
+  conversationId: string;
+  firstContact: boolean;
+  history: { role: "customer" | "agent"; text: string }[];
+  previous: { decision: string; outcome: string; agentId: string | null }[];
+  convState: ConversationState;
+  current: { outcome: Outcome | null; flags: string[]; topics: string[]; agentId: string | null };
+}
+
+/** What a turn decided; the caller saves it (or, in tests, just looks at it). */
+export interface TurnEffects {
+  reply: string;
+  kind: string;
+  records: DecisionRecord[];
+  convState: ConversationState;
+  summary: string | null;
+  outcome: Outcome | null;
+  flags: string[];
+  topics: string[];
+  routedAgent: string | null;
+  disclosed: boolean;
+  ended: boolean;
+  /** A tier-2 action held for staff; `recordIndex` is the decision that should point at it. */
+  approval: {
+    agentId: string;
+    action: string;
+    summary: string;
+    payload: Record<string, unknown>;
+    recordIndex: number;
+  } | null;
+}
+
+type Outcome = NonNullable<(typeof conversations.$inferSelect)["outcome"]>;
+
+/** One customer message through the brain, policies and limits. No storage: pure apart from model calls. */
+export async function runTurn(ctx: TurnContext): Promise<TurnEffects> {
+  const { state, text, now, firstContact, previous } = ctx;
+  let approval: TurnEffects["approval"] = null;
   const lastRoute = [...previous]
     .reverse()
     .find((d) => d.decision === "route" && d.outcome === "ok" && d.agentId);
   const event: BrainEvent = {
-    channel: input.channel,
+    channel: ctx.channel,
     text,
-    conversationId: conversation.id,
+    conversationId: ctx.conversationId,
     firstContact,
     activeFlow: lastRoute?.agentId ? { agentId: lastRoute.agentId, midAction: false } : null,
     clarifications: previous.filter((d) => d.outcome === "asked").length,
   };
 
-  const result = await decide(event, state, deps.classifiers);
+  const result = await decide(event, state, ctx.deps.classifiers);
   const records: DecisionRecord[] = [...result.records];
-  let convState = (conversation.state ?? {}) as ConversationState;
+  let convState = { ...ctx.convState };
   /** Set when a procedure finishes: what staff need to act on, shown in the portal. */
   let summary: string | null = null;
   let reply: string;
-  let outcome = conversation.outcome;
-  const flags = new Set(conversation.flags);
-  const topics = new Set(conversation.topics);
-  let routedAgent = conversation.agentId;
+  let outcome = ctx.current.outcome;
+  const flags = new Set(ctx.current.flags);
+  const topics = new Set(ctx.current.topics);
+  let routedAgent = ctx.current.agentId;
 
   switch (result.action.kind) {
     case "route": {
       routedAgent = result.action.agentId;
       const agentId = result.action.agentId;
-      const policy = runtime.policyFor(agentId);
+      const policy = ctx.policyFor(agentId);
       const open = isOpen(policy.profile, now);
       const limits = policy.limits;
       const contact = limits.handoffContact ? ` (${limits.handoffContact})` : "";
       const noteDecision = (
         fields: Partial<DecisionRecord> & Pick<DecisionRecord, "decision" | "outcome" | "reason">,
-      ) => records.push({ ...base(records[0], state, conversation.id), agentId, ...fields });
+      ) => records.push({ ...base(records[0], state, ctx.conversationId), agentId, ...fields });
 
       // Hard limits first, in code: blocked topics, frustration, after-hours behaviour.
       const topic = blockedTopic(text, limits);
@@ -367,26 +512,20 @@ export async function handleCustomerMessage(
         ...(procedure && convState.procedure === procedure.template ? convState.collected : {}),
       };
 
-      const turns = [
-        ...history.map((m) => ({
-          role: m.role === "customer" ? ("customer" as const) : ("agent" as const),
-          text: m.body,
-        })),
-        { role: "customer" as const, text },
-      ];
-      const knowledge = runtime.knowledgeFor(agentId);
+      const turns = [...ctx.history, { role: "customer" as const, text }];
+      const knowledge = ctx.knowledgeFor(agentId);
       const usesStudio =
         policy.procedures.length > 0 ||
         policy.rules.length > 0 ||
         Boolean(policy.profile.hours && Object.keys(policy.profile.hours).length);
-      const answer = await deps.answer(
+      const answer = await ctx.deps.answer(
         usesStudio || procedure
           ? {
               ...knowledge,
               instructions: buildInstructions(policy, {
                 businessName: state.businessName,
                 agentName: knowledge.agentName,
-                situation: { channel: input.channel, open, returning: false },
+                situation: { channel: ctx.channel, open, returning: false },
                 procedure,
                 collected,
                 today: now.toISOString().slice(0, 10),
@@ -461,29 +600,19 @@ export async function handleCustomerMessage(
             convState = { ...convState, collected };
           } else if (check.needsApproval) {
             const payload = { template: procedure.template, details: collected };
-            const [held] = await db
-              .insert(approvals)
-              .values({
-                tenantId,
-                agentId,
-                conversationId: conversation.id,
-                action: `${procedure.template === "quote" ? "quote" : "booking"}.${procedure.template === "quote" ? "send" : "cancel"}`,
-                riskTier: 2,
-                summary: `${procedure.name}: ${summaryOf(collected, procedure)}`.slice(0, 500),
-                payload,
-                payloadHash: hashPayload({ conversation: conversation.id, ...payload }),
-                requestedAt: now,
-                expiresAt: new Date(now.getTime() + 48 * 3_600_000),
-              })
-              .onConflictDoNothing()
-              .returning();
+            approval = {
+              agentId,
+              action: `${procedure.template === "quote" ? "quote" : "booking"}.${procedure.template === "quote" ? "send" : "cancel"}`,
+              summary: `${procedure.name}: ${summaryOf(collected, procedure)}`.slice(0, 500),
+              payload,
+              recordIndex: records.length,
+            };
             noteDecision({
               decision: "tool_authorize",
               outcome: "held",
               reason: check.reason,
               tool,
               riskTier: 2,
-              approvalId: held?.id ?? null,
             });
             reply = `Thank you. I've passed this to the team${contact}; they'll review it and get back to you.`;
             summary =
@@ -541,58 +670,20 @@ export async function handleCustomerMessage(
       break;
   }
   if (result.disclosure) reply = `${result.disclosure}\n\n${reply}`;
-
-  const cost = records.reduce((sum, r) => sum + r.costMicros, 0);
-  const llmCalls = records.filter(
-    (r) => r.provider === "anthropic" || r.provider === "groq",
-  ).length;
-  await db.transaction(async (tx) => {
-    await tx.insert(conversationMessages).values([
-      { conversationId: conversation.id, tenantId, role: "customer", body: text, createdAt: now },
-      {
-        conversationId: conversation.id,
-        tenantId,
-        role: "agent",
-        body: reply.slice(0, 8000),
-        createdAt: new Date(now.getTime() + 1),
-      },
-    ]);
-    if (records.length) {
-      await tx.insert(agentDecisions).values(
-        records.map((r) => ({
-          ...r,
-          conversationId: conversation.id,
-          confidence: r.confidence,
-          riskTier: r.riskTier,
-        })),
-      );
-    }
-    await tx
-      .update(conversations)
-      .set({
-        agentId: routedAgent,
-        outcome,
-        flags: [...flags],
-        topics: [...topics].slice(0, 10),
-        aiDisclosed: conversation.aiDisclosed || Boolean(result.disclosure),
-        state: convState,
-        summary: summary ?? conversation.summary ?? text.slice(0, 200),
-        endedAt: result.action.kind === "stop" ? now : null,
-        status: result.action.kind === "stop" ? "ended" : "active",
-      })
-      .where(eq(conversations.id, conversation.id));
-    await tx.execute(sql`
-      insert into usage_daily (tenant_id, agent_id, day, conversations, llm_calls, input_tokens, output_tokens, cost_micros)
-      values (${tenantId}, ${routedAgent}, ${dayString(now)}, ${firstContact ? 1 : 0}, ${llmCalls},
-              ${records.reduce((s, r) => s + r.inputTokens, 0)}, ${records.reduce((s, r) => s + r.outputTokens, 0)}, ${cost})
-      on conflict (tenant_id, coalesce(agent_id, '00000000-0000-0000-0000-000000000000'::uuid), day) do update set
-        conversations = usage_daily.conversations + excluded.conversations,
-        llm_calls = usage_daily.llm_calls + excluded.llm_calls,
-        input_tokens = usage_daily.input_tokens + excluded.input_tokens,
-        output_tokens = usage_daily.output_tokens + excluded.output_tokens,
-        cost_micros = usage_daily.cost_micros + excluded.cost_micros`);
-  });
-  return { status: "ok", conversationId: conversation.id, reply, kind: result.action.kind };
+  return {
+    reply,
+    kind: result.action.kind,
+    records,
+    convState,
+    summary,
+    outcome,
+    flags: [...flags],
+    topics: [...topics].slice(0, 10),
+    routedAgent,
+    disclosed: Boolean(result.disclosure),
+    ended: result.action.kind === "stop",
+    approval,
+  };
 }
 
 function base(

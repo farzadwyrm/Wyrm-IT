@@ -25,6 +25,8 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { audit } from "./audit";
 import { type Ctx, DomainError, guarded } from "./context";
 import { agentGate, publishVersion, saveDraft } from "./operations";
+import type { RuntimeDeps } from "./runtime";
+import { addStarterTest, type Judge, runTests } from "./testing";
 
 /**
  * Agent Studio: what a business controls about its agents (facts, rules, procedures, limits).
@@ -447,6 +449,20 @@ export async function addProcedure(
     note: n,
     after: row && toProcedure(row),
   });
+  // Every procedure comes with a starter test, and every agent with the safety test.
+  const createdBy = editor(ctx);
+  await addStarterTest(ctx.db, {
+    tenantId: input.tenantId,
+    agentId: input.agentId,
+    template: input.template,
+    createdBy,
+  });
+  await addStarterTest(ctx.db, {
+    tenantId: input.tenantId,
+    agentId: input.agentId,
+    template: "safety",
+    createdBy,
+  });
   return row;
 }
 
@@ -553,7 +569,13 @@ export async function saveLimits(
 /** Publishes the draft policy: the live agent uses it from the next message. */
 export async function publishPolicy(
   ctx: Ctx,
-  input: { tenantId: string; agentId: string; note: string },
+  input: {
+    tenantId: string;
+    agentId: string;
+    note: string;
+    /** Runs the agent's tests on the draft first; required failures block publishing. */
+    gate?: { deps: RuntimeDeps; judge: Judge | null; now?: Date };
+  },
 ) {
   agentGate(ctx, "agents.configure", input.tenantId, input.agentId);
   const n = requireNote(input.note);
@@ -565,6 +587,23 @@ export async function publishPolicy(
     procedures: policy.procedures.filter((p) => p.enabled),
     limits: policy.limits,
   };
+  let tests: Awaited<ReturnType<typeof runTests>> | null = null;
+  if (input.gate) {
+    tests = await runTests(ctx, {
+      tenantId: input.tenantId,
+      agentId: input.agentId,
+      target: "draft",
+      policy: policyFromConfig(snapshot),
+      deps: input.gate.deps,
+      judge: input.gate.judge,
+      ...(input.gate.now ? { now: input.gate.now } : {}),
+    });
+    if (tests.requiredFailed > 0)
+      throw new DomainError(
+        "tests_failed",
+        `${tests.requiredFailed} required test${tests.requiredFailed === 1 ? "" : "s"} failed. Fix the policy or turn the test off, then publish.`,
+      );
+  }
   const draft = await saveDraft(ctx, {
     tenantId: input.tenantId,
     agentId: input.agentId,
@@ -586,9 +625,10 @@ export async function publishPolicy(
       rules: snapshot.rules.length,
       procedures: snapshot.procedures.map((p) => p.template),
       conflicts: conflicts.length,
+      tests: tests ? { total: tests.total, passed: tests.passed } : null,
     },
   });
-  return { versionId: published?.id ?? null, conflicts };
+  return { versionId: published?.id ?? null, conflicts, tests };
 }
 
 /** The published policy an agent runs with (the old free-text settings are mapped onto it). */

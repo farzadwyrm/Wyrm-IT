@@ -61,6 +61,7 @@ beforeAll(async () => {
     "0003_two_tier_users.sql",
     "0004_agent_operations.sql",
     "0005_agent_policies.sql",
+    "0006_agent_test_gate.sql",
   ])
     await db.exec(migration(m));
   await db.query(
@@ -213,5 +214,32 @@ describe("the change log", () => {
     await expect(db.query("delete from policy_changes")).rejects.toThrow(/append_only/);
     expect(await as(OWNER_B, () => rows("select id from policy_changes"))).toEqual([]);
     expect((await as(OWNER_A, () => rows("select id from policy_changes"))).length).toBe(1);
+  });
+});
+
+describe("test gate (0006)", () => {
+  it("stores expected action and handoff, and batches stay within their organisation", async () => {
+    await db.query(
+      "insert into agent_tests (tenant_id, agent_id, name, turns, expectation, expected_action, expected_handoff, template) values ($1, $2, 'Books a check-up', array['Book me in'], 'Collects details and confirms', 'book.request', false, 'book')",
+      [TENANT_A, FRONT],
+    );
+    await expect(
+      db.query(
+        "insert into agent_tests (tenant_id, agent_id, name, turns, expectation, expected_action) values ($1, $2, 'Bad', array['x'], 'Something', 'refund money')",
+        [TENANT_A, FRONT],
+      ),
+    ).rejects.toThrow(/check constraint/);
+    await db.query(
+      "insert into agent_test_batches (tenant_id, agent_id, target, total) values ($1, $2, 'draft', 1)",
+      [TENANT_A, FRONT],
+    );
+    await expect(
+      db.query(
+        "insert into agent_test_batches (tenant_id, agent_id, target) values ($1, $2, 'draft')",
+        [TENANT_A, SALON],
+      ),
+    ).rejects.toThrow(/tenant_mismatch/);
+    expect(await as(OWNER_B, () => rows("select id from agent_test_batches"))).toEqual([]);
+    expect((await as(MEMBER_A, () => rows("select id from agent_test_batches"))).length).toBe(1);
   });
 });

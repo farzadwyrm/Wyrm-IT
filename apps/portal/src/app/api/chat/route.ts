@@ -1,9 +1,10 @@
-import { answerAsAgent, brainClassifiers, clientsFromEnv, createDemoGuard } from "@wyrm/ai";
+import { createDemoGuard } from "@wyrm/ai";
 import { check } from "@wyrm/auth";
 import { handleCustomerMessage, publicAgent } from "@wyrm/core";
 import { type NextRequest, NextResponse } from "next/server";
 import { getAccess } from "@/lib/auth";
 import { serverDb } from "@/lib/db";
+import { modelDeps } from "@/lib/models";
 
 /**
  * Customer chat with an organisation's agents, through the main brain. Public for live agents
@@ -55,20 +56,27 @@ export async function POST(request: NextRequest) {
     test = true;
   }
 
-  const clients = clientsFromEnv();
   try {
-    const result = await handleCustomerMessage(
-      db,
-      {
-        classifiers: brainClassifiers(clients),
-        answer: (knowledge, history, options) =>
-          answerAsAgent(clients, knowledge, history, options),
-      },
-      { agentId, conversationId, text: message, channel: "web_chat", test },
-    );
+    const result = await handleCustomerMessage(db, modelDeps().deps, {
+      agentId,
+      conversationId,
+      text: message,
+      channel: "web_chat",
+      test,
+    });
     guard.record(ip, 0);
     if (result.status !== "ok") return json({ error: "unavailable" }, 404);
-    return json({ conversationId: result.conversationId, reply: result.reply });
+    // Staff testing see why the agent answered (decisions only: no other customer's data).
+    const trace = test
+      ? result.trace.map((r) => ({
+          decision: r.decision,
+          outcome: r.outcome,
+          reason: r.reason,
+          rule: r.ruleId,
+          tool: r.tool,
+        }))
+      : undefined;
+    return json({ conversationId: result.conversationId, reply: result.reply, trace });
   } catch (error) {
     console.error("chat failed", error instanceof Error ? error.message : error);
     return json({ error: "failed" }, 500);

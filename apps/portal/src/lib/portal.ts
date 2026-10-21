@@ -62,28 +62,7 @@ export const CHANNEL_LABELS: Record<string, string> = {
 };
 
 /** The brain's reasons in plain words ("why it did this"). */
-const REASONS: Record<string, string> = {
-  confident_match: "It was clear which agent should help.",
-  continue_active_flow: "The customer was already talking to this agent.",
-  faq_match: "It matched a saved answer, so no AI was needed.",
-  customer_asked_for_person: "The customer asked for a person.",
-  customer_opted_out: "The customer asked us to stop messaging.",
-  unsure_ask_once: "It wasn't sure what the customer needed, so it asked.",
-  still_unclear: "Still unclear after asking, so it passed it to a person.",
-  low_confidence: "It wasn't confident enough to act, so it passed it to a person.",
-  no_matching_agent: "None of your agents handles this, so it passed it to a person.",
-  no_live_agents: "No agent was switched on.",
-  budget_used_up: "This month's AI budget was used up, so it took a message.",
-  saver_mode_free_models_only: "Close to today's AI budget, so it used the free model.",
-  classifier_failed: "An AI service didn't answer; it tried the next one.",
-  no_classifier_available: "No AI service was available, so it took a message.",
-  flow_agent_unavailable: "The agent was paused, so it passed it to a person.",
-  kill_switch_global: "Wyrm paused all assistants.",
-  kill_switch_tenant: "Your assistants were paused.",
-};
-
-export const explainReason = (reason: string | null) =>
-  (reason && REASONS[reason]) || "Decision recorded.";
+export { explainReason } from "./reasons";
 
 export const PROVIDER_LABELS: Record<string, string> = {
   code: "No AI (rules)",
@@ -112,7 +91,8 @@ export const NOTICES: Record<string, string> = {
   approved: "Approved. The agent will carry it out.",
   rejected: "Rejected. The customer will be told someone will follow up.",
   resolved: "Marked as done.",
-  published: "Published. The agent uses this version now.",
+  published: "All required tests passed and the new version is live.",
+  tests_ran: "Tests finished. See the results below.",
   restored: "Restored. The agent uses that version again.",
   paused: "Paused.",
   resumed: "Switched back on.",

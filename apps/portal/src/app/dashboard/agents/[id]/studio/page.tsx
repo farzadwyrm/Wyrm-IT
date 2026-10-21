@@ -1,5 +1,5 @@
 import { TEMPLATES, type Template } from "@wyrm/brain";
-import { getStudio, listAgents } from "@wyrm/core";
+import { getStudio, listAgents, listTestsWithResults } from "@wyrm/core";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -14,6 +14,7 @@ import {
   saveProcedureAction,
   saveRuleAction,
 } from "./actions";
+import { TestsPanel } from "./tests-panel";
 
 export const metadata: Metadata = { title: "Agent Studio" };
 
@@ -22,6 +23,7 @@ const TABS = [
   { key: "rules", label: "Rules" },
   { key: "procedures", label: "Procedures" },
   { key: "limits", label: "Limits & handoff" },
+  { key: "tests", label: "Tests" },
   { key: "changes", label: "Changes" },
 ] as const;
 const DAYS = [
@@ -72,7 +74,10 @@ export default async function StudioPage({
   const agent = (await listAgents(page.ctx, page.tenantId)).find((a) => a.agent.id === id)?.agent;
   if (!agent) notFound();
   const tab = TABS.find((t) => t.key === query.tab)?.key ?? "facts";
-  const { policy, conflicts, changes } = await getStudio(page.ctx, page.tenantId, agent.id);
+  const [{ policy, conflicts, changes }, testData] = await Promise.all([
+    getStudio(page.ctx, page.tenantId, agent.id),
+    listTestsWithResults(page.ctx, page.tenantId, agent.id),
+  ]);
   const canEdit = page.can("agents.configure", agent.id) && !page.readOnly;
   const hidden = (
     <>
@@ -126,7 +131,7 @@ export default async function StudioPage({
               />
             </label>
             <button type="submit" className={primary}>
-              Publish
+              Test &amp; publish
             </button>
           </form>
         )}
@@ -692,6 +697,8 @@ export default async function StudioPage({
           </fieldset>
         </form>
       )}
+
+      {tab === "tests" && <TestsPanel agentId={agent.id} canEdit={canEdit} data={testData} />}
 
       {tab === "changes" &&
         (changes.length === 0 ? (

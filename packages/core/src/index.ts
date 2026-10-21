@@ -12,3 +12,4 @@ export * from "./staff";
 export * from "./studio";
 export * from "./teams";
 export * from "./tenants";
+export * from "./testing";

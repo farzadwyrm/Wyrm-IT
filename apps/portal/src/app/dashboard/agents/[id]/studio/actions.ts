@@ -5,15 +5,21 @@ import {
   addProcedure,
   DomainError,
   deleteRule,
+  getStudio,
+  policyFromConfig,
   publishPolicy,
+  runTests,
   saveLimits,
   saveProfile,
   saveRule,
+  saveTest,
   setRuleEnabled,
+  setTestActive,
   updateProcedure,
 } from "@wyrm/core";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { modelDeps } from "@/lib/models";
 import { requireTenant } from "@/lib/portal";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -172,8 +178,69 @@ export async function saveLimitsAction(form: FormData) {
   );
 }
 
+/** Publishing runs the agent's tests on the draft first; a failing required test blocks it. */
 export async function publishAction(form: FormData) {
+  form.set("tab", "tests");
   await studio(form, "published", (p, agentId) =>
-    publishPolicy(p.ctx, { tenantId: p.tenantId, agentId, note: field(form, "note", 500) }),
+    publishPolicy(p.ctx, {
+      tenantId: p.tenantId,
+      agentId,
+      note: field(form, "note", 500),
+      gate: modelDeps(),
+    }),
+  );
+}
+
+/** Runs the tests on the current draft (nothing is published, saved as a conversation or sent). */
+export async function runTestsAction(form: FormData) {
+  form.set("tab", "tests");
+  await studio(form, "tests_ran", async (p, agentId) => {
+    const { policy } = await getStudio(p.ctx, p.tenantId, agentId);
+    const draft = policyFromConfig({
+      version: 2,
+      profile: policy.profile,
+      rules: policy.rules.filter((r) => r.enabled),
+      procedures: policy.procedures.filter((x) => x.enabled),
+      limits: policy.limits,
+    });
+    const { deps, judge } = modelDeps();
+    return runTests(p.ctx, {
+      tenantId: p.tenantId,
+      agentId,
+      target: "draft",
+      policy: draft,
+      deps,
+      judge,
+    });
+  });
+}
+
+export async function saveTestAction(form: FormData) {
+  form.set("tab", "tests");
+  const handoff = field(form, "expectedHandoff", 5);
+  await studio(form, "saved", (p, agentId) =>
+    saveTest(p.ctx, {
+      tenantId: p.tenantId,
+      agentId,
+      ...(UUID.test(field(form, "testId", 64)) ? { testId: field(form, "testId", 64) } : {}),
+      name: field(form, "name", 120),
+      turns: lines(field(form, "turns", 6000)),
+      expectation: field(form, "expectation", 1000),
+      expectedAction: field(form, "expectedAction", 40) || null,
+      expectedHandoff: handoff === "yes" ? true : handoff === "no" ? false : null,
+      required: form.get("required") === "on",
+    }),
+  );
+}
+
+export async function testActiveAction(form: FormData) {
+  form.set("tab", "tests");
+  await studio(form, "saved", (p, agentId) =>
+    setTestActive(p.ctx, {
+      tenantId: p.tenantId,
+      agentId,
+      testId: field(form, "testId", 64),
+      active: form.get("active") === "1",
+    }),
   );
 }

@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 /**
- * Typed view of the live schema after migrations 0001–0005. The SQL files are the source of
+ * Typed view of the live schema after migrations 0001–0006. The SQL files are the source of
  * truth (they also hold row-level security, constraints and triggers); keep both in sync.
  * Tested in `rls.test.ts`.
  */
@@ -307,6 +307,11 @@ export const agentTests = pgTable("agent_tests", {
     .default("manual"),
   sourceConversationId: uuid("source_conversation_id"),
   active: boolean("active").notNull().default(true),
+  /** What the agent must do: "none", "book.request", "cancel.held"... (0006). */
+  expectedAction: text("expected_action"),
+  expectedHandoff: boolean("expected_handoff"),
+  required: boolean("required").notNull().default(true),
+  template: text("template"),
   createdBy: uuid("created_by"),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
@@ -321,6 +326,24 @@ export const agentTestRuns = pgTable("agent_test_runs", {
   score: smallint("score"),
   notes: text("notes"),
   ranAt: ts("ran_at").notNull().defaultNow(),
+  batchId: uuid("batch_id"),
+  replyOk: boolean("reply_ok"),
+  actionOk: boolean("action_ok"),
+  handoffOk: boolean("handoff_ok"),
+  transcript: jsonb("transcript").notNull().default([]),
+  trace: jsonb("trace").notNull().default([]),
+});
+
+export const agentTestBatches = pgTable("agent_test_batches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id").notNull(),
+  target: text("target", { enum: ["draft", "live"] }).notNull(),
+  startedBy: uuid("started_by"),
+  total: integer("total").notNull().default(0),
+  passed: integer("passed").notNull().default(0),
+  requiredFailed: integer("required_failed").notNull().default(0),
+  createdAt: ts("created_at").notNull().defaultNow(),
 });
 
 export const corrections = pgTable("corrections", {
@@ -480,3 +503,4 @@ export type AgentRule = typeof agentRules.$inferSelect;
 export type AgentProcedure = typeof agentProcedures.$inferSelect;
 export type AgentLimitsRow = typeof agentLimits.$inferSelect;
 export type PolicyChange = typeof policyChanges.$inferSelect;
+export type AgentTestBatch = typeof agentTestBatches.$inferSelect;

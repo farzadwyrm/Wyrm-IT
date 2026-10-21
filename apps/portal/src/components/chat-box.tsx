@@ -1,10 +1,21 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { explainReason } from "@/lib/reasons";
+
+interface Step {
+  decision: string;
+  outcome: string;
+  reason: string;
+  rule: string | null;
+  tool: string | null;
+}
 
 interface Line {
   role: "customer" | "agent";
   text: string;
+  /** Why the agent answered (test chats only). */
+  trace?: Step[];
 }
 
 const ERRORS: Record<string, string> = {
@@ -47,12 +58,20 @@ export function ChatBox({
         reply?: string;
         conversationId?: string;
         error?: string;
+        trace?: Step[];
       };
       if (!response.ok || !data.reply) {
         setError(ERRORS[data.error ?? ""] ?? "Something went wrong. Try again.");
       } else {
         setConversationId(data.conversationId ?? null);
-        setLines((l) => [...l, { role: "agent", text: data.reply as string }]);
+        setLines((l) => [
+          ...l,
+          {
+            role: "agent",
+            text: data.reply as string,
+            ...(data.trace ? { trace: data.trace } : {}),
+          },
+        ]);
       }
     } catch {
       setError("Couldn't reach the assistant. Check your connection.");
@@ -82,6 +101,22 @@ export function ChatBox({
           >
             <span className="sr-only">{line.role === "customer" ? "You: " : "Assistant: "}</span>
             {line.text}
+            {line.trace && line.trace.length > 0 && (
+              <details className="mt-2 text-xs text-ink-muted">
+                <summary className="cursor-pointer font-semibold">Why?</summary>
+                <ol className="mt-1 space-y-1">
+                  {line.trace.map((step, n) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: steps are fixed per reply
+                    <li key={n}>
+                      {explainReason(step.reason)}
+                      {step.rule
+                        ? ` (${step.rule.replace(/^limit:/, "limit: ").replace(/^procedure:/, "procedure: ")})`
+                        : ""}
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            )}
           </li>
         ))}
         {busy && <li className="self-start text-sm text-ink-muted">Typing…</li>}

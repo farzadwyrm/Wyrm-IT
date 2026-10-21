@@ -67,6 +67,7 @@ beforeAll(async () => {
     "0003_two_tier_users.sql",
     "0004_agent_operations.sql",
     "0005_agent_policies.sql",
+    "0006_agent_test_gate.sql",
   ])
     await client.exec(migration(m));
   await client.query(

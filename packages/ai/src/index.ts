@@ -5,6 +5,7 @@ export {
   brainClassifiers,
   clientsFromEnv,
   firstJson,
+  judgeReply,
   type ModelClients,
 } from "./brain-models";
 export type { DemoGuard, DemoGuardOptions, GuardDecision } from "./demo-guard";

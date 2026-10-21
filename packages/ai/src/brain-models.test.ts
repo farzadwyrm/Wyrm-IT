@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { answerAsAgent, brainClassifiers, firstJson, type ModelClients } from "./brain-models";
+import {
+  answerAsAgent,
+  brainClassifiers,
+  firstJson,
+  judgeReply,
+  type ModelClients,
+} from "./brain-models";
 import { resetGroqCooldowns } from "./receptionist/groq-agent";
 
 // Fake clients only: no network, no keys.
@@ -162,5 +168,26 @@ describe("answerAsAgent with Studio instructions", () => {
     expect(system).not.toContain("Open Mon-Fri 9-17"); // free-text facts replaced by instructions
     expect(a?.fields).toEqual({ name: "Ana Example", date: "2026-10-22" });
     expect(a?.confirmed).toBe(false);
+  });
+});
+
+describe("judgeReply", () => {
+  it("uses only the free model and returns pass/fail with a reason", async () => {
+    const r = await judgeReply(
+      {
+        anthropic: fakeAnthropic(new Error("must not be called")),
+        groq: fakeGroq(['{"pass": false, "reason": "It promised a booking."}']),
+      },
+      "Never says it is booked",
+      [
+        { role: "customer", text: "Book me" },
+        { role: "agent", text: "You're booked!" },
+      ],
+    );
+    expect(r).toEqual({ pass: false, reason: "It promised a booking." });
+  });
+
+  it("returns null when no model is available", async () => {
+    expect(await judgeReply({ anthropic: fakeAnthropic('{"pass":true}') }, "x", [])).toBeNull();
   });
 });

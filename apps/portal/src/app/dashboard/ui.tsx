@@ -20,7 +20,9 @@ const ERRORS: Record<string, string> = {
   not_found: "That item no longer exists.",
   bad_budget: "Enter a monthly budget between $0 and $1,000.",
   tenant_suspended: "Your organisation is suspended.",
-  no_turns: "That conversation has no customer messages to test with.",
+  no_turns: "There are no customer messages to test with.",
+  tests_failed:
+    "A required test failed, so nothing was published. Check the results below, fix the policy or the test, then publish again.",
   note_required: "Say briefly what changed: a few words are enough.",
   bad_rule: "A rule is 5 to 300 characters.",
   rule_limit: "An agent can have up to 15 rules. Remove or merge one first.",
