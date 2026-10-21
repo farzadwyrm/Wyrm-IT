@@ -1,10 +1,19 @@
 "use server";
 
 import { ForbiddenError } from "@wyrm/auth";
-import { createTenant, DomainError, provisionAgent, setTenantStatus } from "@wyrm/core";
+import {
+  createTenant,
+  DomainError,
+  endViewAs,
+  provisionAgent,
+  setAgentStatus,
+  setTenantStatus,
+  startViewAs,
+} from "@wyrm/core";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
-import { coreContext, requireAdmin } from "@/lib/auth";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { coreContext, requireAdmin, VIEW_AS_COOKIE } from "@/lib/auth";
 import { isEmail, isValidSlug, slugify } from "@/lib/config";
 
 export interface CreateClientState {
@@ -74,4 +83,74 @@ export async function changeClientStatus(formData: FormData) {
     console.error("status change failed", explain(error));
   }
   revalidatePath("/admin");
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const idOf = (form: FormData, name: string) => {
+  const value = String(form.get(name) ?? "");
+  return UUID.test(value) ? value : "";
+};
+
+/** Wyrm staff switch a client's agent on or off. */
+export async function adminAgentStatus(formData: FormData) {
+  const access = await requireAdmin();
+  const tenantId = idOf(formData, "tenantId");
+  const status = formData.get("status") === "live" ? "live" : "paused";
+  let error = "";
+  try {
+    await setAgentStatus(await coreContext(access), {
+      tenantId,
+      agentId: idOf(formData, "agentId"),
+      status,
+    });
+  } catch (e) {
+    error = explain(e);
+  }
+  revalidatePath(`/admin/tenants/${tenantId}`);
+  redirect(`/admin/tenants/${tenantId}${error ? `?error=${encodeURIComponent(error)}` : ""}`);
+}
+
+/**
+ * Starts "view as" a client's staff member: 30 minutes, a reason, logged in the client's own
+ * audit log; Support staff get a read-only view.
+ */
+export async function viewAsAction(formData: FormData) {
+  const access = await requireAdmin();
+  const tenantId = idOf(formData, "tenantId");
+  let sessionId = "";
+  let error = "";
+  try {
+    const session = await startViewAs(await coreContext(access), {
+      tenantUserId: idOf(formData, "tenantUserId"),
+      reason: String(formData.get("reason") ?? "").slice(0, 500),
+    });
+    sessionId = session?.id ?? "";
+  } catch (e) {
+    error = explain(e);
+  }
+  if (!sessionId)
+    redirect(`/admin/tenants/${tenantId}?error=${encodeURIComponent(error || "Couldn't start.")}`);
+  (await cookies()).set(VIEW_AS_COOKIE, sessionId, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 30 * 60,
+  });
+  redirect("/dashboard");
+}
+
+export async function endViewAsAction() {
+  const access = await requireAdmin();
+  const store = await cookies();
+  const sessionId = store.get(VIEW_AS_COOKIE)?.value ?? "";
+  if (UUID.test(sessionId)) {
+    try {
+      await endViewAs(await coreContext(access), sessionId);
+    } catch (e) {
+      console.error("end view as failed", explain(e));
+    }
+  }
+  store.delete(VIEW_AS_COOKIE);
+  redirect("/admin");
 }

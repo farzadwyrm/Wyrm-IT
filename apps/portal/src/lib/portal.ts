@@ -1,6 +1,6 @@
 import "server-only";
 import { type Actor, check, type Permission } from "@wyrm/auth";
-import type { Ctx } from "@wyrm/core";
+import { type Ctx, getTenant } from "@wyrm/core";
 import { redirect } from "next/navigation";
 import { type Access, coreContext, requireAccess } from "./auth";
 
@@ -22,7 +22,11 @@ export async function requireTenant(): Promise<TenantPage> {
   if (!me) redirect("/dashboard");
   const ctx = await coreContext(access);
   const tenantName =
-    access.tenants.find((t) => t.tenantId === me.tenantId)?.name ?? "Your business";
+    access.tenants.find((t) => t.tenantId === me.tenantId)?.name ??
+    (await getTenant(ctx, me.tenantId).then(
+      (t) => t.name,
+      () => "Your business",
+    ));
   return {
     access,
     ctx,

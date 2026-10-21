@@ -16,3 +16,6 @@ Applied to the live project (Wyrm-AI): 0001, 0002, 0003 (two-tier users), 0004 (
 
 Rules: no customer data, secrets or real emails in migrations or tests; signed-out visitors
 see nothing; only Wyrm admins create organisations and agents.
+
+`seed/demo-business.sql`: fictional demo organisation (Bright Smile Dental (demo)) with agents,
+conversations, an approval and usage; idempotent; run in the Supabase SQL editor.

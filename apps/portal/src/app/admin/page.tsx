@@ -1,13 +1,30 @@
 import { listTenants, platformStats } from "@wyrm/core";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { coreContext, requireAdmin } from "@/lib/auth";
-import { changeClientStatus } from "./actions";
+import { changeClientStatus, endViewAsAction } from "./actions";
 import { CreateClientForm } from "./create-client-form";
 
 export const metadata: Metadata = { title: "Admin" };
 
 export default async function AdminPage() {
   const access = await requireAdmin();
+  if (access.actor?.kind === "impersonating") {
+    return (
+      <section className="max-w-xl space-y-4">
+        <h1 className="font-display text-3xl font-semibold">You're viewing as a client</h1>
+        <p className="text-ink-muted">End the "view as" session to use Admin again.</p>
+        <form action={endViewAsAction}>
+          <button
+            type="submit"
+            className="rounded-lg bg-ember px-5 py-2.5 font-semibold text-paper"
+          >
+            End view as
+          </button>
+        </form>
+      </section>
+    );
+  }
   const ctx = await coreContext(access);
   const [stats, { rows, total }] = await Promise.all([
     platformStats(ctx),
@@ -68,7 +85,9 @@ export default async function AdminPage() {
             {rows.map((t) => (
               <tr key={t.id} className="border-t border-line">
                 <td className="px-4 py-3">
-                  <p className="font-semibold">{t.name}</p>
+                  <Link href={`/admin/tenants/${t.id}`} className="font-semibold hover:text-ember">
+                    {t.name}
+                  </Link>
                   <p className="font-mono text-xs text-ink-muted">{t.slug}</p>
                 </td>
                 <td className="px-4 py-3">{t.plan}</td>

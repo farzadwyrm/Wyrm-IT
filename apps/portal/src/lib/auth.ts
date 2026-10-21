@@ -1,7 +1,7 @@
 import "server-only";
 import type { Actor } from "@wyrm/auth";
 import { type Ctx, listMyTenants, loadActor } from "@wyrm/core";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { serverDb } from "./db";
@@ -12,6 +12,14 @@ import { userClient } from "./supabase/server";
  * Until then staff sign in with the magic link alone.
  */
 const STAFF_MFA_ENFORCED = false;
+
+/** Cookie holding a Wyrm staff member's open "view as" session id (checked in the database). */
+export const VIEW_AS_COOKIE = "wyrm_view_as";
+
+const viewAsId = (value: string | undefined) =>
+  value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(value)
+    ? value
+    : null;
 
 export interface TenantAccess {
   tenantUserId: string;
@@ -52,7 +60,11 @@ export const getAccess = cache(async (): Promise<Access | null> => {
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
     const mfa = !STAFF_MFA_ENFORCED || aal?.currentLevel === "aal2";
     const [actor, tenants] = await Promise.all([
-      loadActor(db, { userId: user.id, mfa }),
+      loadActor(db, {
+        userId: user.id,
+        mfa,
+        viewAsSessionId: viewAsId((await cookies()).get(VIEW_AS_COOKIE)?.value),
+      }),
       listMyTenants(db, user.id),
     ]);
     const isAdmin = actor?.kind === "platform" || actor?.kind === "impersonating";

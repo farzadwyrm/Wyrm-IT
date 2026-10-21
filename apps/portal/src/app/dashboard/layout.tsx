@@ -1,6 +1,7 @@
 import { homeMetrics } from "@wyrm/core";
 import type { ReactNode } from "react";
 import { coreContext, getAccess } from "@/lib/auth";
+import { endViewAsAction } from "../admin/actions";
 import { DashboardNav } from "./nav";
 
 /**
@@ -23,11 +24,15 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     <div className="space-y-8">
       {actor?.kind === "impersonating" && (
         <p role="status" className="rounded-xl border border-signal/60 bg-signal/10 p-3 text-sm">
-          You're viewing as {me?.userId ? "a customer" : "someone"}
-          {actor.readOnly ? " (view only)" : ""}. This session is logged and ends at{" "}
-          {actor.expiresAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}.
+          Wyrm staff view{actor.readOnly ? " (view only)" : ""}: you're seeing the portal as this
+          client's team member. The session is logged in their activity log and ends at{" "}
+          {actor.expiresAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}.{" "}
+          <button type="submit" form="end-view-as" className="font-semibold text-ember underline">
+            End now
+          </button>
         </p>
       )}
+      {actor?.kind === "impersonating" && <form id="end-view-as" action={endViewAsAction} />}
       {me && <DashboardNav todo={todo} />}
       {children}
     </div>
