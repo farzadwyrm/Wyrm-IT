@@ -1,6 +1,6 @@
 # Roadmap: Agent Studio and a professional client portal
 
-Status: phases 1–2 built and live (2026-10-21); phases 3–6 not started. Research behind it (every claim
+Status: phases 1–3 built and live (2026-10-21); phases 4–6 not started. Research behind it (every claim
 cited there): [agent-policies.md](../research/agent-policies.md),
 [agent-delivery.md](../research/agent-delivery.md),
 [agent-management-ia.md](../research/agent-management-ia.md),
@@ -254,3 +254,14 @@ Each phase ends with tests, a green CI run, a deploy and a check on the live sit
     request gets 403).
   - Not yet run live in the portal: running the test pack and publishing through the gate both need a customer login
     for the demo business.
+- **Phase 3 done (2026-10-21):**
+  - Migration 0007 is applied live.
+  - Setup tracker, go-live gate and Wyrm sign-off: `packages/core/src/onboarding.ts`.
+  - Website import with SSRF guards: `apps/portal/src/lib/site-import.ts`; facts drafted by `draftProfileFromPages`.
+  - Website widget: `public/widget.js` and `/api/widget/[agentId]`; embed mode on `/chat/[agentId]`.
+  - Google Calendar booking: `packages/core/src/calendar.ts` plus `/api/calendar/*`.
+  - Launch page, Home setup card, and admin sign-off.
+  - Live check: widget settings, script and framing headers are correct; the demo widget is enabled.
+  - Not live yet: the calendar needs `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` in Vercel, plus the redirect URI and
+    calendar scopes on the Google OAuth client. Phone forwarding needs Twilio. Website import and the Launch
+    page weren't run while signed in as a customer.
