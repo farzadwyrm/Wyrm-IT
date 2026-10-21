@@ -22,6 +22,7 @@ import {
   setStaffStatus,
   setTenantStatus,
   startViewAs,
+  translateDbError,
   updateSecurity,
 } from "./index";
 
@@ -90,6 +91,7 @@ beforeAll(async () => {
   await client.exec(migration("0002_api_grants.sql"));
   await client.query("insert into wyrm_admins (user_id) values ($1)", [people.super.id]);
   await client.exec(migration("0003_two_tier_users.sql"));
+  await client.exec(migration("0004_agent_operations.sql"));
   await client.query(
     "insert into platform_users (id, email, platform_role) values ($1, $2, 'support')",
     [people.support.id, people.support.email],
@@ -369,5 +371,21 @@ describe("other rules", () => {
     await expect(join(token, people.memberA)).rejects.toThrow(
       /This invitation is for new@salon-b.example/,
     );
+  });
+});
+
+describe("database errors", () => {
+  it("are translated from the database's message, never from the SQL text", () => {
+    const wrapped = Object.assign(
+      new Error('Failed query: insert into "tenants" ("seat_limit") values ($1)'),
+      {
+        cause: { message: 'null value in column "name" violates not-null constraint' },
+      },
+    );
+    expect(() => translateDbError(wrapped)).toThrow(/Failed query/);
+    const seat = Object.assign(new Error("Failed query: insert into invitations"), {
+      cause: { message: "seat_limit" },
+    });
+    expect(() => translateDbError(seat)).toThrow(DomainError);
   });
 });

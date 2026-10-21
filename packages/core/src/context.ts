@@ -58,10 +58,17 @@ const DB_RULES: [RegExp, string, string][] = [
 
 /** Turns a database rule violation into a DomainError; rethrows anything else. */
 export function translateDbError(error: unknown): never {
+  // Drizzle wraps the database error: its own message holds the SQL text (column names such as
+  // seat_limit), so only the database's message and constraint name are matched.
+  const cause = (error as { cause?: { message?: string; constraint?: string } })?.cause;
   const message = error instanceof Error ? error.message : String(error);
-  const detail = (error as { cause?: { message?: string } })?.cause?.message ?? "";
+  const source = cause
+    ? `${cause.message ?? ""} ${cause.constraint ?? ""}`
+    : message.startsWith("Failed query")
+      ? ""
+      : message;
   for (const [pattern, code, text] of DB_RULES) {
-    if (pattern.test(message) || pattern.test(detail)) throw new DomainError(code, text);
+    if (pattern.test(source)) throw new DomainError(code, text);
   }
   throw error;
 }
