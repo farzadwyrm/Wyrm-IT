@@ -1,17 +1,20 @@
 import {
   bigint,
   boolean,
+  date,
   integer,
   jsonb,
+  numeric,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
 
 /**
- * Typed view of the live schema after migrations 0001–0003. The SQL files are the source of
+ * Typed view of the live schema after migrations 0001–0004. The SQL files are the source of
  * truth (they also hold row-level security, constraints and triggers); keep both in sync.
  * Tested in `rls.test.ts`.
  */
@@ -47,6 +50,11 @@ export const tenants = pgTable("tenants", {
     .default("active"),
   features: jsonb("features").notNull().default({}),
   security: jsonb("security").notNull().default({}),
+  /** Monthly AI budget in USD millionths (2_000_000 = $2.00). */
+  aiMonthlyBudgetMicros: bigint("ai_monthly_budget_micros", { mode: "number" })
+    .notNull()
+    .default(2_000_000),
+  retentionDays: integer("retention_days").notNull().default(180),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 
@@ -169,6 +177,193 @@ export const impersonationSessions = pgTable("impersonation_sessions", {
   endedAt: ts("ended_at"),
 });
 
+// Agent operations (0004): conversations, brain decisions, approvals, teaching, usage, switches.
+
+export const CHANNELS = ["voice", "web_chat", "sms", "email", "whatsapp", "form"] as const;
+export type Channel = (typeof CHANNELS)[number];
+export const OUTCOMES = [
+  "resolved_confirmed",
+  "resolved_assumed",
+  "booked",
+  "lead",
+  "handed_off",
+  "abandoned",
+  "failed",
+] as const;
+export type Outcome = (typeof OUTCOMES)[number];
+export const DECISION_TYPES = [
+  "route",
+  "answer_mode",
+  "model_select",
+  "tool_authorize",
+  "escalate",
+  "budget_gate",
+  "compact",
+  "schedule",
+] as const;
+export const DECISION_OUTCOMES = ["ok", "asked", "held", "denied", "escalated", "failed"] as const;
+export const PROVIDERS = ["code", "anthropic", "groq", "fallback"] as const;
+export const APPROVAL_STATUSES = [
+  "pending",
+  "approved",
+  "rejected",
+  "expired",
+  "executed",
+] as const;
+export const SWITCH_SCOPES = ["global", "tenant", "agent", "tool", "provider"] as const;
+
+export const conversations = pgTable("conversations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id"),
+  configVersionId: uuid("config_version_id"),
+  channel: text("channel", { enum: CHANNELS }).notNull(),
+  customerRef: text("customer_ref"),
+  customerLabel: text("customer_label"),
+  status: text("status", { enum: ["active", "ended"] })
+    .notNull()
+    .default("active"),
+  outcome: text("outcome", { enum: OUTCOMES }),
+  summary: text("summary"),
+  topics: text("topics").array().notNull().default([]),
+  flags: text("flags").array().notNull().default([]),
+  qualityScore: smallint("quality_score"),
+  aiDisclosed: boolean("ai_disclosed").notNull().default(false),
+  startedAt: ts("started_at").notNull().defaultNow(),
+  endedAt: ts("ended_at"),
+  purgeAfter: ts("purge_after").notNull().defaultNow(),
+});
+
+export const conversationMessages = pgTable("conversation_messages", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  conversationId: uuid("conversation_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
+  role: text("role", { enum: ["customer", "agent", "staff", "system"] }).notNull(),
+  body: text("body").notNull(),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
+export const agentDecisions = pgTable("agent_decisions", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  tenantId: uuid("tenant_id").notNull(),
+  conversationId: uuid("conversation_id"),
+  agentId: uuid("agent_id"),
+  configVersionId: uuid("config_version_id"),
+  decision: text("decision", { enum: DECISION_TYPES }).notNull(),
+  intent: text("intent"),
+  confidence: numeric("confidence", { precision: 4, scale: 3, mode: "number" }),
+  ruleId: text("rule_id"),
+  outcome: text("outcome", { enum: DECISION_OUTCOMES }).notNull(),
+  reason: text("reason"),
+  tool: text("tool"),
+  riskTier: smallint("risk_tier"),
+  approvalId: uuid("approval_id"),
+  provider: text("provider", { enum: PROVIDERS }),
+  model: text("model"),
+  fallbackDepth: smallint("fallback_depth").notNull().default(0),
+  inputTokens: integer("input_tokens").notNull().default(0),
+  outputTokens: integer("output_tokens").notNull().default(0),
+  costMicros: bigint("cost_micros", { mode: "number" }).notNull().default(0),
+  latencyMs: integer("latency_ms"),
+  retries: smallint("retries").notNull().default(0),
+  errorCode: text("error_code"),
+  guardrailFlags: text("guardrail_flags").array().notNull().default([]),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
+export const approvals = pgTable("approvals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id"),
+  conversationId: uuid("conversation_id"),
+  action: text("action").notNull(),
+  riskTier: smallint("risk_tier").notNull(),
+  summary: text("summary").notNull(),
+  payload: jsonb("payload").notNull().default({}),
+  payloadHash: text("payload_hash").notNull(),
+  status: text("status", { enum: APPROVAL_STATUSES }).notNull().default("pending"),
+  requestedAt: ts("requested_at").notNull().defaultNow(),
+  expiresAt: ts("expires_at").notNull(),
+  decidedBy: uuid("decided_by"),
+  decidedAt: ts("decided_at"),
+  decisionReason: text("decision_reason"),
+  executedAt: ts("executed_at"),
+});
+
+export const agentTests = pgTable("agent_tests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id").notNull(),
+  name: text("name").notNull(),
+  turns: text("turns").array().notNull(),
+  expectation: text("expectation").notNull(),
+  expectedOutcome: text("expected_outcome", {
+    enum: ["resolved_confirmed", "booked", "lead", "handed_off"],
+  }),
+  source: text("source", { enum: ["manual", "conversation", "correction"] })
+    .notNull()
+    .default("manual"),
+  sourceConversationId: uuid("source_conversation_id"),
+  active: boolean("active").notNull().default(true),
+  createdBy: uuid("created_by"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
+export const agentTestRuns = pgTable("agent_test_runs", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id").notNull(),
+  testId: uuid("test_id").notNull(),
+  configVersionId: uuid("config_version_id"),
+  passed: boolean("passed").notNull(),
+  score: smallint("score"),
+  notes: text("notes"),
+  ranAt: ts("ran_at").notNull().defaultNow(),
+});
+
+export const corrections = pgTable("corrections", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id").notNull(),
+  conversationId: uuid("conversation_id"),
+  messageId: bigint("message_id", { mode: "number" }),
+  topic: text("topic"),
+  wrongAnswer: text("wrong_answer"),
+  correctAnswer: text("correct_answer").notNull(),
+  status: text("status", { enum: ["draft", "active", "retired"] })
+    .notNull()
+    .default("active"),
+  testId: uuid("test_id"),
+  createdBy: uuid("created_by"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
+export const usageDaily = pgTable("usage_daily", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id"),
+  day: date("day").notNull(),
+  conversations: integer("conversations").notNull().default(0),
+  llmCalls: integer("llm_calls").notNull().default(0),
+  inputTokens: bigint("input_tokens", { mode: "number" }).notNull().default(0),
+  outputTokens: bigint("output_tokens", { mode: "number" }).notNull().default(0),
+  costMicros: bigint("cost_micros", { mode: "number" }).notNull().default(0),
+});
+
+export const killSwitches = pgTable("kill_switches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  scope: text("scope", { enum: SWITCH_SCOPES }).notNull(),
+  tenantId: uuid("tenant_id"),
+  agentId: uuid("agent_id"),
+  target: text("target"),
+  reason: text("reason").notNull(),
+  setBy: uuid("set_by"),
+  automatic: boolean("automatic").notNull().default(false),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  clearedAt: ts("cleared_at"),
+  clearedBy: uuid("cleared_by"),
+});
+
 export type PlatformUser = typeof platformUsers.$inferSelect;
 export type Tenant = typeof tenants.$inferSelect;
 export type Role = typeof roles.$inferSelect;
@@ -179,3 +374,12 @@ export type AgentAccess = typeof agentAccess.$inferSelect;
 export type Invitation = typeof invitations.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type ImpersonationSession = typeof impersonationSessions.$inferSelect;
+export type Conversation = typeof conversations.$inferSelect;
+export type ConversationMessage = typeof conversationMessages.$inferSelect;
+export type AgentDecision = typeof agentDecisions.$inferSelect;
+export type Approval = typeof approvals.$inferSelect;
+export type AgentTest = typeof agentTests.$inferSelect;
+export type AgentTestRun = typeof agentTestRuns.$inferSelect;
+export type Correction = typeof corrections.$inferSelect;
+export type UsageDaily = typeof usageDaily.$inferSelect;
+export type KillSwitch = typeof killSwitches.$inferSelect;
