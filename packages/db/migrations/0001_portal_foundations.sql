@@ -123,7 +123,10 @@ create policy profiles_read on public.profile_versions for select to authenticat
 create policy profiles_owner_insert on public.profile_versions for insert to authenticated
   with check (
     (public.has_org_role(org_id, array['owner']) or public.is_wyrm_admin())
-    and exists (select 1 from public.agents a where a.id = agent_id and a.org_id = org_id)
+    and exists (
+      select 1 from public.agents a
+      where a.id = profile_versions.agent_id and a.org_id = profile_versions.org_id
+    )
   );
 
 -- audit_log: owners read their organisation's log; admins read all; written by the server.
