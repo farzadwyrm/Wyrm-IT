@@ -94,6 +94,7 @@ beforeAll(async () => {
   await client.exec(migration("0004_agent_operations.sql"));
   await client.exec(migration("0005_agent_policies.sql"));
   await client.exec(migration("0006_agent_test_gate.sql"));
+  await client.exec(migration("0007_onboarding.sql"));
   await client.query(
     "insert into platform_users (id, email, platform_role) values ($1, $2, 'support')",
     [people.support.id, people.support.email],

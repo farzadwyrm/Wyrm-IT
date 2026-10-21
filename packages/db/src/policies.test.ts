@@ -62,6 +62,7 @@ beforeAll(async () => {
     "0004_agent_operations.sql",
     "0005_agent_policies.sql",
     "0006_agent_test_gate.sql",
+    "0007_onboarding.sql",
   ])
     await db.exec(migration(m));
   await db.query(
@@ -241,5 +242,52 @@ describe("test gate (0006)", () => {
     ).rejects.toThrow(/tenant_mismatch/);
     expect(await as(OWNER_B, () => rows("select id from agent_test_batches"))).toEqual([]);
     expect((await as(MEMBER_A, () => rows("select id from agent_test_batches"))).length).toBe(1);
+  });
+});
+
+describe("onboarding (0007)", () => {
+  it("never lets signed-in users read the encrypted calendar token", async () => {
+    await db.query(
+      "insert into calendar_connections (agent_id, tenant_id, account_email, refresh_token_enc) values ($1, $2, 'calendar@dental-a.example', 'ciphertext')",
+      [FRONT, TENANT_A],
+    );
+    expect(
+      await as(OWNER_A, () => rows("select account_email, status from calendar_connections")),
+    ).toEqual([{ account_email: "calendar@dental-a.example", status: "ok" }]);
+    await expect(
+      as(OWNER_A, () => rows("select refresh_token_enc from calendar_connections")),
+    ).rejects.toThrow(/permission denied/);
+    await expect(as(OWNER_A, () => rows("select * from calendar_connections"))).rejects.toThrow(
+      /permission denied/,
+    );
+    expect(await as(OWNER_B, () => rows("select account_email from calendar_connections"))).toEqual(
+      [],
+    );
+  });
+
+  it("keeps widget settings valid and within the organisation", async () => {
+    await db.query(
+      "insert into agent_channels (agent_id, tenant_id, widget_enabled, widget_origins) values ($1, $2, true, '{https://dental-a.example}')",
+      [FRONT, TENANT_A],
+    );
+    await expect(
+      db.query("update agent_channels set widget_color = 'red' where agent_id = $1", [FRONT]),
+    ).rejects.toThrow(/check constraint/);
+    await expect(
+      db.query("insert into agent_channels (agent_id, tenant_id) values ($1, $2)", [
+        SALON,
+        TENANT_A,
+      ]),
+    ).rejects.toThrow(/tenant_mismatch/);
+    expect(await as(OWNER_B, () => rows("select agent_id from agent_channels"))).toEqual([]);
+  });
+
+  it("shows website suggestions only to the organisation's members", async () => {
+    await db.query(
+      "insert into profile_suggestions (tenant_id, source_url, draft) values ($1, 'https://dental-a.example', '{}')",
+      [TENANT_A],
+    );
+    expect((await as(MEMBER_A, () => rows("select id from profile_suggestions"))).length).toBe(1);
+    expect(await as(OWNER_B, () => rows("select id from profile_suggestions"))).toEqual([]);
   });
 });

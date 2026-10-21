@@ -57,3 +57,20 @@ test("the chat endpoint rejects bad input and unknown chat pages are not found",
   const response = await page.goto("/chat/00000000-0000-4000-8000-000000000000");
   expect(response?.status()).toBe(404);
 });
+
+test("the website widget script is public and unknown agents get no widget", async ({
+  request,
+}) => {
+  const script = await request.get("/widget.js");
+  expect(script.status()).toBe(200);
+  expect(await script.text()).toContain("data-agent");
+  const config = await request.get("/api/widget/00000000-0000-4000-8000-000000000000", {
+    headers: { Origin: "https://somewhere.example" },
+  });
+  expect([403, 404]).toContain(config.status());
+});
+
+test("only the public chat page may be embedded in other sites", async ({ request }) => {
+  const login = await request.get("/login");
+  expect(login.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
+});

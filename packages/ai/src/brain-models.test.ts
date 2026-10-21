@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   answerAsAgent,
   brainClassifiers,
+  draftProfileFromPages,
   firstJson,
   judgeReply,
   type ModelClients,
@@ -189,5 +190,23 @@ describe("judgeReply", () => {
 
   it("returns null when no model is available", async () => {
     expect(await judgeReply({ anthropic: fakeAnthropic('{"pass":true}') }, "x", [])).toBeNull();
+  });
+});
+
+describe("draftProfileFromPages", () => {
+  it("returns the model's JSON draft using the free model only", async () => {
+    const draft = await draftProfileFromPages(
+      {
+        anthropic: fakeAnthropic(new Error("must not be called")),
+        groq: fakeGroq([
+          '{"summary":"Family dentist.","services":[{"name":"Check-up","price":"65 EUR"}]}',
+        ]),
+      },
+      [{ url: "https://brightsmile.example", text: "Family dentist. Check-up 65 EUR." }],
+    );
+    expect(draft).toEqual({
+      summary: "Family dentist.",
+      services: [{ name: "Check-up", price: "65 EUR" }],
+    });
   });
 });

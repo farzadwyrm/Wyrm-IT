@@ -1,11 +1,18 @@
-import { DomainError, getTenant, listAgents, listConversations, listStaff } from "@wyrm/core";
+import {
+  DomainError,
+  getTenant,
+  listAgents,
+  listConversations,
+  listStaff,
+  setupStatus,
+} from "@wyrm/core";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ChatBox } from "@/components/chat-box";
 import { coreContext, requireAdmin } from "@/lib/auth";
 import { OUTCOME_LABELS, when } from "@/lib/portal";
-import { adminAgentStatus, viewAsAction } from "../../actions";
+import { adminAgentStatus, signOffAction, viewAsAction } from "../../actions";
 
 export const metadata: Metadata = { title: "Client" };
 
@@ -37,6 +44,11 @@ export default async function TenantPage({
     listStaff(ctx, id),
     listConversations(ctx, id, { limit: 10 }),
   ]);
+  const setups = new Map(
+    await Promise.all(
+      agents.map(async ({ agent }) => [agent.id, await setupStatus(ctx, id, agent.id)] as const),
+    ),
+  );
   const canImpersonate = ["super_admin", "platform_admin", "support"].includes(access.actor.role);
 
   return (
@@ -91,6 +103,45 @@ export default async function TenantPage({
                   </Link>
                 </p>
               )}
+              {(() => {
+                const setup = setups.get(agent.id);
+                if (!setup) return null;
+                return (
+                  <div className="space-y-2 rounded-xl border border-line p-3 text-sm">
+                    <p>
+                      Setup: {setup.done} of {setup.total} done
+                      {setup.missing.length > 0 && (
+                        <span className="text-ink-muted">
+                          {" "}
+                          · missing: {setup.missing.map((m) => m.label.toLowerCase()).join(", ")}
+                        </span>
+                      )}
+                    </p>
+                    {setup.signedOff ? (
+                      <p className="text-moss">
+                        Signed off{setup.launch?.note ? `: ${setup.launch.note}` : ""}
+                      </p>
+                    ) : (
+                      <form action={signOffAction} className="flex flex-wrap items-end gap-2">
+                        <input type="hidden" name="tenantId" value={id} />
+                        <input type="hidden" name="agentId" value={agent.id} />
+                        <input
+                          name="note"
+                          required
+                          minLength={3}
+                          maxLength={500}
+                          className={input}
+                          placeholder="Sign-off note, e.g. facts and tests reviewed"
+                          aria-label="Sign-off note"
+                        />
+                        <button type="submit" className={button}>
+                          Sign off for launch
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                );
+              })()}
               <ChatBox agentId={agent.id} test title={`Try ${agent.name} (test chat)`} />
             </li>
           ))}

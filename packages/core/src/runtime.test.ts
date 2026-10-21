@@ -88,6 +88,7 @@ beforeAll(async () => {
     "0004_agent_operations.sql",
     "0005_agent_policies.sql",
     "0006_agent_test_gate.sql",
+    "0007_onboarding.sql",
   ])
     await client.exec(migration(m));
   await client.query(
@@ -504,5 +505,153 @@ describe("Agent Studio policies at runtime", () => {
     });
     expect(d.seen[0]?.instructions).toContain('PROCEDURE "Take a message"');
     expect(d.seen[0]?.instructions).toContain("closed right now");
+  });
+});
+
+describe("calendar booking at runtime", () => {
+  const TENANT_D = "10000000-0000-4000-8000-00000000000d";
+  const CAL = "20000000-0000-4000-8000-0000000000d1";
+  const SECRET = "test-secret-value-that-is-long-enough";
+  const policy = {
+    version: 2,
+    profile: {
+      timezone: "UTC",
+      hours: { tue: { open: "08:00", close: "18:00" } },
+      services: [{ name: "Check-up", duration: "45 min" }],
+    },
+    rules: [],
+    procedures: [
+      {
+        id: "p-book",
+        template: "book",
+        name: "Book a visit",
+        whenToUse: "New appointment.",
+        whenNotToUse: "",
+        requiredInfo: [
+          { key: "name", label: "Name", type: "text" },
+          { key: "service", label: "Service", type: "text" },
+          { key: "date", label: "Day", type: "date" },
+          { key: "time", label: "Time", type: "time" },
+        ],
+        steps: [],
+        confirmBeforeActing: false,
+        enabled: true,
+      },
+    ],
+    limits: { minNoticeHours: 1, bookingWindowDays: 30, handoffContact: "Reception" },
+  };
+  const bookingDeps = (busy: boolean | "error", created: unknown[]): RuntimeDeps => ({
+    classifiers: [
+      {
+        provider: "groq",
+        paid: false,
+        classify: async () => ({
+          intent: "booking",
+          confidence: 0.95,
+          provider: "groq",
+          model: "f",
+          inputTokens: 1,
+          outputTokens: 1,
+          costMicros: 0,
+          latencyMs: 1,
+        }),
+      },
+    ],
+    answer: async () => ({
+      reply: "The team will confirm.",
+      answered: true,
+      topic: null,
+      lead: false,
+      provider: "groq",
+      model: "f",
+      inputTokens: 1,
+      outputTokens: 1,
+      costMicros: 0,
+      latencyMs: 1,
+      fields: { name: "Ana Example", service: "Check-up", date: "2026-10-20", time: "10:00" },
+      confirmed: true,
+    }),
+    calendar: {
+      secret: SECRET,
+      api: {
+        accessToken: async (rt) => {
+          if (busy === "error") throw new Error("google_401");
+          return `access-for-${rt}`;
+        },
+        isBusy: async () => busy === true,
+        createEvent: async (_t, _c, event) => {
+          created.push(event);
+          return { id: "evt1" };
+        },
+      },
+    },
+  });
+
+  beforeAll(async () => {
+    await client.query(
+      "insert into tenants (id, name, slug, agent_limit) values ($1, 'Fictional Clinic D', 'clinic-d', 2)",
+      [TENANT_D],
+    );
+    await client.query(
+      "insert into agents (id, tenant_id, name, type, status, config) values ($1, $2, 'Desk', 'receptionist', 'live', $3)",
+      [CAL, TENANT_D, JSON.stringify(policy)],
+    );
+    const { encryptToken } = await import("./calendar");
+    await client.query(
+      "insert into calendar_connections (agent_id, tenant_id, refresh_token_enc) values ($1, $2, $3)",
+      [CAL, TENANT_D, encryptToken("rt-1", SECRET)],
+    );
+  });
+
+  it("books a free slot straight into the calendar", async () => {
+    const created: { start: Date; end: Date; summary: string }[] = [];
+    const r = await handleCustomerMessage(db, bookingDeps(false, created), {
+      agentId: CAL,
+      text: "Book a check-up Tuesday 10am, Ana Example",
+      channel: "web_chat",
+      now: new Date("2026-10-19T10:00:00Z"),
+    });
+    if (r.status !== "ok") throw new Error("expected ok");
+    expect(r.reply).toContain("You're booked: Check-up on 2026-10-20 at 10:00");
+    expect(created[0]?.start.toISOString()).toBe("2026-10-20T10:00:00.000Z");
+    expect(created[0]?.end.toISOString()).toBe("2026-10-20T10:45:00.000Z"); // 45-minute service
+    const [conv] = await rows<{ outcome: string }>(
+      "select outcome from conversations where id = $1",
+      [r.conversationId],
+    );
+    expect(conv?.outcome).toBe("booked");
+  });
+
+  it("asks for another time when the slot is taken", async () => {
+    const created: unknown[] = [];
+    const r = await handleCustomerMessage(db, bookingDeps(true, created), {
+      agentId: CAL,
+      text: "Book me in",
+      channel: "web_chat",
+      now: new Date("2026-10-19T10:00:00Z"),
+    });
+    if (r.status !== "ok") throw new Error("expected ok");
+    expect(r.reply).toContain("already taken");
+    expect(created).toEqual([]);
+    const [conv] = await rows<{
+      state: { procedure?: string; collected?: Record<string, string> };
+    }>("select state from conversations where id = $1", [r.conversationId]);
+    expect(conv?.state.procedure).toBe("book");
+    expect(conv?.state.collected).toEqual({ name: "Ana Example", service: "Check-up" });
+  });
+
+  it("falls back to a request for the team when Google fails, and marks the link", async () => {
+    const r = await handleCustomerMessage(db, bookingDeps("error", []), {
+      agentId: CAL,
+      text: "Book me in",
+      channel: "web_chat",
+      now: new Date("2026-10-19T10:00:00Z"),
+    });
+    expect(r.status === "ok" && r.reply).toContain("team will confirm");
+    const [link] = await rows<{ status: string }>(
+      "select status from calendar_connections where agent_id = $1",
+      [CAL],
+    );
+    expect(link?.status).toBe("revoked");
   });
 });

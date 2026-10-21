@@ -31,6 +31,7 @@ import {
   usageDaily,
 } from "@wyrm/db";
 import { and, asc, desc, eq, gte, isNull, or, sql } from "drizzle-orm";
+import { bookOnCalendar, type CalendarApi, durationMinutes, zonedTime } from "./calendar";
 import type { Db } from "./context";
 import { hashPayload } from "./operations";
 import { policyFromConfig } from "./studio";
@@ -105,6 +106,8 @@ export interface RuntimeDeps {
     history: { role: "customer" | "agent"; text: string }[],
     options: { allowPaid: boolean },
   ) => Promise<Answer | null>;
+  /** When set, confirmed bookings go straight into the agent's connected calendar. */
+  calendar?: { api: CalendarApi; secret: string };
 }
 
 const words = (topic: string) =>
@@ -322,7 +325,8 @@ export async function handleCustomerMessage(
       agentId: conversation.agentId,
     },
   });
-  const { reply, records, convState, summary, outcome, routedAgent } = turn;
+  const { records, routedAgent } = turn;
+  let { reply, convState, summary, outcome } = turn;
   if (turn.approval) {
     const payload = turn.approval.payload;
     const [held] = await db
@@ -343,6 +347,58 @@ export async function handleCustomerMessage(
       .returning();
     const record = records[turn.approval.recordIndex];
     if (record && held) record.approvalId = held.id;
+  }
+
+  // A confirmed booking goes straight into the connected calendar when the slot is free.
+  if (turn.booking && deps.calendar) {
+    const policy = runtime.policyFor(turn.booking.agentId);
+    const f = turn.booking.fields;
+    const timeZone = policy.profile.timezone || "Europe/Lisbon";
+    const service = policy.profile.services?.find(
+      (x) => f.service && x.name.toLowerCase().includes(f.service.toLowerCase().slice(0, 12)),
+    );
+    const start = zonedTime(f.date ?? "", f.time ?? "", timeZone);
+    const result = start
+      ? await bookOnCalendar(db, {
+          agentId: turn.booking.agentId,
+          api: deps.calendar.api,
+          secret: deps.calendar.secret,
+          event: {
+            summary: `${f.service || "Appointment"}: ${f.name ?? "Customer"}`.slice(0, 200),
+            description: `Booked by ${state.businessName}'s AI assistant. ${Object.entries(f)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join(", ")}`.slice(0, 2000),
+            start,
+            end: new Date(start.getTime() + durationMinutes(service?.duration) * 60_000),
+            timeZone,
+          },
+        })
+      : "unavailable";
+    records.push({
+      ...base(records[0], state, conversation.id),
+      agentId: turn.booking.agentId,
+      decision: "tool_authorize",
+      outcome: result === "booked" ? "ok" : result === "busy" ? "denied" : "failed",
+      reason: `calendar_${result}`,
+      tool: "calendar.book",
+      riskTier: 1,
+    });
+    if (result === "booked") {
+      outcome = "booked";
+      summary = `Booked: ${summaryOf(f)}`.slice(0, 2000);
+      reply = `You're booked: ${f.service || "your appointment"} on ${f.date} at ${f.time}. We look forward to seeing you${f.name ? `, ${f.name.split(" ")[0]}` : ""}!`;
+    } else if (result === "busy") {
+      outcome = conversation.outcome;
+      summary = conversation.summary;
+      const { date: _d, time: _t, ...rest } = f;
+      convState = {
+        ...convState,
+        procedure: turn.booking.template,
+        collected: rest,
+        done: (convState.done ?? []).slice(0, -1),
+      };
+      reply = `I'm sorry, ${f.time} on ${f.date} is already taken. Could you suggest another day or time?`;
+    }
   }
 
   const cost = records.reduce((sum, r) => sum + r.costMicros, 0);
@@ -436,6 +492,13 @@ export interface TurnEffects {
     payload: Record<string, unknown>;
     recordIndex: number;
   } | null;
+  /** A confirmed booking request (book/reschedule); the caller may place it in a calendar. */
+  booking: {
+    agentId: string;
+    template: Template;
+    procedureName: string;
+    fields: Record<string, string>;
+  } | null;
 }
 
 type Outcome = NonNullable<(typeof conversations.$inferSelect)["outcome"]>;
@@ -444,6 +507,7 @@ type Outcome = NonNullable<(typeof conversations.$inferSelect)["outcome"]>;
 export async function runTurn(ctx: TurnContext): Promise<TurnEffects> {
   const { state, text, now, firstContact, previous } = ctx;
   let approval: TurnEffects["approval"] = null;
+  let booking: TurnEffects["booking"] = null;
   const lastRoute = [...previous]
     .reverse()
     .find((d) => d.decision === "route" && d.outcome === "ok" && d.agentId);
@@ -636,6 +700,13 @@ export async function runTurn(ctx: TurnContext): Promise<TurnEffects> {
               riskTier: tier,
             });
             summary = `${procedure.name}: ${summaryOf(collected, procedure)}`.slice(0, 2000);
+            if (procedure.template === "book" || procedure.template === "reschedule")
+              booking = {
+                agentId,
+                template: procedure.template,
+                procedureName: procedure.name,
+                fields: { ...collected },
+              };
             flags.add("needs_attention");
             topics.add(`${procedure.template} request`);
             outcome = procedure.template === "transfer" ? "handed_off" : "lead";
@@ -683,6 +754,7 @@ export async function runTurn(ctx: TurnContext): Promise<TurnEffects> {
     disclosed: Boolean(result.disclosure),
     ended: result.action.kind === "stop",
     approval,
+    booking,
   };
 }
 

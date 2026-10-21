@@ -138,6 +138,7 @@ beforeAll(async () => {
     "0004_agent_operations.sql",
     "0005_agent_policies.sql",
     "0006_agent_test_gate.sql",
+    "0007_onboarding.sql",
   ])
     await client.exec(migration(m));
 

@@ -38,3 +38,10 @@ relevant guide in `apps/web/node_modules/next/dist/docs/`. Do not rely on memory
 - Agent Studio: `src/app/dashboard/agents/[id]/studio/` (Facts, Rules, Procedures, Limits &
   handoff, Changes, Publish) over `packages/core/src/studio.ts`. Every change needs a note; edits
   are a draft until published; limits are enforced by the runtime, not the prompt.
+- Launch (`src/app/dashboard/agents/[id]/launch/`): setup checklist and go-live (customers need all
+  required steps plus Wyrm sign-off from the admin client page), website import
+  (`src/lib/site-import.ts`: public hosts only, private addresses refused after every redirect,
+  robots.txt respected, 10 pages max), website widget (`public/widget.js` + `/api/widget/[agentId]`
+  + `/chat/[agentId]?embed=1`; only `/chat/*` may be framed), and Google Calendar
+  (`/api/calendar/connect` and `/callback`; switched off until `GOOGLE_CLIENT_ID` and
+  `GOOGLE_CLIENT_SECRET` are set; tokens encrypted with a key derived from `SUPABASE_SECRET_KEY`).

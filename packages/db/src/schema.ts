@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 /**
- * Typed view of the live schema after migrations 0001–0006. The SQL files are the source of
+ * Typed view of the live schema after migrations 0001–0007. The SQL files are the source of
  * truth (they also hold row-level security, constraints and triggers); keep both in sync.
  * Tested in `rls.test.ts`.
  */
@@ -479,6 +479,62 @@ export const policyChanges = pgTable("policy_changes", {
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 
+// Onboarding (0007): widget channels, calendar connections, website suggestions, launches.
+
+export const agentChannels = pgTable("agent_channels", {
+  agentId: uuid("agent_id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  widgetEnabled: boolean("widget_enabled").notNull().default(false),
+  widgetOrigins: text("widget_origins").array().notNull().default([]),
+  widgetColor: text("widget_color").notNull().default("#e8590c"),
+  widgetLabel: text("widget_label").notNull().default("Chat with us"),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
+export const calendarConnections = pgTable("calendar_connections", {
+  agentId: uuid("agent_id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  provider: text("provider", { enum: ["google"] })
+    .notNull()
+    .default("google"),
+  accountEmail: text("account_email"),
+  calendarId: text("calendar_id").notNull().default("primary"),
+  /** base64(iv | tag | ciphertext), AES-256-GCM; only the server can decrypt. */
+  refreshTokenEnc: text("refresh_token_enc").notNull(),
+  scopes: text("scopes").notNull().default(""),
+  status: text("status", { enum: ["ok", "error", "revoked"] })
+    .notNull()
+    .default("ok"),
+  lastCheckedAt: ts("last_checked_at"),
+  lastError: text("last_error"),
+  connectedBy: uuid("connected_by"),
+  connectedAt: ts("connected_at").notNull().defaultNow(),
+});
+
+export const profileSuggestions = pgTable("profile_suggestions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  sourceUrl: text("source_url").notNull(),
+  pagesRead: integer("pages_read").notNull().default(0),
+  draft: jsonb("draft").notNull().default({}),
+  status: text("status", { enum: ["pending", "applied", "dismissed"] })
+    .notNull()
+    .default("pending"),
+  createdBy: uuid("created_by"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
+export const agentLaunches = pgTable("agent_launches", {
+  agentId: uuid("agent_id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  signedOffBy: uuid("signed_off_by"),
+  signedOffAt: ts("signed_off_at"),
+  note: text("note"),
+  stage: text("stage", { enum: ["not_started", "after_hours", "overflow", "all"] })
+    .notNull()
+    .default("not_started"),
+});
+
 export type PlatformUser = typeof platformUsers.$inferSelect;
 export type Tenant = typeof tenants.$inferSelect;
 export type Role = typeof roles.$inferSelect;
@@ -504,3 +560,7 @@ export type AgentProcedure = typeof agentProcedures.$inferSelect;
 export type AgentLimitsRow = typeof agentLimits.$inferSelect;
 export type PolicyChange = typeof policyChanges.$inferSelect;
 export type AgentTestBatch = typeof agentTestBatches.$inferSelect;
+export type AgentChannel = typeof agentChannels.$inferSelect;
+export type CalendarConnection = typeof calendarConnections.$inferSelect;
+export type ProfileSuggestion = typeof profileSuggestions.$inferSelect;
+export type AgentLaunch = typeof agentLaunches.$inferSelect;

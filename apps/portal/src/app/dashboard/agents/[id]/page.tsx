@@ -62,6 +62,16 @@ export default async function AgentPage({
       </div>
       <Notice params={query} />
       <Link
+        href={`/dashboard/agents/${agent.id}/launch`}
+        className="flex items-center justify-between rounded-2xl border border-line p-4 hover:border-ink-muted"
+      >
+        <span>
+          <strong>Launch</strong>: setup checklist, import from your website, website chat,
+          calendar, and going live.
+        </span>
+        <span aria-hidden="true">→</span>
+      </Link>
+      <Link
         href={`/dashboard/agents/${agent.id}/studio`}
         className="flex items-center justify-between rounded-2xl border border-ember/50 bg-ember/10 p-4 hover:border-ember"
       >

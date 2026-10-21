@@ -8,6 +8,7 @@ import {
   provisionAgent,
   setAgentStatus,
   setTenantStatus,
+  signOffLaunch,
   startViewAs,
 } from "@wyrm/core";
 import { revalidatePath } from "next/cache";
@@ -153,4 +154,22 @@ export async function endViewAsAction() {
   }
   store.delete(VIEW_AS_COOKIE);
   redirect("/admin");
+}
+
+/** Wyrm staff confirm an agent's setup was reviewed and it may go live. */
+export async function signOffAction(formData: FormData) {
+  const access = await requireAdmin();
+  const tenantId = idOf(formData, "tenantId");
+  let error = "";
+  try {
+    await signOffLaunch(await coreContext(access), {
+      tenantId,
+      agentId: idOf(formData, "agentId"),
+      note: String(formData.get("note") ?? "").slice(0, 500),
+    });
+  } catch (e) {
+    error = explain(e);
+  }
+  revalidatePath(`/admin/tenants/${tenantId}`);
+  redirect(`/admin/tenants/${tenantId}${error ? `?error=${encodeURIComponent(error)}` : ""}`);
 }

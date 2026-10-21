@@ -1,6 +1,7 @@
 import "server-only";
 import { answerAsAgent, brainClassifiers, clientsFromEnv, judgeReply } from "@wyrm/ai";
 import type { Judge, RuntimeDeps } from "@wyrm/core";
+import { calendarDeps } from "./calendar";
 
 /**
  * Model connections for the brain (live chat, test runs) built from server-only environment
@@ -8,10 +9,12 @@ import type { Judge, RuntimeDeps } from "@wyrm/core";
  */
 export function modelDeps(): { deps: RuntimeDeps; judge: Judge } {
   const clients = clientsFromEnv();
+  const calendar = calendarDeps();
   return {
     deps: {
       classifiers: brainClassifiers(clients),
       answer: (knowledge, history, options) => answerAsAgent(clients, knowledge, history, options),
+      ...(calendar ? { calendar } : {}),
     },
     judge: { judge: (expectation, transcript) => judgeReply(clients, expectation, transcript) },
   };

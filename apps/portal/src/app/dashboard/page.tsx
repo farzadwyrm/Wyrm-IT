@@ -3,6 +3,7 @@ import {
   listAgents,
   listApprovals,
   notableChange,
+  setupStatus,
   unansweredTopics,
   usageSummary,
 } from "@wyrm/core";
@@ -66,6 +67,15 @@ export default async function HomePage({ searchParams }: PageProps<"/dashboard">
   const usage = page.can("billing.view") ? await usageSummary(page.ctx, page.tenantId) : null;
   const byKey = new Map(home.metrics.map((m) => [m.key, m]));
   const live = agents.filter((a) => a.agent.status === "live").length;
+  const setups = await Promise.all(
+    agents
+      .filter((a) => a.agent.status !== "live" && page.can("agents.configure", a.agent.id))
+      .slice(0, 4)
+      .map(async ({ agent }) => ({
+        agent,
+        setup: await setupStatus(page.ctx, page.tenantId, agent.id),
+      })),
+  );
 
   return (
     <section className="space-y-8">
@@ -91,6 +101,34 @@ export default async function HomePage({ searchParams }: PageProps<"/dashboard">
           <span aria-hidden="true">→</span>
         </Link>
       )}
+
+      {setups.map(({ agent, setup }) => (
+        <Link
+          key={agent.id}
+          href={`/dashboard/agents/${agent.id}/launch`}
+          className="block rounded-2xl border border-line bg-paper-raised/80 p-4 hover:border-ink-muted"
+        >
+          <span className="flex items-center justify-between gap-4">
+            <span>
+              <strong>Finish setting up {agent.name}</strong>: {setup.done} of {setup.total} steps
+              done
+              {setup.missing[0]
+                ? `. Next: ${setup.missing[0].label.toLowerCase()}`
+                : setup.signedOff
+                  ? ". Ready to go live"
+                  : ". Waiting for Wyrm's sign-off"}
+              .
+            </span>
+            <span aria-hidden="true">→</span>
+          </span>
+          <span className="mt-2 block h-2 overflow-hidden rounded-full bg-line" aria-hidden="true">
+            <span
+              className="block h-full bg-moss"
+              style={{ width: `${Math.round((setup.done / setup.total) * 100)}%` }}
+            />
+          </span>
+        </Link>
+      ))}
 
       <ul className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         {TILES.map((tile) => {

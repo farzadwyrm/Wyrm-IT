@@ -4,6 +4,7 @@ export {
   answerAsAgent,
   brainClassifiers,
   clientsFromEnv,
+  draftProfileFromPages,
   firstJson,
   judgeReply,
   type ModelClients,

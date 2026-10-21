@@ -3,6 +3,7 @@ import { agentAccess, agents, tenants } from "@wyrm/db";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { audit } from "./audit";
 import { type Ctx, DomainError, guarded } from "./context";
+import { assertReadyToGoLive } from "./onboarding";
 
 export const AGENT_TYPES = [
   "receptionist",
@@ -107,6 +108,7 @@ export async function setAgentStatus(
   if (input.status === "live" && tenant?.status !== "active") {
     throw new DomainError("tenant_suspended", "Agents of a suspended organisation stay paused.");
   }
+  if (input.status === "live") await assertReadyToGoLive(ctx, input.tenantId, input.agentId);
   const [agent] = await ctx.db
     .update(agents)
     .set({ status: input.status })
