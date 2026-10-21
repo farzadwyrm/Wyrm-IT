@@ -9,5 +9,10 @@ Database for the customer portal (Supabase Postgres). Plan: docs/plans/customer-
   Supabase's `auth` schema and proves tenant isolation. Every new table gets `org_id`, RLS
   enabled, policies, and a test here.
 
+Every new table also needs explicit grants (see `0002_api_grants.sql`): Supabase no longer
+exposes new tables to the API by default. Never grant anything to `anon`.
+
+Applied to the live project (Wyrm-AI): 0001, 0002 (2026-10-21).
+
 Rules: no customer data, secrets or real emails in migrations or tests; signed-out visitors
 see nothing; only Wyrm admins create organisations and agents.

@@ -7,10 +7,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  * schema, then proves the row-level security rules: each client sees only its own data.
  */
 
-const SQL = readFileSync(
-  new URL("../migrations/0001_portal_foundations.sql", import.meta.url),
-  "utf8",
-);
+const migration = (name: string) =>
+  readFileSync(new URL(`../migrations/${name}`, import.meta.url), "utf8");
+const SQL = migration("0001_portal_foundations.sql");
+const GRANTS = migration("0002_api_grants.sql");
 
 const SUPABASE_STANDIN = `
 create schema auth;
@@ -22,12 +22,6 @@ create role anon;
 create role authenticated;
 create role service_role;
 grant usage on schema public, auth to anon, authenticated;
-`;
-
-const GRANTS = `
-grant select, insert, update, delete on all tables in schema public to anon, authenticated;
-grant usage on all sequences in schema public to anon, authenticated;
-grant execute on function public.is_wyrm_admin(), public.has_org_role(uuid, text[]) to anon, authenticated;
 `;
 
 const ADMIN = "00000000-0000-4000-8000-00000000000a";
@@ -65,6 +59,8 @@ const insertProfile = (agent: string, org: string) =>
   ]);
 
 const RLS = /row-level security/;
+/** Refused either by table privileges or by row-level security. */
+const BLOCKED = /row-level security|permission denied/;
 
 beforeAll(async () => {
   db = new PGlite();
@@ -116,11 +112,20 @@ describe("tenant isolation (row-level security)", () => {
     });
   });
 
-  it("shows signed-out visitors nothing", async () => {
+  it("gives signed-out visitors no access at all", async () => {
     await as(null, async () => {
-      expect(await rows("select * from organizations")).toEqual([]);
-      expect(await rows("select * from profile_versions")).toEqual([]);
-      expect(await rows("select * from memberships")).toEqual([]);
+      for (const table of ["organizations", "profile_versions", "memberships", "wyrm_admins"]) {
+        await expect(db.query(`select * from ${table}`)).rejects.toThrow(/permission denied/);
+      }
+    });
+  });
+
+  it("never lets signed-in users empty or change tables outside the rules", async () => {
+    await as(OWNER_A, async () => {
+      await expect(db.query("truncate organizations cascade")).rejects.toThrow(/permission denied/);
+      await expect(db.query("update agents set status = 'live'")).rejects.toThrow(
+        /permission denied/,
+      );
     });
   });
 
@@ -164,10 +169,10 @@ describe("tenant isolation (row-level security)", () => {
     await as(OWNER_A, async () => {
       await expect(
         db.query("insert into agents (org_id, type) values ($1, 'receptionist')", [ORG_A]),
-      ).rejects.toThrow(RLS);
+      ).rejects.toThrow(BLOCKED);
       await expect(
         db.query("insert into organizations (name, slug) values ('Nope', 'nope')"),
-      ).rejects.toThrow(RLS);
+      ).rejects.toThrow(BLOCKED);
     });
   });
 

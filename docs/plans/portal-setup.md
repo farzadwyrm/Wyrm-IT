@@ -8,8 +8,9 @@ Do these once. Never paste keys or passwords into chat.
    saved in your password manager.
 
 ## 2. Create the tables
-SQL Editor → New query → paste all of `packages/db/migrations/0001_portal_foundations.sql`
-→ Run. You should see "Success. No rows returned".
+SQL Editor → New query → run each file in `packages/db/migrations/` in order
+(`0001_portal_foundations.sql`, then `0002_api_grants.sql`). Each should say "Success. No rows
+returned". 0002 is required: newer Supabase projects don't open new tables to the API.
 
 ## 3. Sign-in settings
 Authentication → Sign In / Providers: turn **off** "Allow new users to sign up" (invite-only).
