@@ -76,6 +76,12 @@ test("the assessment maps a process and produces a full report", async ({ page }
   }
   await expect(page.getByRole("figure", { name: /with AI agents/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Save as PDF" })).toBeVisible();
+
+  // Wide tables scroll inside their own box; the page itself never scrolls sideways.
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow, "report is wider than the viewport").toBeLessThanOrEqual(0);
 });
 
 test("the old planner address redirects to the analyser", async ({ page }) => {

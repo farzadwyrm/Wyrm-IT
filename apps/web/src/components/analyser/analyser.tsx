@@ -265,7 +265,7 @@ export function WorkflowAnalyser() {
         aria-label="Assessment sections"
         className="min-w-0 lg:sticky lg:top-24 lg:self-start print:hidden"
       >
-        <ol className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
+        <ol className="relative flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
           {SECTIONS.map((s, i) => {
             const current = s.key === section;
             return (

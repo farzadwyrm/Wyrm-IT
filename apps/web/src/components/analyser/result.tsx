@@ -252,7 +252,7 @@ export function AssessmentReport({
         <div className="rounded-2xl border border-line bg-paper/60 p-5">
           <WorkflowDiagram workflow={analysis.asIs} />
         </div>
-        <div className="overflow-x-auto rounded-xl border border-line">
+        <div className="relative overflow-x-auto rounded-xl border border-line">
           <table className="w-full min-w-[680px] text-sm">
             <caption className="sr-only">Current process metrics per step</caption>
             <thead className="bg-paper-raised">
@@ -325,7 +325,7 @@ export function AssessmentReport({
           an AI model handles that work. The consequence tier then caps its autonomy: the higher the
           stakes, the more a person stays involved.
         </p>
-        <div className="overflow-x-auto rounded-xl border border-line">
+        <div className="relative overflow-x-auto rounded-xl border border-line">
           <table className="w-full min-w-[860px] text-sm">
             <caption className="sr-only">Assessment of each step</caption>
             <thead className="bg-paper-raised">
@@ -467,7 +467,7 @@ export function AssessmentReport({
         ) : (
           <p className="text-ink-muted">No target design until the planned change has settled.</p>
         )}
-        <div className="overflow-x-auto rounded-xl border border-line">
+        <div className="relative overflow-x-auto rounded-xl border border-line">
           <table className="w-full min-w-[680px] text-sm">
             <caption className="sr-only">Human controls by consequence tier</caption>
             <thead className="bg-paper-raised">
@@ -513,7 +513,7 @@ export function AssessmentReport({
       </Section>
 
       <Section number={8} title="Business case">
-        <div className="overflow-x-auto rounded-xl border border-line">
+        <div className="relative overflow-x-auto rounded-xl border border-line">
           <table className="w-full min-w-[480px] text-sm">
             <caption className="sr-only">Savings scenarios per year</caption>
             <thead className="bg-paper-raised">
@@ -628,7 +628,7 @@ export function AssessmentReport({
             No systems named. Add them to each step for an integration plan.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-line">
+          <div className="relative overflow-x-auto rounded-xl border border-line">
             <table className="w-full min-w-[480px] text-sm">
               <caption className="sr-only">
                 Systems involved and how an agent can reach them
