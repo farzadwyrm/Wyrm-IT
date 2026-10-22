@@ -42,7 +42,30 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   const query = await searchParams;
   const filter = typeof query.show === "string" ? query.show : "all";
   const ctx = await coreContext(access);
-  const [stats, rows] = await Promise.all([platformStats(ctx), customerHealth(ctx)]);
+  // Each part has a time limit, so a slow query shows a notice instead of a blank page.
+  const timed = <T,>(label: string, work: Promise<T>, fallback: T) =>
+    Promise.race([
+      work,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error(label)), 8000)),
+    ]).catch((e: unknown) => {
+      console.error("admin: part failed", label, e instanceof Error ? e.message : "unknown");
+      degraded = true;
+      return fallback;
+    });
+  let degraded = false;
+  const started = Date.now();
+  const [stats, rows] = await Promise.all([
+    timed("platformStats", platformStats(ctx), {
+      activeTenants: 0,
+      suspendedTenants: 0,
+      activeUsers: 0,
+      liveAgents: 0,
+      newTenantsThisWeek: 0,
+      signupsThisWeek: 0,
+    }),
+    timed("customerHealth", customerHealth(ctx), []),
+  ]);
+  console.info("admin: loaded", { ms: Date.now() - started, clients: rows.length, degraded });
   const role = access.actor?.kind === "platform" ? access.actor.role.replace("_", " ") : "";
   const clients = rows
     .map((r) => ({ ...r, health: clientHealth(r) }))
@@ -90,6 +113,12 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
           </li>
         ))}
       </ul>
+
+      {degraded && (
+        <p role="alert" className="rounded-xl border border-signal/60 bg-signal/10 p-3 text-sm">
+          Some numbers didn't load in time. Refresh in a minute; the client list may be incomplete.
+        </p>
+      )}
 
       <div className="space-y-3">
         <h2 className="font-display text-xl font-semibold">Needs you</h2>
