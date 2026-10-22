@@ -6,9 +6,11 @@ import {
   clientsFromEnv,
   expandQuestion,
   judgeReply,
+  planLookup,
 } from "@wyrm/ai";
 import type { Judge, KnowledgeDeps, RuntimeDeps } from "@wyrm/core";
 import { calendarDeps } from "./calendar";
+import { liveDeps } from "./connectors";
 
 /**
  * Model connections for the brain (live chat, test runs) built from server-only environment
@@ -27,11 +29,16 @@ export function modelDeps(): { deps: RuntimeDeps; judge: Judge } {
   };
 }
 
-/** Models for "Ask your documents": free models only (search words and the cited answer). */
-export function knowledgeDeps(): KnowledgeDeps {
+/**
+ * Models and live connections for "Ask your documents": free models only (search words, lookup
+ * choice, cited answer); `user` (the asker's email) is passed to the client's own search APIs.
+ */
+export function knowledgeDeps(user: string | null = null): KnowledgeDeps {
   const clients = clientsFromEnv();
   return {
     expand: (question) => expandQuestion(clients, question),
+    plan: (question, lookups) => planLookup(clients, question, lookups),
     answer: (input) => answerFromDocuments(clients, input, { allowPaid: false }),
+    ...liveDeps(user),
   };
 }

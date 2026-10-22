@@ -2,6 +2,7 @@ export { listMyTenants, loadActor, loadTenantActor } from "./actor";
 export * from "./agents";
 export { type AuditEntry, audit, listAudit } from "./audit";
 export * from "./calendar";
+export * from "./connections";
 export { type Ctx, type Db, DomainError, guarded, translateDbError } from "./context";
 export * from "./impersonation";
 export * from "./knowledge";

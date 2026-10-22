@@ -223,7 +223,9 @@ export default async function DocumentsPage({
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-ink-muted">{KIND_LABELS[s.kind]}</td>
+                    <td className="px-4 py-3 text-ink-muted">
+                      {s.location?.startsWith("sharepoint:") ? "SharePoint" : KIND_LABELS[s.kind]}
+                    </td>
                     <td className="px-4 py-3 text-right">{s.chunkCount}</td>
                     <td className="px-4 py-3 text-ink-muted">{when(s.updatedAt)}</td>
                     <td className="px-4 py-3 text-right">

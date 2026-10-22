@@ -8,6 +8,7 @@ import {
   firstJson,
   judgeReply,
   type ModelClients,
+  planLookup,
 } from "./brain-models";
 import { resetGroqCooldowns } from "./receptionist/groq-agent";
 
@@ -256,5 +257,41 @@ describe("documents", () => {
     );
     expect(w?.words).toEqual(["holiday", "leave", "vacation"]);
     expect(await expandQuestion({}, "time off?")).toBeNull();
+  });
+});
+
+describe("planLookup", () => {
+  const lookups = [
+    {
+      n: 1,
+      name: "Order status",
+      description: "Where an order is",
+      params: [{ name: "order_no", label: "Order number", type: "text" }],
+    },
+  ];
+
+  it("chooses a lookup only with every value, and ignores unknown ones", async () => {
+    const yes = await planLookup(
+      {
+        groq: fakeGroq([
+          '{"words":["order"],"lookup":1,"params":{"order_no":"A-1001","evil":"x"}}',
+        ]),
+      },
+      "Where is order A-1001?",
+      lookups,
+    );
+    expect(yes?.lookup).toEqual({ n: 1, params: { order_no: "A-1001" } });
+    const missing = await planLookup(
+      { groq: fakeGroq(['{"words":["order"],"lookup":1,"params":{}}']) },
+      "Where is my order?",
+      lookups,
+    );
+    expect(missing?.lookup).toBeNull();
+    const unknown = await planLookup(
+      { groq: fakeGroq(['{"words":[],"lookup":7,"params":{"order_no":"A"}}']) },
+      "x",
+      lookups,
+    );
+    expect(unknown?.lookup).toBeNull();
   });
 });

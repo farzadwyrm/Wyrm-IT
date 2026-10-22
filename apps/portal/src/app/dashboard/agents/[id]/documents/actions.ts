@@ -199,7 +199,7 @@ export async function askAction(
     const answer = await askKnowledge(
       page.ctx,
       { tenantId: page.tenantId, agentId, question: question.slice(0, 1000), history: clean },
-      knowledgeDeps(),
+      knowledgeDeps(page.access.email),
     );
     return { ok: true, answer };
   } catch (e) {

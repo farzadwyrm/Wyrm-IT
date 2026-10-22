@@ -108,4 +108,12 @@ export const NOTICES: Record<string, string> = {
   docs_added: "Added. The agent can use it straight away.",
   doc_removed: "Document removed. The agent no longer uses it.",
   access_saved: "Access saved.",
+  connection_ok: "Connected and checked: the account is read-only.",
+  connection_saved: "Connection saved.",
+  connection_on: "Connection switched on. Check it again before the agent uses it.",
+  connection_off: "Connection switched off. The agent no longer uses it.",
+  connection_removed: "Connection and its lookups removed.",
+  lookup_saved: "Lookup approved. The agent can use it now.",
+  lookup_removed: "Lookup removed.",
+  microsoft_connected: "Signed in with Microsoft (read only). Now choose a document library.",
 };

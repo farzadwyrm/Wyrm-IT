@@ -10,7 +10,9 @@ export {
   expandQuestion,
   firstJson,
   judgeReply,
+  type LookupChoice,
   type ModelClients,
+  planLookup,
 } from "./brain-models";
 export type { DemoGuard, DemoGuardOptions, GuardDecision } from "./demo-guard";
 export { createDemoGuard } from "./demo-guard";

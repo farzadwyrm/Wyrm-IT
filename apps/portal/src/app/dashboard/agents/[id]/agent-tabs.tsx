@@ -21,6 +21,7 @@ export function AgentTabs({
   const knowledge: Item[] = [
     { label: "Ask", href: `${base}/ask`, key: "ask" },
     { label: "Documents", href: `${base}/documents`, key: "documents" },
+    { label: "Connections", href: `${base}/connections`, key: "connections" },
     { label: "Questions", href: `${base}/questions`, key: "questions" },
     { label: "Rules", ...studio("rules"), badge: conflicts },
     { label: "Limits & handoff", ...studio("limits") },

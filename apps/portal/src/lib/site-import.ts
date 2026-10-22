@@ -64,7 +64,7 @@ export function isPrivateAddress(ip: string): boolean {
   return mapped ? isPrivateAddress(mapped[1] as string) : false;
 }
 
-async function assertPublicHost(host: string) {
+export async function assertPublicHost(host: string) {
   const addresses = await lookup(host, { all: true });
   if (addresses.length === 0 || addresses.some((a) => isPrivateAddress(a.address)))
     throw new Error("not_public");

@@ -68,6 +68,93 @@ editor, after 0007).
    owner switches it on.
 6. **Staff use it** in their portal: My agent → Ask. Managers watch the Questions tab weekly.
 
+## Live connections (read only): databases, CRM, SharePoint, own search API
+
+My agent → **Connections** (owners and admins only: `security.manage` plus `agents.configure`).
+Read-only is enforced three times:
+
+1. **When connecting**, Wyrm tests the account and refuses it if it can change anything
+   (Postgres: no superuser/role rights and no INSERT/UPDATE/DELETE/TRUNCATE on any table;
+   MySQL: grants are SELECT only; SQL Server: not sysadmin/db_owner/db_datawriter/db_ddladmin
+   and no write permissions; HubSpot: every token scope ends in `.read`; Microsoft: no
+   write scopes are granted). Only connections that pass ("Read-only ✓") are used.
+2. **Approved lookups only.** The manager writes each lookup once: a name, "use it when…",
+   and one SELECT with `:name` values (or a HubSpot object to search). Wyrm rejects anything
+   that isn't a single SELECT (no comments, no INSERT/UPDATE/DELETE/DDL/EXEC/INTO/locks/sleep).
+   While answering, the model may only pick a lookup by number and copy values from the
+   question; it never writes SQL. Values are bound as parameters, never pasted into the query.
+3. **At run time**: TLS, a public host only, a read-only transaction (Postgres, MySQL), a
+   5-second limit and at most 50 rows. Every run is logged (who, lookup, values, rows, time)
+   on the Connections tab. Results are passed to the answer as cited "live data" and not stored.
+
+Passwords and tokens are encrypted (AES-256-GCM) and can't be viewed again by anyone.
+
+### What the client prepares
+
+**PostgreSQL** (run as an admin; views are best, so Wyrm sees only what it needs):
+
+```sql
+create role wyrm_readonly login password '<strong password>';
+grant connect on database shop to wyrm_readonly;
+grant usage on schema public to wyrm_readonly;
+grant select on orders_v, stock_v to wyrm_readonly;   -- or: on all tables in schema public
+revoke create on schema public from public;            -- recommended
+```
+
+**MySQL / MariaDB:**
+
+```sql
+CREATE USER 'wyrm_readonly'@'%' IDENTIFIED BY '<strong password>' REQUIRE SSL;
+GRANT SELECT ON shop.orders_v TO 'wyrm_readonly'@'%';
+```
+
+**SQL Server:**
+
+```sql
+CREATE LOGIN wyrm_readonly WITH PASSWORD = '<strong password>';
+USE Shop; CREATE USER wyrm_readonly FOR LOGIN wyrm_readonly;
+ALTER ROLE db_datareader ADD MEMBER wyrm_readonly;   -- or GRANT SELECT ON dbo.OrdersView
+```
+
+**Network:** Wyrm connects from Vercel, which has no fixed IP address on the free plan, so the
+database must accept TLS connections from the internet (cloud databases such as Azure SQL,
+AWS RDS, Supabase or Neon do). Databases inside an office network should use the **search
+API** below instead (a small service next to the database that Wyrm calls over https).
+
+**HubSpot:** Settings → Integrations → Private apps → Create a private app → Scopes: tick only
+`.read` scopes (for example `crm.objects.contacts.read`, `crm.objects.companies.read`,
+`crm.objects.deals.read`) → Create → copy the access token into Wyrm. Then approve a lookup
+per object (for example "Find a customer: when someone asks about a customer's details").
+
+**SharePoint / OneDrive:** Add connection → SharePoint → Sign in with Microsoft (asks only for
+`Sites.Read.All`, `Files.Read.All`, `User.Read`; some organisations need their Microsoft 365
+admin to approve the app once) → Choose a document library (and folder) → Sync now. New and
+changed files (PDF, Word, text) are copied into the agent's documents, 15 per click; files
+removed from the library are removed from the agent.
+
+**Own search API** (for anything else, or data that must stay on the client's servers):
+
+- Request: `POST <https address>` with JSON `{"question": "...", "user": "staff@client.example",
+  "limit": 4}` and headers `X-Wyrm-Timestamp` (unix seconds) and `X-Wyrm-Signature:
+  sha256=<hex HMAC-SHA256(secret, timestamp + "." + raw body)>`.
+- The service should check the signature and that the timestamp is within 5 minutes, then
+  search **with that user's permissions**.
+- Reply within 6 seconds: `{"results": [{"title": "...", "text": "...", "url": "https://..."}]}`
+  (up to 4 results, 200 KB).
+
+### Wyrm one-time setup for SharePoint
+
+1. Azure portal → Microsoft Entra ID → App registrations → New registration: name
+   "Wyrm portal", supported accounts "Accounts in any organizational directory (multitenant)",
+   redirect URI (Web) `https://wyrm-portal.vercel.app/api/connections/microsoft/callback`.
+2. API permissions → Microsoft Graph → Delegated: `User.Read`, `Sites.Read.All`,
+   `Files.Read.All`, `offline_access` (read only; nothing else).
+3. Certificates & secrets → New client secret.
+4. Vercel → `MICROSOFT_CLIENT_ID` (Application ID) and `MICROSOFT_CLIENT_SECRET` (Secret,
+   Production) → redeploy. Until then SharePoint shows "being switched on".
+
+Database: migration `packages/db/migrations/0009_connections.sql` (after 0008).
+
 ## Limits
 
 Per agent: 300 documents and 4 million characters; 400,000 characters per document; 4 MB per
@@ -85,3 +172,11 @@ it (no background sync, and no Drive token is stored).
 - Portal: `apps/portal/src/lib/documents.ts` (file and Drive reading),
   `app/dashboard/agents/[id]/{ask,documents,questions}`, `launch/team-access.tsx`,
   back office "Add an agent" (`app/admin/actions.ts`, `addAgentAction`).
+- Connections: migration `0009_connections.sql`; core `connections.ts` (+ test: SELECT checker,
+  permissions, encrypted secrets, lookups while answering); planner `planLookup` in
+  `brain-models.ts`; drivers in `apps/portal/src/lib/connectors/` (`sql.ts`, `hubspot.ts`,
+  `sharepoint.ts`, `search-api.ts`, `index.ts`) with `connectors.test.ts`; UI
+  `app/dashboard/agents/[id]/connections/`; Microsoft sign-in `app/api/connections/microsoft/`.
+- Not verified against real customer systems yet: Postgres/MySQL/SQL Server/HubSpot/Graph
+  calls are covered by unit tests and fakes only; test each with a real read-only account
+  before a client relies on it.

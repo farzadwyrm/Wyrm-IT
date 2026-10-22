@@ -1,4 +1,4 @@
-import { knowledgeStats, listKnowledgeQuestions } from "@wyrm/core";
+import { knowledgeStats, listKnowledgeQuestions, liveSources } from "@wyrm/core";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireTenant } from "@/lib/portal";
@@ -19,7 +19,9 @@ export default async function AskPage({ params }: PageProps<"/dashboard/agents/[
     ...new Set(recent.filter((q) => q.answered && q.feedback !== "down").map((q) => q.question)),
   ].slice(0, 3);
 
-  if (stats.sources === 0)
+  const live = await liveSources(page.ctx.db, page.tenantId, id);
+  const connected = live.lookups.length + live.searchApis.length;
+  if (stats.sources === 0 && connected === 0)
     return (
       <Empty>
         This agent has no documents yet.{" "}
@@ -36,8 +38,9 @@ export default async function AskPage({ params }: PageProps<"/dashboard/agents/[
   return (
     <div className="space-y-3">
       <p className="text-sm text-ink-muted">
-        Answers come only from {stats.sources} document{stats.sources === 1 ? "" : "s"}. Open
-        “Sources” under an answer to check it, and use 👍 / 👎 so the answers get better.
+        Answers come only from {stats.sources} document{stats.sources === 1 ? "" : "s"}
+        {connected ? ` and ${connected} live connection lookup${connected === 1 ? "" : "s"}` : ""}.
+        Open “Sources” under an answer to check it, and use 👍 / 👎 so the answers get better.
       </p>
       <AskChat agentId={id} examples={examples} />
     </div>

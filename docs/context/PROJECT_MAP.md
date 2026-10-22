@@ -11,6 +11,11 @@ Last updated: 2026-10-21
   (drive.file; needs GOOGLE_PICKER_API_KEY), "Who can use this agent", back-office "Add an
   agent from a template". Internal agents are blocked from public chat, widget and routing.
   Verified locally (verify:fast, build). Live: see deploy notes.
+- 2026-10-22 Read-only Connections for that agent (migration 0009): Postgres, MySQL, SQL
+  Server, HubSpot, SharePoint (Graph, needs MICROSOFT_CLIENT_ID/SECRET) and the client's own
+  signed search API. Account checked read-only on connect; only approved SELECT lookups;
+  read-only transaction, 5 s, 50 rows; calls logged. Unit/fake tests only: not yet tried
+  against real customer systems.
 
 - 2026-10-21 Portal layout redesign (customer portal + back office). Customer sidebar:
   Overview (monitoring: alerts, 4 KPIs, 14-day activity chart, latest chats, unanswered

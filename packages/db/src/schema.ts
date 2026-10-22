@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 /**
- * Typed view of the live schema after migrations 0001–0008. The SQL files are the source of
+ * Typed view of the live schema after migrations 0001–0009. The SQL files are the source of
  * truth (they also hold row-level security, constraints and triggers); keep both in sync.
  * Tested in `rls.test.ts`.
  */
@@ -592,6 +592,74 @@ export const knowledgeQuestions = pgTable("knowledge_questions", {
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 
+// Read-only connections to the client's own systems (0009).
+
+export const CONNECTION_KINDS = [
+  "postgres",
+  "mysql",
+  "sqlserver",
+  "hubspot",
+  "sharepoint",
+  "search_api",
+] as const;
+export type ConnectionKind = (typeof CONNECTION_KINDS)[number];
+
+export const agentConnections = pgTable("agent_connections", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id").notNull(),
+  kind: text("kind", { enum: CONNECTION_KINDS }).notNull(),
+  name: text("name").notNull(),
+  config: jsonb("config").$type<Record<string, string | number | boolean>>().notNull().default({}),
+  secretEnc: text("secret_enc"),
+  status: text("status", { enum: ["untested", "ok", "error", "disabled"] })
+    .notNull()
+    .default("untested"),
+  checkNote: text("check_note"),
+  lastError: text("last_error"),
+  lastCheckedAt: ts("last_checked_at"),
+  createdBy: uuid("created_by"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
+export interface LookupParam {
+  name: string;
+  label: string;
+  type: "text" | "number" | "date";
+}
+
+export const connectionLookups = pgTable("connection_lookups", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id").notNull(),
+  connectionId: uuid("connection_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  query: text("query").notNull(),
+  params: jsonb("params").$type<LookupParam[]>().notNull().default([]),
+  enabled: boolean("enabled").notNull().default(true),
+  createdBy: uuid("created_by"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
+export const connectionCalls = pgTable("connection_calls", {
+  id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id").notNull(),
+  connectionId: uuid("connection_id"),
+  lookupId: uuid("lookup_id"),
+  questionId: uuid("question_id"),
+  askedBy: uuid("asked_by"),
+  params: jsonb("params").$type<Record<string, string>>().notNull().default({}),
+  rows: integer("rows").notNull().default(0),
+  ms: integer("ms").notNull().default(0),
+  ok: boolean("ok").notNull().default(true),
+  error: text("error"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
 export type PlatformUser = typeof platformUsers.$inferSelect;
 export type Tenant = typeof tenants.$inferSelect;
 export type Role = typeof roles.$inferSelect;
@@ -624,3 +692,6 @@ export type AgentLaunch = typeof agentLaunches.$inferSelect;
 export type KnowledgeSource = typeof knowledgeSources.$inferSelect;
 export type KnowledgeChunk = typeof knowledgeChunks.$inferSelect;
 export type KnowledgeQuestion = typeof knowledgeQuestions.$inferSelect;
+export type AgentConnection = typeof agentConnections.$inferSelect;
+export type ConnectionLookup = typeof connectionLookups.$inferSelect;
+export type ConnectionCall = typeof connectionCalls.$inferSelect;

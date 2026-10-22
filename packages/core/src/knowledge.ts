@@ -1,16 +1,20 @@
 import { createHash } from "node:crypto";
 import { blockedTopic } from "@wyrm/brain";
 import {
+  type AgentConnection,
   agents,
+  type ConnectionLookup,
   type KnowledgeCitation,
   type KnowledgeKind,
   killSwitches,
   knowledgeChunks,
   knowledgeQuestions,
   knowledgeSources,
+  type LookupParam,
 } from "@wyrm/db";
 import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { audit } from "./audit";
+import { coerceParam, liveSources, logConnectionCall, rowsToText } from "./connections";
 import { type Ctx, DomainError, guarded } from "./context";
 import { agentGate } from "./operations";
 import { policyFromConfig } from "./studio";
@@ -385,9 +389,39 @@ export interface ModelAnswer {
   costMicros: number;
 }
 
+export interface LookupOption {
+  n: number;
+  name: string;
+  description: string;
+  params: LookupParam[];
+}
+
 export interface KnowledgeDeps {
   /** More search words for a question (synonyms, other phrasings); null when no model is free. */
   expand?: (question: string) => Promise<{ words: string[]; costMicros: number } | null>;
+  /**
+   * Search words plus, when one fits, the approved lookup to run and its values (replaces
+   * `expand` when the agent has lookups).
+   */
+  plan?: (
+    question: string,
+    lookups: LookupOption[],
+  ) => Promise<{
+    words: string[];
+    lookup: { n: number; params: Record<string, string> } | null;
+    costMicros: number;
+  } | null>;
+  /** Runs an approved lookup read-only on the client's system (driver code lives in the portal). */
+  runLookup?: (input: {
+    connection: AgentConnection;
+    lookup: ConnectionLookup;
+    values: Record<string, string | number>;
+  }) => Promise<Record<string, unknown>[]>;
+  /** Asks the client's own search API; returns passages with a title and optional link. */
+  searchApi?: (
+    connection: AgentConnection,
+    question: string,
+  ) => Promise<{ title: string; text: string; url?: string | null }[]>;
   answer: (input: {
     question: string;
     history: { role: "user" | "agent"; text: string }[];
@@ -491,15 +525,132 @@ export async function askKnowledge(
     .filter((m) => m.role === "user")
     .map((m) => m.text)
     .join(" ");
-  const widened = deps.expand ? await deps.expand(question).catch(() => null) : null;
+
+  // Live data from the client's systems: approved lookups and their own search APIs.
+  const live =
+    deps.runLookup || deps.searchApi
+      ? await liveSources(ctx.db, input.tenantId, input.agentId)
+      : { lookups: [], searchApis: [] };
+  const calls: Omit<Parameters<typeof logConnectionCall>[1], "questionId">[] = [];
+  let widened: { words: string[]; costMicros: number } | null = null;
+  let chosen: { n: number; params: Record<string, string> } | null = null;
+  if (live.lookups.length && deps.plan && deps.runLookup) {
+    const plan = await deps
+      .plan(
+        question,
+        live.lookups.map(({ lookup }, i) => ({
+          n: i + 1,
+          name: lookup.name,
+          description: lookup.description,
+          params: lookup.params,
+        })),
+      )
+      .catch(() => null);
+    widened = plan ? { words: plan.words, costMicros: plan.costMicros } : null;
+    chosen = plan?.lookup ?? null;
+  } else if (deps.expand) widened = await deps.expand(question).catch(() => null);
+
+  const livePassages: Passage[] = [];
+  const entry = chosen ? live.lookups[chosen.n - 1] : undefined;
+  if (chosen && entry && deps.runLookup) {
+    const started = Date.now();
+    const shown: Record<string, string> = {};
+    try {
+      const values: Record<string, string | number> = {};
+      for (const p of entry.lookup.params) {
+        values[p.name] = coerceParam(p, chosen.params[p.name]);
+        shown[p.name] = String(values[p.name]).slice(0, 100);
+      }
+      const rows = await deps.runLookup({
+        connection: entry.connection,
+        lookup: entry.lookup,
+        values,
+      });
+      livePassages.push({
+        chunkId: 0,
+        sourceId: entry.connection.id,
+        sourceName: `${entry.connection.name} · ${entry.lookup.name}`,
+        location: null,
+        heading:
+          Object.entries(shown)
+            .map(([k, v]) => `${k} = ${v}`)
+            .join(", ") || null,
+        content: rowsToText(rows),
+        rank: 100,
+      });
+      calls.push({
+        tenantId: input.tenantId,
+        agentId: input.agentId,
+        connectionId: entry.connection.id,
+        lookupId: entry.lookup.id,
+        params: shown,
+        rows: rows.length,
+        ms: Date.now() - started,
+        ok: true,
+      });
+    } catch (e) {
+      calls.push({
+        tenantId: input.tenantId,
+        agentId: input.agentId,
+        connectionId: entry.connection.id,
+        lookupId: entry.lookup.id,
+        params: shown,
+        rows: 0,
+        ms: Date.now() - started,
+        ok: false,
+        error: e instanceof DomainError ? e.message : "The lookup failed.",
+      });
+    }
+  }
+  if (deps.searchApi) {
+    for (const connection of live.searchApis.slice(0, 2)) {
+      const started = Date.now();
+      try {
+        const hits = (await deps.searchApi(connection, question)).slice(0, 4);
+        for (const h of hits)
+          livePassages.push({
+            chunkId: 0,
+            sourceId: connection.id,
+            sourceName: `${connection.name} · ${h.title}`.slice(0, 200),
+            location: h.url ?? null,
+            heading: null,
+            content: h.text.slice(0, 1800),
+            rank: 50,
+          });
+        calls.push({
+          tenantId: input.tenantId,
+          agentId: input.agentId,
+          connectionId: connection.id,
+          rows: hits.length,
+          ms: Date.now() - started,
+          ok: true,
+        });
+      } catch {
+        calls.push({
+          tenantId: input.tenantId,
+          agentId: input.agentId,
+          connectionId: connection.id,
+          rows: 0,
+          ms: Date.now() - started,
+          ok: false,
+          error: "The search API didn't answer.",
+        });
+      }
+    }
+  }
+
+  const finish = async (answer: KnowledgeAnswer, meta?: ModelAnswer) => {
+    const saved = await save(answer, meta, widened?.costMicros ?? 0);
+    for (const call of calls)
+      await logConnectionCall(ctx, { ...call, questionId: saved.questionId });
+    return saved;
+  };
+
   const words = [...keywords(question), ...(widened?.words ?? []), ...keywords(context)];
-  const passages = await searchKnowledge(ctx.db, input.tenantId, input.agentId, words);
+  const documents = await searchKnowledge(ctx.db, input.tenantId, input.agentId, words);
+  const passages = [...livePassages, ...documents].slice(0, KNOWLEDGE_LIMITS.passages + 2);
   if (!passages.length)
-    return save(
-      { questionId: null, reply: NOT_FOUND, answered: false, citations: [] },
-      undefined,
-      widened?.costMicros ?? 0,
-    );
+    return finish({ questionId: null, reply: NOT_FOUND, answered: false, citations: [] });
 
   const result = await deps.answer({
     question,
@@ -527,7 +678,7 @@ export async function askKnowledge(
     };
   });
   const answered = result.answered && citations.length > 0;
-  return save(
+  return finish(
     {
       questionId: null,
       reply: answered ? result.reply : result.reply || NOT_FOUND,
@@ -535,7 +686,6 @@ export async function askKnowledge(
       citations,
     },
     result,
-    widened?.costMicros ?? 0,
   );
 }
 
