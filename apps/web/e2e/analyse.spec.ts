@@ -3,7 +3,9 @@ import { AGENTS } from "@wyrm/agents";
 
 // Runs without AI keys: steps are drafted from the text with keyword rules.
 
-const next = (page: Page, name = "Next") => page.getByRole("button", { name, exact: true }).click();
+// Keyboard activation: on phone sizes the sticky site header can cover the button for a robot click.
+const next = (page: Page, name = "Next") =>
+  page.getByRole("button", { name, exact: true }).press("Enter");
 
 test("the agents page links every agent", async ({ page }) => {
   await page.goto("/agents");
@@ -19,48 +21,61 @@ test("an agent page shows its workflow diagram", async ({ page }) => {
   await expect(diagram).toContainText("Human check");
 });
 
-test("the analyser asks six simple questions and gives a clear result", async ({ page }) => {
+test("the assessment maps a process and produces a full report", async ({ page }) => {
   await page.goto("/");
   await page
     .getByRole("textbox", { name: "Name a task to analyse" })
-    .fill("Entering supplier invoices");
+    .fill("Supplier invoice processing");
   await page.getByRole("button", { name: "Analyse", exact: true }).click();
   await expect(page).toHaveURL(/\/analyse\?q=/);
 
-  // 1 The task (pre-filled from the home page)
-  await expect(page.getByRole("textbox", { name: "The task" })).toHaveValue(
-    "Entering supplier invoices",
+  // 1 Scope (name pre-filled from the home page)
+  await expect(page.getByRole("textbox", { name: "Process name" })).toHaveValue(
+    "Supplier invoice processing",
   );
-  await next(page);
+  await page.getByRole("spinbutton", { name: "Cases" }).fill("60");
+  await next(page, "Current process →");
 
-  // 2 How it starts: one click moves on
-  await page.getByRole("button", { name: "An email" }).click();
-
-  // 3 How often
-  await page.getByRole("button", { name: "about 20" }).click();
-
-  // 4 Walk-through
-  await expect(page.getByText("Question 4 of 6")).toBeVisible();
-  await page.getByRole("button", { name: "Show me an example" }).click();
-  await next(page);
-
-  // 5 Minutes per step (drafted without AI in tests)
-  const minutes = page.getByRole("spinbutton", { name: /^Minutes for step/ });
-  await expect(minutes).toHaveCount(5);
+  // 2 Current process: draft from the example walk-through (keyword rules in tests)
+  await page.getByRole("button", { name: "Use an example" }).press("Enter");
+  await page.getByRole("button", { name: "Draft the step map" }).press("Enter");
+  const activities = page.getByRole("textbox", { name: "Activity" });
+  await expect(activities).toHaveCount(5);
+  const minutes = page.getByRole("spinbutton", { name: "Hands-on time" });
   for (let i = 0; i < 5; i++) await minutes.nth(i).fill("4");
-  await next(page);
+  await next(page, "Exceptions & quality →");
 
-  // 6 Off-plan share and optional cost
-  await page.getByRole("button", { name: "Almost never (0–1)" }).click();
-  await page.getByRole("spinbutton", { name: "Cost per hour in euros" }).fill("30");
-  await next(page, "See my result");
+  // 3 Exceptions & quality
+  await page
+    .getByRole("combobox", { name: "Of the last 10 cases, how many left the standard path?" })
+    .selectOption("1");
+  await page.getByRole("checkbox", { name: /Re-keying data/ }).check();
+  await next(page, "Cost & context →");
 
-  // Result
-  await expect(page.getByText(/hours a week/).first()).toBeVisible();
-  await expect(page.getByText("What AI can do in each step")).toBeVisible();
-  await expect(page.getByText("AI does it").first()).toBeVisible();
+  // 4 Cost & context
+  await page
+    .getByRole("spinbutton", { name: "Hourly wage of the people doing this work" })
+    .fill("30");
+  await next(page, "Generate assessment");
+
+  // Report
+  await expect(page.getByText("Recommendation", { exact: true }).first()).toBeVisible();
+  for (const title of [
+    "Executive summary",
+    "Key figures",
+    "Current process",
+    "Step assessment",
+    "Opportunity matrix",
+    "Findings",
+    "Target design",
+    "Business case",
+    "Implementation roadmap",
+    "Systems and access",
+  ]) {
+    await expect(page.getByRole("heading", { name: title })).toBeVisible();
+  }
   await expect(page.getByRole("figure", { name: /with AI agents/ })).toBeVisible();
-  await expect(page.getByText("How we worked this out")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save as PDF" })).toBeVisible();
 });
 
 test("the old planner address redirects to the analyser", async ({ page }) => {

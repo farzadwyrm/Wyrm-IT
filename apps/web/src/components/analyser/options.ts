@@ -14,69 +14,79 @@ import type {
   WaitBand,
 } from "@wyrm/agents";
 
-/** Answer options in the owner's words (research report, section 1). */
+/** Answer options for the assessment, worded for a business owner or operations lead. */
+
 export const TRIGGERS: [TriggerType, string][] = [
-  ["email", "An email arrives"],
-  ["call", "A phone call"],
-  ["web_form", "A web form or booking"],
-  ["chat", "A chat or text message"],
-  ["paper", "A paper document or post"],
-  ["schedule", "On a schedule (e.g. every Friday)"],
-  ["manual", "I or a colleague decide to start it"],
-  ["other", "Something else"],
+  ["email", "Email received"],
+  ["call", "Phone call"],
+  ["web_form", "Web form or online booking"],
+  ["chat", "Chat, SMS or WhatsApp message"],
+  ["paper", "Paper document or post"],
+  ["schedule", "Scheduled (e.g. weekly, month-end)"],
+  ["manual", "Started by staff when needed"],
+  ["other", "Other"],
 ];
 
 export const RECIPIENTS: [Recipient, string][] = [
-  ["customer", "A customer"],
-  ["supplier", "A supplier"],
-  ["team", "My team"],
-  ["authority", "An authority (tax, regulator)"],
-  ["internal", "Nobody, it's record-keeping"],
-  ["other", "Someone else"],
+  ["customer", "Customers"],
+  ["supplier", "Suppliers"],
+  ["team", "Internal team"],
+  ["authority", "Authorities (tax, regulator)"],
+  ["internal", "Records only"],
+  ["other", "Other"],
 ];
 
 export const ACTORS: [ActorType, string][] = [
-  ["owner", "Me"],
-  ["staff", "A staff member"],
-  ["customer", "The customer"],
-  ["supplier", "A supplier"],
-  ["software", "Software already does it"],
+  ["owner", "Owner / manager"],
+  ["staff", "Staff member"],
+  ["customer", "Customer"],
+  ["supplier", "Supplier"],
+  ["software", "Already automated"],
 ];
 
 export const INPUTS: [InputFormat, string][] = [
-  ["system_fields", "Already in a system, as fields"],
-  ["structured_form", "A structured web form"],
-  ["message_text", "Email or message text"],
-  ["document", "A PDF or document"],
-  ["paper_photo", "Paper or a photo"],
-  ["phone_call", "A phone call"],
-  ["in_person_physical", "In person or physical work"],
+  ["system_fields", "Structured data in a system"],
+  ["structured_form", "Structured web form"],
+  ["message_text", "Free-text email or message"],
+  ["document", "PDF or document"],
+  ["paper_photo", "Paper or photo"],
+  ["phone_call", "Phone conversation"],
+  ["in_person_physical", "In person / physical work"],
 ];
 
 export const DECISIONS: [DecisionType, string][] = [
-  ["none", "No decision"],
-  ["fixed_rule", "A fixed rule (if this, then that)"],
-  ["guided_judgement", "Judgement using guidelines or prices"],
+  ["none", "No decision (data handling)"],
+  ["fixed_rule", "Fixed rule (if X then Y)"],
+  ["guided_judgement", "Judgement within written guidelines"],
   ["experience_judgement", "Judgement from experience"],
-  ["relational_or_physical", "Needs empathy, relationships or being there"],
+  ["relational_or_physical", "Relationship, empathy or presence"],
 ];
 
 export const WAITS: [WaitBand, string][] = [
-  ["none", "No wait"],
-  ["lt_1h", "Under an hour"],
+  ["none", "None"],
+  ["lt_1h", "Under 1 hour"],
   ["same_day", "Same day"],
   ["1_3_days", "1–3 days"],
-  ["longer", "Longer"],
+  ["longer", "More than 3 days"],
+];
+
+export const FIRST_PASS: [string, string][] = [
+  ["10", "10 / 10"],
+  ["9", "9 / 10"],
+  ["8", "8 / 10"],
+  ["7", "7 / 10"],
+  ["6", "6 / 10"],
+  ["5", "5 / 10 or fewer"],
 ];
 
 export const FLAGS: [ImpactFlag, string][] = [
-  ["money", "Takes, pays or refunds money"],
-  ["external_message", "Sends something to a customer or supplier"],
-  ["commitment", "Books, orders, cancels or agrees something"],
+  ["money", "Moves money (payment, refund)"],
+  ["external_message", "Sends to customers or suppliers"],
+  ["commitment", "Commits the business (order, booking, cancellation)"],
   ["destructive_write", "Deletes or overwrites records"],
-  ["personal_data", "Uses people's personal details"],
+  ["personal_data", "Uses personal data"],
   ["sensitive_data", "Health, financial, ID or children's data"],
-  ["decision_about_person", "Decides about someone's job, pay, credit or insurance"],
+  ["decision_about_person", "Decides about a person's job, pay, credit or insurance"],
   ["safety", "Safety or emergency"],
   ["legal_statement", "Legal or tax statements"],
 ];
@@ -89,41 +99,48 @@ export const MONEY_BANDS: [MoneyBand, string][] = [
 ];
 
 export const REVERSIBILITY: [Reversibility, string][] = [
-  ["easy", "Easily undone"],
-  ["effort", "With effort or an apology"],
-  ["irreversible", "Not at all"],
+  ["easy", "Easily reversed"],
+  ["effort", "Reversible with effort or an apology"],
+  ["irreversible", "Not reversible"],
 ];
 
 export const CHANGES: [ChangeExpected, string][] = [
-  ["no", "No"],
-  ["minor", "Minor tweaks"],
-  ["some", "Some changes"],
-  ["major", "Major change (new software, rules)"],
+  ["no", "No change expected"],
+  ["minor", "Minor adjustments"],
+  ["some", "Some changes planned"],
+  ["major", "Major change (new software or rules)"],
 ];
 
 export const DOCS: [Documentation, string][] = [
-  ["nothing", "Nothing written down"],
-  ["notes", "Some notes"],
-  ["checklist", "A checklist or template"],
-  ["instructions", "Step-by-step instructions"],
+  ["nothing", "Not documented"],
+  ["notes", "Informal notes"],
+  ["checklist", "Checklist or template"],
+  ["instructions", "Step-by-step procedure"],
 ];
 
-export const PAINS: [PainTag, string][] = [
-  ["waiting", "Waiting on people"],
-  ["mistakes", "Fixing mistakes"],
-  ["retyping", "Re-typing or copying"],
-  ["chasing", "Chasing missing information"],
-  ["skilled_routine", "Skilled people doing routine work"],
-  ["too_many_checks", "Too many checks"],
+/** Lean waste probes, with what each looks like in office work. */
+export const PAINS: [PainTag, string, string][] = [
+  ["retyping", "Re-keying data", "Copying information between email, documents and systems"],
+  ["waiting", "Waiting", "Work stalls on approvals, replies or a colleague"],
+  ["mistakes", "Rework", "Errors found later and corrected"],
+  ["chasing", "Chasing information", "Inputs arrive incomplete and need follow-up"],
+  ["too_many_checks", "Over-processing", "Checks or approvals heavier than the risk"],
+  ["skilled_routine", "Under-used skills", "Senior people doing routine steps"],
+];
+
+export const CURRENCIES: [string, string][] = [
+  ["EUR", "EUR"],
+  ["GBP", "GBP"],
+  ["USD", "USD"],
 ];
 
 export const PROVENANCE_LABEL: Record<Provenance, string> = {
-  user_stated: "you said",
-  user_estimate: "you estimated",
-  ai_confirmed: "AI drafted, you confirmed",
-  ai_unconfirmed: "AI drafted",
-  default: "default",
+  user_stated: "Stated",
+  user_estimate: "Your estimate",
+  ai_confirmed: "AI-drafted, reviewed",
+  ai_unconfirmed: "AI-drafted",
+  default: "Default",
 };
 
 export const EXAMPLE_WALKTHROUGH =
-  "A supplier emails a PDF invoice to our info@ inbox.\nI open it and check it against the purchase order in our shared spreadsheet.\nI type the supplier, amounts and VAT into Xero.\nIf it's over 1,000 I ask the owner to approve it.\nI schedule the payment in the bank.";
+  "A supplier emails a PDF invoice to accounts@.\nThe office manager checks it against the purchase order in the shared spreadsheet.\nShe types the supplier, amounts and VAT into Xero.\nIf it is over 1,000 the owner approves it, usually the next day.\nShe schedules the payment in the banking app.";

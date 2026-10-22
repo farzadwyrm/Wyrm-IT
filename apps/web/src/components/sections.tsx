@@ -34,7 +34,7 @@ export function PageHeader({
   intro: string;
 }) {
   return (
-    <Container className="pt-16 pb-10 sm:pt-24">
+    <Container className="pt-16 pb-10 sm:pt-24 print:hidden">
       <Eyebrow>{eyebrow}</Eyebrow>
       <h1 className="mt-4 max-w-3xl font-display text-4xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-6xl">
         {title}
@@ -72,7 +72,7 @@ export function SectionTitle({
 /** Closing call to action used at the bottom of most pages. */
 export function CtaBand() {
   return (
-    <Container className="py-20">
+    <Container className="py-20 print:hidden">
       <div className="relative overflow-hidden rounded-3xl border border-ember/30 bg-paper-raised px-6 py-12 sm:px-12">
         <div
           aria-hidden="true"

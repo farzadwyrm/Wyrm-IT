@@ -4,7 +4,7 @@ import { LogoMark } from "./logo";
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-line">
+    <footer className="border-t border-line print:hidden">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-[2fr_1fr_1fr] sm:px-6">
         <div>
           <p className="flex items-center gap-2 font-display text-lg font-semibold">

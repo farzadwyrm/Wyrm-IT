@@ -4,6 +4,15 @@ Last updated: 2026-10-21
 
 ## Done
 
+- 2026-10-22 Workflow assessment rebuilt (`/analyse`): the six-question quiz is replaced by a
+  five-section workspace (Scope/SIPOC, current process with per-step metrics, exceptions and
+  Lean waste, cost and stability) and a consultant-style report: recommendation with
+  confidence, KPIs (hands-on vs elapsed time, activity ratio, rolled first-pass yield, FTE),
+  step assessment matrix, opportunity matrix, findings, target design with tier controls,
+  low/base/high business case, phased roadmap with exit criteria, systems and access, print
+  to PDF. Engine: `packages/agents/src/analysis/report.ts` (+ tests). UI:
+  `apps/web/src/components/analyser/`. Verified locally (unit, build, e2e desktop + phone).
+
 - 2026-10-22 "Ask your documents" internal agent (docs/plans/ask-your-documents.md): migration
   0008 (sources, passages with full-text index, question log), core `knowledge.ts` (chunking,
   search, cited answers, access per agent, setup checklist), free-model prompts, portal tabs

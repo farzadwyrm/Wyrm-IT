@@ -7,6 +7,22 @@ export {
   stepFromDraft,
 } from "./analysis/draft";
 export {
+  buildReport,
+  type Confidence,
+  type Finding,
+  HOURS_PER_FTE,
+  hoursLabel,
+  INTEGRATION_LABELS,
+  type Kpis,
+  type Phase,
+  type Report,
+  type Severity,
+  type SystemNeed,
+  VERDICT_LABELS,
+  type Verdict,
+  WAIT_LABELS,
+} from "./analysis/report";
+export {
   type Assumption,
   DEFAULTS,
   estimateSavings,

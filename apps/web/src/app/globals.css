@@ -48,3 +48,26 @@ body {
     opacity: 0;
   }
 }
+
+/* Printing (the assessment's "Save as PDF"): white paper, dark ink, no grid. */
+@media print {
+  :root {
+    color-scheme: light;
+    --color-ink: #111418;
+    --color-ink-muted: #4b5563;
+    --color-paper: #ffffff;
+    --color-paper-raised: #f4f5f7;
+    --color-line: #d7dbe0;
+  }
+  html {
+    color-scheme: light;
+  }
+  body {
+    background: #ffffff;
+  }
+  .assessment-report section,
+  .assessment-report li,
+  .assessment-report tr {
+    break-inside: avoid;
+  }
+}
