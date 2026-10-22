@@ -188,8 +188,9 @@ export function WorkflowAnalyser() {
       ? [["quality", "Share of cases that leave the standard path"] as const]
       : []),
   ];
+  // Without a volume there is no business case, so the report would mislead.
   const blocking = missing.filter(
-    ([, label]) => label === "Process name" || label === "At least two process steps",
+    ([, label]) => label !== "Share of cases that leave the standard path",
   );
   const done: Record<SectionKey, boolean> = {
     scope: input.name.trim().length >= 3 && input.volumeCount !== null,
