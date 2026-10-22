@@ -1,8 +1,9 @@
 import { createDemoGuard } from "@wyrm/ai";
 import { check } from "@wyrm/auth";
-import { handleCustomerMessage, publicAgent } from "@wyrm/core";
+import type { Policy } from "@wyrm/brain";
+import { draftPolicy, handleCustomerMessage, publicAgent } from "@wyrm/core";
 import { type NextRequest, NextResponse } from "next/server";
-import { getAccess } from "@/lib/auth";
+import { coreContext, getAccess } from "@/lib/auth";
 import { serverDb } from "@/lib/db";
 import { modelDeps } from "@/lib/models";
 
@@ -21,7 +22,13 @@ export async function POST(request: NextRequest) {
   const db = serverDb();
   if (!db) return json({ error: "unavailable" }, 503);
 
-  let body: { agentId?: unknown; conversationId?: unknown; message?: unknown; test?: unknown };
+  let body: {
+    agentId?: unknown;
+    conversationId?: unknown;
+    message?: unknown;
+    test?: unknown;
+    draft?: unknown;
+  };
   try {
     body = await request.json();
   } catch {
@@ -42,6 +49,8 @@ export async function POST(request: NextRequest) {
 
   // Test mode only for signed-in staff who may use this agent.
   let test = false;
+  // "Try your draft": the unpublished settings, for staff who may see them.
+  let policy: Policy | null = null;
   if (body.test === true) {
     const access = await getAccess();
     const agent = await publicAgent(db, agentId);
@@ -54,6 +63,13 @@ export async function POST(request: NextRequest) {
         : check(actor, "agents.use", { tenantId: agent.tenantId, agentId }).allowed);
     if (!permitted) return json({ error: "forbidden" }, 403);
     test = true;
+    if (body.draft === true && access && agent) {
+      try {
+        policy = await draftPolicy(await coreContext(access), agent.tenantId, agentId);
+      } catch {
+        return json({ error: "forbidden" }, 403);
+      }
+    }
   }
 
   try {
@@ -63,6 +79,7 @@ export async function POST(request: NextRequest) {
       text: message,
       channel: "web_chat",
       test,
+      policy,
     });
     guard.record(ip, 0);
     if (result.status !== "ok") return json({ error: "unavailable" }, 404);

@@ -28,10 +28,13 @@ const ERRORS: Record<string, string> = {
 export function ChatBox({
   agentId,
   test = false,
+  draft = false,
   title,
 }: {
   agentId: string;
   test?: boolean;
+  /** Test chats only: answer with the unpublished settings. */
+  draft?: boolean;
   title: string;
 }) {
   const [lines, setLines] = useState<Line[]>([]);
@@ -52,7 +55,7 @@ export function ChatBox({
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentId, conversationId, message, test }),
+        body: JSON.stringify({ agentId, conversationId, message, test, draft: test && draft }),
       });
       const data = (await response.json()) as {
         reply?: string;
@@ -86,7 +89,22 @@ export function ChatBox({
       aria-label={title}
       className="flex flex-col rounded-2xl border border-line bg-paper-raised/80"
     >
-      <h2 className="border-b border-line px-4 py-3 font-semibold">{title}</h2>
+      <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
+        <h2 className="font-semibold">{title}</h2>
+        {test && lines.length > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              setLines([]);
+              setConversationId(null);
+              setError(null);
+            }}
+            className="text-sm font-semibold text-ember hover:underline"
+          >
+            Restart
+          </button>
+        )}
+      </div>
       <ol aria-live="polite" className="flex max-h-96 min-h-40 flex-col gap-2 overflow-y-auto p-4">
         {lines.length === 0 && <li className="text-sm text-ink-muted">Say hello to start.</li>}
         {lines.map((line, i) => (

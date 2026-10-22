@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ReceptionistDemo } from "@/components/receptionist/receptionist-demo";
 import { Container, CtaBand, PageHeader } from "@/components/sections";
+import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "AI Receptionist demo",
@@ -54,6 +55,22 @@ export default function ReceptionistPage() {
               <li>Shows a confirmation card and books only after you clearly say yes.</li>
               <li>Asks only for a first name: no phone, email or health details.</li>
             </ul>
+          </div>
+
+          <div className="rounded-2xl border border-ember/40 bg-ember/5 p-5 text-sm text-ink-muted">
+            <h2 className="font-display text-lg font-semibold text-ink">
+              Your business, your answers
+            </h2>
+            <p className="mt-2">
+              Clients set up their own agent in the Wyrm portal: services and prices, opening hours,
+              questions and answers, rules and booking steps. They try the changes in a test chat,
+              then publish when they're happy.
+            </p>
+            <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-semibold">
+              <a href={`${SITE.portalUrl}/login`} className="text-ember hover:underline">
+                Clients: sign in to set up your agent →
+              </a>
+            </p>
           </div>
 
           <div className="rounded-2xl border border-line p-5 text-sm text-ink-muted">

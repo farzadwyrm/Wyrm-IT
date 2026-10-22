@@ -33,6 +33,16 @@ const lines = (text: string) =>
     .map((l) => l.trim())
     .filter(Boolean);
 
+/** A list posted as JSON by the row editors; anything malformed counts as an empty list. */
+function jsonList(form: FormData, name: string): unknown[] {
+  try {
+    const value: unknown = JSON.parse(field(form, name, 60_000) || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Runs a Studio change and goes back to the same tab with a notice or error code. */
 async function studio(
   form: FormData,
@@ -71,7 +81,6 @@ export async function saveFactsAction(form: FormData) {
         ? null
         : { open: field(form, `${day}_open`, 5), close: field(form, `${day}_close`, 5) };
     }
-    const split = (l: string) => l.split("|").map((x) => x.trim());
     return saveProfile(
       p.ctx,
       p.tenantId,
@@ -79,15 +88,10 @@ export async function saveFactsAction(form: FormData) {
         summary: field(form, "summary", 600),
         timezone: field(form, "timezone", 60),
         hours,
-        services: lines(field(form, "services", 6000)).map((l) => {
-          const [name = "", price = "", duration = ""] = split(l);
-          return { name, price, duration };
-        }),
-        locations: lines(field(form, "locations", 2000)).map((address) => ({ address })),
-        faqs: lines(field(form, "faqs", 12000)).map((l) => {
-          const [question = "", ...rest] = split(l);
-          return { question, answer: rest.join(" | ") };
-        }),
+        // Row editors post JSON lists; saveProfile cleans and caps every value.
+        services: jsonList(form, "services_json"),
+        locations: jsonList(form, "locations_json"),
+        faqs: jsonList(form, "faqs_json"),
         other: field(form, "other", 2000),
       },
       field(form, "note", 500),

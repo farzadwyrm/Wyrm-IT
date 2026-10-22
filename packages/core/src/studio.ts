@@ -114,7 +114,14 @@ export function cleanProfile(input: unknown): BusinessProfile {
     hours,
     services: list(p.services, 50, (s) => {
       const name = clip(s.name, 80);
-      return name ? { name, price: clip(s.price, 40), duration: clip(s.duration, 40) } : null;
+      if (!name) return null;
+      const description = clip(s.description, 300);
+      return {
+        name,
+        price: clip(s.price, 40),
+        duration: clip(s.duration, 40),
+        ...(description ? { description } : {}),
+      };
     }),
     locations: list(p.locations, 10, (l) => {
       const address = clip(l.address, 200);
@@ -566,6 +573,21 @@ export async function saveLimits(
   return limits;
 }
 
+/** What publishing would make live: switched-off rules and procedures are left out. */
+const snapshotOf = (policy: Policy) => ({
+  version: 2,
+  profile: policy.profile,
+  rules: policy.rules.filter((r) => r.enabled),
+  procedures: policy.procedures.filter((p) => p.enabled),
+  limits: policy.limits,
+});
+
+/** The draft as it would run if published now (for "try your draft" chats). */
+export async function draftPolicy(ctx: Ctx, tenantId: string, agentId: string): Promise<Policy> {
+  const { policy } = await getStudio(ctx, tenantId, agentId);
+  return policyFromConfig(snapshotOf(policy));
+}
+
 /** Publishes the draft policy: the live agent uses it from the next message. */
 export async function publishPolicy(
   ctx: Ctx,
@@ -580,13 +602,7 @@ export async function publishPolicy(
   agentGate(ctx, "agents.configure", input.tenantId, input.agentId);
   const n = requireNote(input.note);
   const { policy, conflicts } = await getStudio(ctx, input.tenantId, input.agentId);
-  const snapshot = {
-    version: 2,
-    profile: policy.profile,
-    rules: policy.rules.filter((r) => r.enabled),
-    procedures: policy.procedures.filter((p) => p.enabled),
-    limits: policy.limits,
-  };
+  const snapshot = snapshotOf(policy);
   let tests: Awaited<ReturnType<typeof runTests>> | null = null;
   if (input.gate) {
     tests = await runTests(ctx, {

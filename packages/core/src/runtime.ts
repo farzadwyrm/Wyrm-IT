@@ -242,6 +242,8 @@ export interface TurnInput {
   channel: "web_chat" | "sms" | "email" | "whatsapp" | "voice" | "form";
   /** Staff trying the agent from the portal. */
   test?: boolean;
+  /** Test chats only: answer with this (unpublished) policy instead of the live one. */
+  policy?: Policy | null;
   customerLabel?: string;
   now?: Date;
 }
@@ -259,7 +261,20 @@ export async function handleCustomerMessage(
   const runtime = await loadRuntime(db, input.agentId, now, input.test ?? false);
   if (!runtime) return { status: "unavailable" };
   if (runtime.entry.status !== "live" && !input.test) return { status: "unavailable" };
-  const { tenantId, state } = runtime;
+  const { tenantId } = runtime;
+  // A draft policy is only ever used for staff test chats, never for customers.
+  const draft = input.test ? (input.policy ?? null) : null;
+  const state = draft
+    ? {
+        ...runtime.state,
+        agents: runtime.state.agents.map((a) =>
+          a.id === input.agentId && draft.procedures.length
+            ? { ...a, intents: policyIntents(draft) }
+            : a,
+        ),
+      }
+    : runtime.state;
+  const policyFor = (id: string) => (draft && id === input.agentId ? draft : runtime.policyFor(id));
   const text = input.text.trim().slice(0, 1000);
 
   // Continue the conversation only if it belongs to this organisation and is recent.
@@ -311,7 +326,7 @@ export async function handleCustomerMessage(
   ]);
   const turn = await runTurn({
     state,
-    policyFor: runtime.policyFor,
+    policyFor,
     knowledgeFor: runtime.knowledgeFor,
     deps,
     channel: input.channel,
@@ -357,7 +372,8 @@ export async function handleCustomerMessage(
   }
 
   // A confirmed booking goes straight into the connected calendar when the slot is free.
-  if (turn.booking && deps.calendar) {
+  // Never from a draft chat: the draft's services and hours are not live yet.
+  if (turn.booking && deps.calendar && !draft) {
     const policy = runtime.policyFor(turn.booking.agentId);
     const f = turn.booking.fields;
     const timeZone = policy.profile.timezone || "Europe/Lisbon";

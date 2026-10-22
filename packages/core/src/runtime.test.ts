@@ -4,6 +4,7 @@ import type { Classifier } from "@wyrm/brain";
 import { drizzle } from "drizzle-orm/pglite";
 import { beforeAll, describe, expect, it } from "vitest";
 import { type Answer, handleCustomerMessage, type RuntimeDeps } from "./runtime";
+import { policyFromConfig } from "./studio";
 
 /** A customer message end to end: brain, agent answer, and everything recorded. Fake models only. */
 
@@ -531,6 +532,39 @@ describe("Agent Studio policies at runtime", () => {
     });
     expect(d.seen[0]?.instructions).toContain('PROCEDURE "Take a message"');
     expect(d.seen[0]?.instructions).toContain("closed right now");
+  });
+
+  it("answers staff test chats from the draft, and customers only from the live version", async () => {
+    const draft = policyFromConfig({
+      ...policy,
+      profile: {
+        ...policy.profile,
+        services: [{ name: "Whitening", price: "from 250 EUR", description: "Takes one hour." }],
+      },
+    });
+    const monday = new Date("2026-10-19T10:00:00Z");
+    const tester = studioDeps("prices", [{ reply: "Whitening is from 250 EUR." }]);
+    await handleCustomerMessage(db, tester, {
+      agentId: STUDIO,
+      text: "How much is whitening?",
+      channel: "web_chat",
+      test: true,
+      policy: draft,
+      now: monday,
+    });
+    expect(tester.seen[0]?.instructions).toContain(
+      "Service: Whitening, from 250 EUR. Takes one hour.",
+    );
+
+    const customer = studioDeps("prices", [{ reply: "Let me check." }]);
+    await handleCustomerMessage(db, customer, {
+      agentId: STUDIO,
+      text: "How much is whitening?",
+      channel: "web_chat",
+      policy: draft,
+      now: monday,
+    });
+    expect(customer.seen[0]?.instructions).not.toContain("Whitening");
   });
 });
 

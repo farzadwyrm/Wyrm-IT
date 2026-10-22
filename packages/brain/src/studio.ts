@@ -13,7 +13,7 @@ export interface BusinessProfile {
   timezone?: string;
   /** "09:00"–"17:30" per day; missing or null = closed. */
   hours?: Partial<Record<Day, { open: string; close: string } | null>>;
-  services?: { name: string; price?: string; duration?: string }[];
+  services?: { name: string; price?: string; duration?: string; description?: string }[];
   locations?: { name?: string; address: string }[];
   faqs?: { question: string; answer: string }[];
   other?: string;
@@ -449,7 +449,7 @@ function factsText(p: BusinessProfile): string {
   }
   for (const s of p.services ?? [])
     lines.push(
-      `Service: ${s.name}${s.price ? `, ${s.price}` : ""}${s.duration ? `, ${s.duration}` : ""}.`,
+      `Service: ${s.name}${s.price ? `, ${s.price}` : ""}${s.duration ? `, ${s.duration}` : ""}.${s.description ? ` ${s.description}` : ""}`,
     );
   for (const l of p.locations ?? [])
     lines.push(`Location: ${l.name ? `${l.name}, ` : ""}${l.address}.`);

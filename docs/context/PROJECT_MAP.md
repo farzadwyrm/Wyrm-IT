@@ -4,6 +4,13 @@ Last updated: 2026-10-21
 
 ## Done
 
+- 2026-10-22 Customers customise their own agent: Studio "Business info" now has row editors for
+  services and prices (with optional details), questions and locations, plus starter examples by
+  business type (`studio/profile-lists.tsx`, posted as JSON, cleaned by `cleanProfile`). A "Try
+  your draft" chat sits beside it: `/api/chat` with `draft: true` loads `draftPolicy()` for staff
+  only, and `handleCustomerMessage` uses `input.policy` only when `test` is set and never books
+  from it (test in `runtime.test.ts`). Website `/receptionist` links clients to the portal. Not
+  yet tried signed in on live (no customer staff login for the demo client).
 - 2026-10-22 Workflow assessment rebuilt (`/analyse`): the six-question quiz is replaced by a
   five-section workspace (Scope/SIPOC, current process with per-step metrics, exceptions and
   Lean waste, cost and stability) and a consultant-style report: recommendation with

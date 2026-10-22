@@ -14,6 +14,7 @@ import {
   saveProcedureAction,
   saveRuleAction,
 } from "./actions";
+import { ProfileLists } from "./profile-lists";
 import { TestsPanel } from "./tests-panel";
 
 export const metadata: Metadata = { title: "Agent Studio" };
@@ -143,119 +144,112 @@ export default async function StudioPage({
       )}
 
       {tab === "facts" && (
-        <form action={saveFactsAction} className="space-y-5">
-          {hidden}
-          <fieldset disabled={!canEdit} className="space-y-5">
-            <Card className="space-y-3">
-              <h2 className="font-display text-xl font-semibold">About the business</h2>
-              <p className="text-sm text-ink-muted">
-                Facts only. Put instructions ("always…", "never…") in Rules.
-              </p>
-              <textarea
-                name="summary"
-                rows={3}
-                maxLength={600}
-                defaultValue={p.summary ?? ""}
-                className={input}
-                placeholder="e.g. Family dental practice in the city centre, 3 dentists."
-              />
-              <label className="block max-w-xs">
-                <span className="text-sm font-semibold">Time zone</span>
-                <input
-                  name="timezone"
-                  defaultValue={p.timezone ?? "Europe/Lisbon"}
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <form action={saveFactsAction} className="min-w-0 space-y-5">
+            {hidden}
+            <fieldset disabled={!canEdit} className="space-y-5">
+              <Card className="space-y-3">
+                <h2 className="font-display text-xl font-semibold">About the business</h2>
+                <p className="text-sm text-ink-muted">
+                  Facts only. Put instructions ("always…", "never…") in Rules.
+                </p>
+                <textarea
+                  name="summary"
+                  rows={3}
+                  maxLength={600}
+                  defaultValue={p.summary ?? ""}
                   className={input}
+                  placeholder="e.g. Family dental practice in the city centre, 3 dentists."
                 />
-              </label>
-            </Card>
-            <Card className="space-y-3">
-              <h2 className="font-display text-xl font-semibold">Opening hours</h2>
-              <div className="grid gap-2">
-                {DAYS.map(([key, label]) => {
-                  const slot = p.hours?.[key];
-                  return (
-                    <div
-                      key={key}
-                      className="grid grid-cols-[7rem_1fr_1fr_auto] items-center gap-2"
-                    >
-                      <span className="text-sm font-semibold">{label}</span>
-                      <input
-                        type="time"
-                        name={`${key}_open`}
-                        defaultValue={slot?.open ?? "09:00"}
-                        aria-label={`${label} opens`}
-                        className={input}
-                      />
-                      <input
-                        type="time"
-                        name={`${key}_close`}
-                        defaultValue={slot?.close ?? "17:00"}
-                        aria-label={`${label} closes`}
-                        className={input}
-                      />
-                      <label className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" name={`${key}_closed`} defaultChecked={!slot} />{" "}
-                        Closed
-                      </label>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-            <Card className="space-y-3">
-              <h2 className="font-display text-xl font-semibold">Services and prices</h2>
-              <p className="text-sm text-ink-muted">One per line: name | price | duration</p>
-              <textarea
-                name="services"
-                rows={6}
-                defaultValue={(p.services ?? [])
-                  .map((s) => [s.name, s.price, s.duration].filter(Boolean).join(" | "))
-                  .join("\n")}
-                className={`${input} font-mono text-sm`}
-                placeholder="Check-up and clean | 65 EUR | 30 min"
-              />
-            </Card>
-            <Card className="space-y-3">
-              <h2 className="font-display text-xl font-semibold">Locations</h2>
-              <textarea
-                name="locations"
-                rows={2}
-                defaultValue={(p.locations ?? []).map((x) => x.address).join("\n")}
-                className={input}
-                placeholder="One address per line"
-              />
-            </Card>
-            <Card className="space-y-3">
-              <h2 className="font-display text-xl font-semibold">Frequent questions</h2>
-              <p className="text-sm text-ink-muted">One per line: question | answer</p>
-              <textarea
-                name="faqs"
-                rows={6}
-                defaultValue={(p.faqs ?? []).map((f) => `${f.question} | ${f.answer}`).join("\n")}
-                className={`${input} font-mono text-sm`}
-                placeholder="Is there parking? | Yes, free parking behind the building."
-              />
-              <textarea
-                name="other"
-                rows={3}
-                maxLength={2000}
-                defaultValue={p.other ?? ""}
-                className={input}
-                placeholder="Anything else the agent should know"
-              />
-            </Card>
-            {canEdit && (
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="min-w-64 flex-1">
-                  <Note placeholder="e.g. New Saturday hours" />
+                <label className="block max-w-xs">
+                  <span className="text-sm font-semibold">Time zone</span>
+                  <input
+                    name="timezone"
+                    defaultValue={p.timezone ?? "Europe/Lisbon"}
+                    className={input}
+                  />
+                </label>
+              </Card>
+              <Card className="space-y-3">
+                <h2 className="font-display text-xl font-semibold">Opening hours</h2>
+                <div className="grid gap-2">
+                  {DAYS.map(([key, label]) => {
+                    const slot = p.hours?.[key];
+                    return (
+                      <div
+                        key={key}
+                        className="grid grid-cols-[7rem_1fr_1fr_auto] items-center gap-2"
+                      >
+                        <span className="text-sm font-semibold">{label}</span>
+                        <input
+                          type="time"
+                          name={`${key}_open`}
+                          defaultValue={slot?.open ?? "09:00"}
+                          aria-label={`${label} opens`}
+                          className={input}
+                        />
+                        <input
+                          type="time"
+                          name={`${key}_close`}
+                          defaultValue={slot?.close ?? "17:00"}
+                          aria-label={`${label} closes`}
+                          className={input}
+                        />
+                        <label className="flex items-center gap-2 text-sm">
+                          <input type="checkbox" name={`${key}_closed`} defaultChecked={!slot} />{" "}
+                          Closed
+                        </label>
+                      </div>
+                    );
+                  })}
                 </div>
-                <button type="submit" className={secondary}>
-                  Save facts
-                </button>
-              </div>
-            )}
-          </fieldset>
-        </form>
+              </Card>
+              <ProfileLists
+                services={(p.services ?? []).map((s) => ({
+                  name: s.name,
+                  price: s.price ?? "",
+                  duration: s.duration ?? "",
+                  description: s.description ?? "",
+                }))}
+                faqs={(p.faqs ?? []).map((f) => ({ question: f.question, answer: f.answer }))}
+                locations={(p.locations ?? []).map((l) => ({
+                  name: l.name ?? "",
+                  address: l.address,
+                }))}
+              />
+              <Card className="space-y-3">
+                <h2 className="font-display text-xl font-semibold">Anything else</h2>
+                <textarea
+                  name="other"
+                  rows={3}
+                  maxLength={2000}
+                  defaultValue={p.other ?? ""}
+                  className={input}
+                  placeholder="Anything else the agent should know"
+                />
+              </Card>
+              {canEdit && (
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="min-w-64 flex-1">
+                    <Note placeholder="e.g. New Saturday hours" />
+                  </div>
+                  <button type="submit" className={secondary}>
+                    Save facts
+                  </button>
+                </div>
+              )}
+            </fieldset>
+          </form>
+          {page.can("agents.use", agent.id) && (
+            <aside className="space-y-2 xl:sticky xl:top-4 xl:self-start">
+              <ChatBox agentId={agent.id} test draft title="Try your draft" />
+              <p className="text-xs text-ink-muted">
+                Answers from your saved settings, before you publish. Save, then ask about a price
+                or your hours. Nothing is booked or sent from this chat.
+              </p>
+            </aside>
+          )}
+        </div>
       )}
 
       {tab === "rules" && (
