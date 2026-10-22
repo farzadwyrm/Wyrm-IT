@@ -71,6 +71,7 @@ export const WAITS: [WaitBand, string][] = [
 ];
 
 export const FIRST_PASS: [string, string][] = [
+  ["", "Not measured"],
   ["10", "10 / 10"],
   ["9", "9 / 10"],
   ["8", "8 / 10"],

@@ -180,8 +180,8 @@ export function StepEditor({
             label="Right first time"
             hint="Out of the last 10 cases"
             options={FIRST_PASS}
-            value={String(Math.max(5, step.firstPassOutOf10 ?? 9))}
-            onChange={(v) => set({ firstPassOutOf10: Number(v) })}
+            value={step.firstPassOutOf10 === null ? "" : String(Math.max(5, step.firstPassOutOf10))}
+            onChange={(v) => set({ firstPassOutOf10: v === "" ? null : Number(v) })}
           />
           <label className="flex cursor-pointer items-start gap-2.5 self-end rounded-lg border border-line px-3 py-2 text-sm has-[:checked]:border-ember/70 has-[:checked]:bg-ember/5">
             <input

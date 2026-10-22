@@ -106,10 +106,16 @@ export function analyseWorkflow(w: WorkflowInput): Analysis {
           break;
         case "agent_check":
           if (score.tier >= 3) {
-            steps.push({ kind: "agent", label: s.name, detail: "AI agent prepares the action." });
+            steps.push(
+              score.engine === "code"
+                ? { kind: "tool", label: s.name, detail: "Integration prepares the action." }
+                : { kind: "agent", label: s.name, detail: "AI agent prepares the action." },
+            );
             steps.push({
               kind: "human",
-              label: `Approve: ${s.name.toLowerCase()}`,
+              label: /^(approve|review|check|sign|confirm)/i.test(s.name)
+                ? `${s.name} (person decides)`
+                : `Approve: ${s.name.charAt(0).toLowerCase()}${s.name.slice(1)}`,
               detail: TIER_CONTROLS[3].humanCheck,
             });
           } else {

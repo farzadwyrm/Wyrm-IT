@@ -3,13 +3,14 @@
 import {
   type Agent,
   type Analysis,
-  CLASS_LABELS,
   type Finding,
   INTEGRATION_LABELS,
   QUADRANT_LABELS,
   type Quadrant,
   type Report,
+  STEP_VERDICT_LABELS,
   type StepClass,
+  stepVerdict,
   TIER_CONTROLS,
   TIER_LABELS,
   type Tier,
@@ -21,7 +22,7 @@ import {
 import Link from "next/link";
 import { type ReactNode, type RefObject, useState } from "react";
 import { WorkflowDiagram } from "@/components/workflow-diagram";
-import { PROVENANCE_LABEL } from "./options";
+import { ACTORS, PROVENANCE_LABEL } from "./options";
 
 const CLASS_STYLE: Record<StepClass, string> = {
   automate: "border-node-trigger/50 text-node-trigger",
@@ -102,9 +103,7 @@ function markdown(input: WorkflowInput, a: Analysis, r: Report): string {
     ...input.steps.map((s, i) => {
       const sc = a.scores[i];
       const sv = a.savings.steps[i];
-      const verdict = sc?.alreadyAutomated
-        ? "Already automated"
-        : CLASS_LABELS[sc?.finalClass ?? "human"];
+      const verdict = sc ? STEP_VERDICT_LABELS[stepVerdict(sc)] : "—";
       return `| ${i + 1} | ${s.name} | ${verdict} | Tier ${sc?.tier ?? 1} | ${n(sv?.baselineHoursYear ?? 0)} | ${n(sv?.savedHoursYear.base ?? 0)} |`;
     }),
     "",
@@ -229,8 +228,8 @@ export function AssessmentReport({
           />
           <Kpi
             label="Right first time"
-            value={pct(k.rolledFirstPassYield)}
-            note="All steps, rolled yield"
+            value={k.firstPassKnown ? pct(k.rolledFirstPassYield) : "—"}
+            note={k.firstPassKnown ? "All steps, rolled yield" : "Not measured"}
           />
           <Kpi
             label="Exception rate"
@@ -292,7 +291,9 @@ export function AssessmentReport({
                     {s.name}
                     {s.rekeying && <span className="ml-2 text-xs text-node-tool">re-keyed</span>}
                   </td>
-                  <td className={`${td} text-ink-muted`}>{s.actorRole ?? s.actorType}</td>
+                  <td className={`${td} text-ink-muted`}>
+                    {s.actorRole ?? ACTORS.find(([a]) => a === s.actorType)?.[1]}
+                  </td>
                   <td className={`${td} text-ink-muted`}>{s.tools.join(", ") || "—"}</td>
                   <td className={`${td} text-right tabular-nums`}>
                     {s.touchMinutes === null ? (
@@ -302,7 +303,9 @@ export function AssessmentReport({
                     )}
                   </td>
                   <td className={`${td} text-ink-muted`}>{WAIT_LABELS[s.waitBand]}</td>
-                  <td className={`${td} text-right tabular-nums`}>{s.firstPassOutOf10 ?? 9}/10</td>
+                  <td className={`${td} text-right tabular-nums`}>
+                    {s.firstPassOutOf10 === null ? "—" : `${s.firstPassOutOf10}/10`}
+                  </td>
                   <td className={`${td} text-right tabular-nums`}>
                     {n(savings.steps[i]?.baselineHoursYear ?? 0)}
                   </td>
@@ -379,7 +382,7 @@ export function AssessmentReport({
                             : CLASS_STYLE[sc.finalClass]
                         }`}
                       >
-                        {sc.alreadyAutomated ? "Already automated" : CLASS_LABELS[sc.finalClass]}
+                        {STEP_VERDICT_LABELS[stepVerdict(sc)]}
                       </span>
                     </td>
                     <td className={`${td} text-ink-muted`}>{ENGINE_LABEL[sc.engine]}</td>

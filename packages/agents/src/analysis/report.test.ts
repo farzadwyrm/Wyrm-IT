@@ -108,6 +108,31 @@ describe("buildReport", () => {
     expect(report(invoices()).findings[0]?.severity).toBe("high");
   });
 
+  it("doesn't invent problems from unanswered questions", () => {
+    // Eight steps with no right-first-time answer must not look like a broken process.
+    const w = invoices({}, [
+      ...Array.from({ length: 8 }, (_, i) =>
+        step({ id: `n${i}`, name: `Step ${i + 1}`, firstPassOutOf10: null }),
+      ),
+    ]);
+    const r = report(w);
+    expect(r.kpis.firstPassKnown).toBe(false);
+    expect(r.verdict).not.toBe("fix_first");
+    expect(r.findings.map((f) => f.id)).not.toContain("rework");
+    expect(r.roadmap[0]?.name).toBe("Pilot in shadow mode");
+  });
+
+  it("treats an owner's money approval as a control, not routine work", () => {
+    const ids = report(invoices()).findings.map((f) => f.id);
+    expect(ids).not.toContain("skilled_routine");
+  });
+
+  it("describes steps in words that match their verdict", () => {
+    const text = report(invoices()).summary[1] ?? "";
+    expect(text).toContain("with a person checking");
+    expect(text).not.toMatch(/\bai agent\b/);
+  });
+
   it("says fix the process first when most cases need correcting", () => {
     const w = invoices();
     w.steps = w.steps.map((s) => ({ ...s, firstPassOutOf10: 6 }));

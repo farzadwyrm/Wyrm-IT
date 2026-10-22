@@ -165,7 +165,8 @@ describe("analyseWorkflow", () => {
     const a = analyseWorkflow(workflow(steps));
     const labels = a.toBe?.steps.map((s) => `${s.kind}:${s.label}`) ?? [];
     expect(labels[0]).toBe("trigger:Email arrives");
-    expect(labels).toContain("human:Approve: approve payment");
+    expect(labels).toContain("human:Approve payment (person decides)");
+    expect(labels.some((l) => l.includes("Approve: approve"))).toBe(false);
     expect(a.maxTier).toBe(3);
   });
 

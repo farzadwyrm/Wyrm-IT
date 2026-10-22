@@ -1,10 +1,11 @@
 import type { Analysis } from "./analyse";
 import { itemsPerWeek, type Range } from "./savings";
 import {
-  CLASS_LABELS,
   type IntegrationAccess,
   integrationAccess,
   type StepClass,
+  type StepVerdict,
+  stepVerdict,
   TIER_CONTROLS,
   type Tier,
 } from "./score";
@@ -54,6 +55,17 @@ export const WAIT_LABELS: Record<WaitBand, string> = {
   longer: "> 3 days",
 };
 
+/** How each step verdict reads inside a sentence. */
+const VERDICT_PHRASES: Record<StepVerdict, string> = {
+  agent_sampled: "run by an AI agent with sampled review",
+  agent_checked: "run by an AI agent with a person checking",
+  integration: "automated by an integration",
+  approval: "automated with a person approving each action",
+  assist: "AI-assisted",
+  human: "kept with a person",
+  existing: "already automated",
+};
+
 /** Productive hours in a full-time year, for FTE equivalents. */
 export const HOURS_PER_FTE = 1650;
 
@@ -66,6 +78,8 @@ export interface Kpis {
   /** Hands-on time ÷ elapsed time: low means work mostly waits. */
   activityRatio: number | null;
   rolledFirstPassYield: number;
+  /** True when at least one step has a reported right-first-time rate. */
+  firstPassKnown: boolean;
   exceptionRate: number | null;
   baselineHoursYear: number;
   baselineFte: number;
@@ -160,6 +174,7 @@ function kpis(w: WorkflowInput, a: Analysis): Kpis {
     leadTimeHours: r1(lead),
     activityRatio: lead > 0 ? touch / 60 / lead : null,
     rolledFirstPassYield: a.gates.rolledFirstPassYield,
+    firstPassKnown: w.steps.some((s) => s.firstPassOutOf10 !== null),
     exceptionRate: w.exceptionsOutOf10 === null ? null : w.exceptionsOutOf10 / 10,
     baselineHoursYear: baseline,
     baselineFte: fte(baseline),
@@ -204,8 +219,8 @@ function findings(w: WorkflowInput, a: Analysis, k: Kpis): Finding[] {
     });
   }
 
-  const rework = w.steps.filter((s) => (s.firstPassOutOf10 ?? 9) <= 7);
-  if (rework.length || k.rolledFirstPassYield < 0.7) {
+  const rework = w.steps.filter((s) => s.firstPassOutOf10 !== null && s.firstPassOutOf10 <= 7);
+  if (rework.length || (k.firstPassKnown && k.rolledFirstPassYield < 0.7)) {
     out.push({
       id: "rework",
       severity: k.rolledFirstPassYield < 0.5 ? "high" : "medium",
@@ -225,9 +240,13 @@ function findings(w: WorkflowInput, a: Analysis, k: Kpis): Finding[] {
     });
   }
 
+  // Approvals of money or commitments are controls, not routine work.
+  const tierOf = (s: StepInput) => a.scores[w.steps.indexOf(s)]?.tier ?? 1;
   const skilled = human.filter(
     (s) =>
-      s.actorType === "owner" && (s.decisionType === "none" || s.decisionType === "fixed_rule"),
+      s.actorType === "owner" &&
+      (s.decisionType === "none" || s.decisionType === "fixed_rule") &&
+      tierOf(s) < 3,
   );
   if (skilled.length || w.painTags.includes("skilled_routine")) {
     const h = skilled.reduce((t, s) => t + hoursOf(s), 0);
@@ -441,9 +460,11 @@ function systems(w: WorkflowInput): SystemNeed[] {
 
 function summary(w: WorkflowInput, a: Analysis, k: Kpis, headline: string): string[] {
   const name = w.name.trim() || "This process";
-  const classCounts = (Object.keys(k.stepsByClass) as StepClass[])
-    .filter((c) => k.stepsByClass[c] > 0)
-    .map((c) => `${k.stepsByClass[c]} ${CLASS_LABELS[c].toLowerCase()}`)
+  const counts = new Map<StepVerdict, number>();
+  for (const sc of a.scores) counts.set(stepVerdict(sc), (counts.get(stepVerdict(sc)) ?? 0) + 1);
+  const classCounts = (Object.keys(VERDICT_PHRASES) as StepVerdict[])
+    .filter((v) => counts.get(v))
+    .map((v) => `${counts.get(v)} ${VERDICT_PHRASES[v]}`)
     .join(", ");
   const s = a.savings.savedHoursYear;
   const value = a.savings.valueYear;

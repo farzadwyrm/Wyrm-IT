@@ -268,13 +268,51 @@ export function scoreStep(workflow: WorkflowInput, step: StepInput): StepScore {
           ? "agent_check"
           : "assist";
   let finalClass = minClass(capability, cap);
-  if (llmRule4 && tier === 1) finalClass = "automate";
+  if (llmRule4 && tier === 1) {
+    finalClass = "automate";
+    reason =
+      "Unstructured input with clear rules and low consequence: an AI agent runs it, results sampled.";
+  }
   if (finalClass === "human") engine = "person";
   if (CLASS_RANK[finalClass] < CLASS_RANK[capability]) {
     reason += ` Capped by risk (${TIER_LABELS[tier]}).`;
   }
 
   return { ...base, capability, finalClass, engine, alreadyAutomated: false, reason };
+}
+
+/** What the owner sees per step: the class combined with who runs it. */
+export type StepVerdict =
+  | "integration"
+  | "agent_sampled"
+  | "agent_checked"
+  | "approval"
+  | "assist"
+  | "human"
+  | "existing";
+
+export const STEP_VERDICT_LABELS: Record<StepVerdict, string> = {
+  integration: "Automate (integration)",
+  agent_sampled: "AI agent, sampled",
+  agent_checked: "AI agent + human check",
+  approval: "Automate with approval",
+  assist: "AI assists a person",
+  human: "Keep human",
+  existing: "Already automated",
+};
+
+export function stepVerdict(score: StepScore): StepVerdict {
+  if (score.alreadyAutomated) return "existing";
+  switch (score.finalClass) {
+    case "automate":
+      return score.engine === "code" ? "integration" : "agent_sampled";
+    case "agent_check":
+      return score.engine === "code" ? "approval" : "agent_checked";
+    case "assist":
+      return "assist";
+    default:
+      return "human";
+  }
 }
 
 export interface Gates {
@@ -286,7 +324,8 @@ export interface Gates {
 }
 
 export function gates(workflow: WorkflowInput): Gates {
-  const rfy = workflow.steps.reduce((p, s) => p * ((s.firstPassOutOf10 ?? 9) / 10), 1);
+  // Only reported error rates count here; an unanswered step is not assumed to fail.
+  const rfy = workflow.steps.reduce((p, s) => p * ((s.firstPassOutOf10 ?? 10) / 10), 1);
   return {
     defer: workflow.changeExpected === "major",
     fixFirst: rfy < 0.5,
