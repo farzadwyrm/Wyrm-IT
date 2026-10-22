@@ -260,10 +260,10 @@ export function WorkflowAnalyser() {
   const meta = SECTIONS[index] ?? SECTIONS[0];
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[230px_minmax(0,1fr)]">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[230px_minmax(0,1fr)]">
       <nav
         aria-label="Assessment sections"
-        className="lg:sticky lg:top-24 lg:self-start print:hidden"
+        className="min-w-0 lg:sticky lg:top-24 lg:self-start print:hidden"
       >
         <ol className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
           {SECTIONS.map((s, i) => {
