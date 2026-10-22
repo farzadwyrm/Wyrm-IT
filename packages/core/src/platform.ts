@@ -177,10 +177,10 @@ export async function customerHealth(ctx: Ctx, now = new Date()): Promise<Custom
     .toISOString()
     .slice(0, 10);
   const n = (filter?: SQL) => sql<number>`count(*) filter (where ${filter ?? sql`true`})::int`;
-  // One query at a time (the pooled connection is small); a slow step is logged by name.
+  // One query at a time: eight at once (with the page's other queries) stalled the small
+  // pooled connection in production. A slow step is logged by name.
   const step = async <T>(label: string, query: PromiseLike<T>): Promise<T> => {
     const started = Date.now();
-    console.info("customerHealth: step", label);
     const result = await query;
     const ms = Date.now() - started;
     if (ms > 1000) console.warn("customerHealth: slow step", label, ms);
