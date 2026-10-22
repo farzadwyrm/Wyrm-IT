@@ -1,4 +1,4 @@
-import { getChannel, publicAgent, widgetAllowed } from "@wyrm/core";
+import { getChannel, INTERNAL_AGENT_TYPES, publicAgent, widgetAllowed } from "@wyrm/core";
 import { type NextRequest, NextResponse } from "next/server";
 import { serverDb } from "@/lib/db";
 
@@ -14,7 +14,10 @@ export async function GET(request: NextRequest, { params }: RouteContext<"/api/w
   if (!db || !/^[0-9a-f-]{36}$/.test(agentId))
     return NextResponse.json({ enabled: false }, { status: 404 });
   const [agent, channel] = await Promise.all([publicAgent(db, agentId), getChannel(db, agentId)]);
-  const live = agent?.status === "live" && agent.tenantStatus === "active";
+  const live =
+    agent?.status === "live" &&
+    agent.tenantStatus === "active" &&
+    !INTERNAL_AGENT_TYPES.includes(agent.type);
   if (!live || !widgetAllowed(channel, origin)) {
     return NextResponse.json(
       { enabled: false },

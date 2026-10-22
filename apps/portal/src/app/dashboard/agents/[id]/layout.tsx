@@ -10,6 +10,7 @@ import { AgentTabs } from "./agent-tabs";
 
 const TYPE_LABELS: Record<string, string> = {
   receptionist: "Receptionist",
+  knowledge: "Ask your documents",
   quote: "Quotes",
   support: "Support",
   sales: "Sales",
@@ -73,7 +74,7 @@ export default async function AgentLayout({
           ))}
       </div>
       <Suspense fallback={<div className="h-11 border-b border-line" />}>
-        <AgentTabs agentId={agent.id} conflicts={studio?.conflicts.length ?? 0} />
+        <AgentTabs agentId={agent.id} conflicts={studio?.conflicts.length ?? 0} type={agent.type} />
       </Suspense>
       {children}
     </section>

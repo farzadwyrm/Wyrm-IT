@@ -39,6 +39,19 @@ const ERRORS: Record<string, string> = {
   already_added: "That procedure is already added.",
   bad_procedure: "Describe when to use the procedure in a sentence.",
   bad_template: "Unknown procedure.",
+  no_file: "Choose at least one file.",
+  too_big: "That file is too big. Upload files up to 4 MB, or split the document.",
+  unsupported:
+    "That file type isn't supported. Use PDF, Word (.docx), text, Markdown, CSV or HTML.",
+  unreadable: "We couldn't read that file. If it's a scanned PDF, export it with text first.",
+  empty_document: "We couldn't find readable text in that document.",
+  too_many_sources: "This agent has the most documents it can hold. Remove some first.",
+  knowledge_full: "This agent's document space is full. Remove some documents first.",
+  bad_name: "Give it a name.",
+  drive_denied: "Google Drive didn't allow access to that file.",
+  bad_file: "That file wasn't found in Google Drive.",
+  agent_paused: "This agent is paused.",
+  bad_level: "Choose an access level.",
   unknown: "Something went wrong. Nothing was changed.",
 };
 

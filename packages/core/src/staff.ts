@@ -85,6 +85,7 @@ export async function listStaff(
       roleId: roles.id,
       roleName: roles.name,
       roleRank: roles.rank,
+      rolePermissions: roles.permissions,
     })
     .from(tenantUsers)
     .innerJoin(roles, eq(roles.id, tenantUsers.roleId))

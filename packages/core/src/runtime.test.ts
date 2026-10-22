@@ -89,6 +89,7 @@ beforeAll(async () => {
     "0005_agent_policies.sql",
     "0006_agent_test_gate.sql",
     "0007_onboarding.sql",
+    "0008_knowledge.sql",
   ])
     await client.exec(migration(m));
   await client.query(
@@ -215,6 +216,30 @@ describe("a customer message", () => {
       channel: "web_chat",
     });
     expect(r.status === "ok" && r.reply).toContain("pass it to the team");
+  });
+
+  it("never lets customers reach an internal documents agent", async () => {
+    const DOCS = "20000000-0000-4000-8000-0000000000d0";
+    await client.query(
+      "insert into agents (id, tenant_id, name, type, status) values ($1, $2, 'Ask the handbook', 'knowledge', 'live')",
+      [DOCS, TENANT_A],
+    );
+    for (const test of [false, true]) {
+      const r = await handleCustomerMessage(db, deps("general_question"), {
+        agentId: DOCS,
+        text: "What are the salary bands?",
+        channel: "web_chat",
+        test,
+      });
+      expect(r.status).toBe("unavailable");
+    }
+    const routed = await handleCustomerMessage(db, deps("general_question"), {
+      agentId: FRONT,
+      text: "Do you have a staff handbook?",
+      channel: "web_chat",
+    });
+    expect(routed.status === "ok" && routed.trace.some((d) => d.agentId === DOCS)).toBe(false);
+    await client.query("delete from agents where id = $1", [DOCS]);
   });
 
   it("keeps draft agents private, except for staff testing them", async () => {

@@ -8,6 +8,8 @@ import {
   agentTestBatches,
   calendarConnections,
   conversations,
+  knowledgeQuestions,
+  knowledgeSources,
   profileSuggestions,
   tenantUsers,
 } from "@wyrm/db";
@@ -48,6 +50,8 @@ export async function setupStatus(ctx: Ctx, tenantId: string, agentId: string) {
     team,
     launch,
     agent,
+    docs,
+    asked,
   ] = await Promise.all([
     getStudio(ctx, tenantId, agentId),
     ctx.db
@@ -109,103 +113,168 @@ export async function setupStatus(ctx: Ctx, tenantId: string, agentId: string) {
       .from(agentLaunches)
       .where(and(eq(agentLaunches.agentId, agentId), eq(agentLaunches.tenantId, tenantId))),
     ctx.db
-      .select({ status: agents.status })
+      .select({ status: agents.status, type: agents.type })
       .from(agents)
       .where(and(eq(agents.id, agentId), eq(agents.tenantId, tenantId))),
+    ctx.db
+      .select({ n: count() })
+      .from(knowledgeSources)
+      .where(and(eq(knowledgeSources.agentId, agentId), eq(knowledgeSources.tenantId, tenantId))),
+    ctx.db
+      .select({ n: count() })
+      .from(knowledgeQuestions)
+      .where(
+        and(
+          eq(knowledgeQuestions.agentId, agentId),
+          eq(knowledgeQuestions.tenantId, tenantId),
+          eq(knowledgeQuestions.answered, true),
+        ),
+      ),
   ]);
   const p = policy.profile;
   const openDays = Object.values(p.hours ?? {}).filter(Boolean).length;
   const lastBatch = batches[0];
   const practiced = Number(practice[0]?.n ?? 0);
 
-  const required: SetupItem[] = [
-    {
-      key: "facts",
-      label: "Opening hours and at least one service",
-      done: openDays > 0 && (p.services?.length ?? 0) > 0,
-      hint: "Add them in Facts, or import them from your website.",
-      where: "facts",
-    },
-    {
-      key: "handoff",
-      label: "Who to pass customers to",
-      done: policy.limits.handoffContact.trim().length > 0,
-      hint: "Set a person or team in Limits & handoff.",
-      where: "limits",
-    },
-    {
-      key: "procedure",
-      label: "At least one procedure",
-      done: policy.procedures.some((x) => x.enabled),
-      hint: "Add Book, Take a message or another procedure.",
-      where: "procedures",
-    },
-    {
-      key: "tests",
-      label: "Tests pass",
-      done: Boolean(lastBatch && lastBatch.total > 0 && lastBatch.requiredFailed === 0),
-      hint: "Run the tests on the Tests tab.",
-      where: "tests",
-    },
-    {
-      key: "published",
-      label: "A published version",
-      done: Number(versions[0]?.n ?? 0) > 0,
-      hint: "Use Test & publish.",
-      where: "tests",
-    },
-    {
-      key: "practice",
-      label: `${PRACTICE_CONVERSATIONS} practice chats`,
-      done: practiced >= PRACTICE_CONVERSATIONS,
-      hint: `Try your agent ${PRACTICE_CONVERSATIONS} times (${practiced} so far) from the agent page.`,
-      where: "try",
-    },
-  ];
-  const recommended: SetupItem[] = [
-    {
-      key: "signoff",
-      label: "Wyrm sign-off",
-      done: Boolean(launch[0]?.signedOffAt),
-      hint: "Your Wyrm contact reviews the setup before launch.",
-      where: "launch",
-    },
-    {
-      key: "channel",
-      label: "Website chat installed",
-      done: Boolean(channel[0]?.widgetEnabled) || Number(live[0]?.n ?? 0) > 0,
-      hint: "Turn on the website widget and paste the snippet.",
-      where: "launch",
-    },
-    {
-      key: "calendar",
-      label: "Calendar connected",
-      done: calendar[0]?.status === "ok",
-      hint: "Connect Google Calendar so bookings use real availability.",
-      where: "launch",
-    },
-    {
-      key: "faqs",
-      label: "At least 3 frequent questions",
-      done: (p.faqs?.length ?? 0) >= 3,
-      hint: "Add common questions in Facts.",
-      where: "facts",
-    },
-    {
-      key: "rules",
-      label: "At least one rule",
-      done: Number(rules[0]?.n ?? 0) > 0,
-      hint: "Add a short rule in Rules.",
-      where: "rules",
-    },
-    {
-      key: "team",
-      label: "A teammate invited",
-      done: Number(team[0]?.n ?? 0) > 1,
-      hint: "Invite someone in Settings.",
-      where: "settings",
-    },
-  ];
+  const isKnowledge = agent[0]?.type === "knowledge";
+  const documents = Number(docs[0]?.n ?? 0);
+  const answeredQuestions = Number(asked[0]?.n ?? 0);
+  const required: SetupItem[] = isKnowledge
+    ? [
+        {
+          key: "documents",
+          label: "At least one document",
+          done: documents > 0,
+          hint: "Upload files, add web pages or import from Google Drive.",
+          where: "documents",
+        },
+        {
+          key: "practice",
+          label: `${PRACTICE_CONVERSATIONS} questions answered from your documents`,
+          done: answeredQuestions >= PRACTICE_CONVERSATIONS,
+          hint: `Ask a few real questions (${answeredQuestions} answered so far) and check the sources.`,
+          where: "ask",
+        },
+      ]
+    : [
+        {
+          key: "facts",
+          label: "Opening hours and at least one service",
+          done: openDays > 0 && (p.services?.length ?? 0) > 0,
+          hint: "Add them in Facts, or import them from your website.",
+          where: "facts",
+        },
+        {
+          key: "handoff",
+          label: "Who to pass customers to",
+          done: policy.limits.handoffContact.trim().length > 0,
+          hint: "Set a person or team in Limits & handoff.",
+          where: "limits",
+        },
+        {
+          key: "procedure",
+          label: "At least one procedure",
+          done: policy.procedures.some((x) => x.enabled),
+          hint: "Add Book, Take a message or another procedure.",
+          where: "procedures",
+        },
+        {
+          key: "tests",
+          label: "Tests pass",
+          done: Boolean(lastBatch && lastBatch.total > 0 && lastBatch.requiredFailed === 0),
+          hint: "Run the tests on the Tests tab.",
+          where: "tests",
+        },
+        {
+          key: "published",
+          label: "A published version",
+          done: Number(versions[0]?.n ?? 0) > 0,
+          hint: "Use Test & publish.",
+          where: "tests",
+        },
+        {
+          key: "practice",
+          label: `${PRACTICE_CONVERSATIONS} practice chats`,
+          done: practiced >= PRACTICE_CONVERSATIONS,
+          hint: `Try your agent ${PRACTICE_CONVERSATIONS} times (${practiced} so far) from the agent page.`,
+          where: "try",
+        },
+      ];
+  const recommended: SetupItem[] = isKnowledge
+    ? [
+        {
+          key: "signoff",
+          label: "Wyrm sign-off",
+          done: Boolean(launch[0]?.signedOffAt),
+          hint: "Your Wyrm contact reviews the documents and answers before launch.",
+          where: "launch",
+        },
+        {
+          key: "handoff",
+          label: "Who to ask when the documents don't say",
+          done: policy.limits.handoffContact.trim().length > 0,
+          hint: "Set a person or team in Limits & handoff.",
+          where: "limits",
+        },
+        {
+          key: "rules",
+          label: "At least one rule",
+          done: Number(rules[0]?.n ?? 0) > 0,
+          hint: 'For example "Never share salary details."',
+          where: "rules",
+        },
+        {
+          key: "team",
+          label: "A teammate invited",
+          done: Number(team[0]?.n ?? 0) > 1,
+          hint: "Invite your team in Settings so they can ask questions.",
+          where: "settings",
+        },
+      ]
+    : [
+        {
+          key: "signoff",
+          label: "Wyrm sign-off",
+          done: Boolean(launch[0]?.signedOffAt),
+          hint: "Your Wyrm contact reviews the setup before launch.",
+          where: "launch",
+        },
+        {
+          key: "channel",
+          label: "Website chat installed",
+          done: Boolean(channel[0]?.widgetEnabled) || Number(live[0]?.n ?? 0) > 0,
+          hint: "Turn on the website widget and paste the snippet.",
+          where: "launch",
+        },
+        {
+          key: "calendar",
+          label: "Calendar connected",
+          done: calendar[0]?.status === "ok",
+          hint: "Connect Google Calendar so bookings use real availability.",
+          where: "launch",
+        },
+        {
+          key: "faqs",
+          label: "At least 3 frequent questions",
+          done: (p.faqs?.length ?? 0) >= 3,
+          hint: "Add common questions in Facts.",
+          where: "facts",
+        },
+        {
+          key: "rules",
+          label: "At least one rule",
+          done: Number(rules[0]?.n ?? 0) > 0,
+          hint: "Add a short rule in Rules.",
+          where: "rules",
+        },
+        {
+          key: "team",
+          label: "A teammate invited",
+          done: Number(team[0]?.n ?? 0) > 1,
+          hint: "Invite someone in Settings.",
+          where: "settings",
+        },
+      ];
   const missing = required.filter((i) => !i.done);
   const signedOff = Boolean(launch[0]?.signedOffAt);
   return {

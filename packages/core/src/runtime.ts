@@ -42,6 +42,9 @@ import { policyFromConfig } from "./studio";
  * Every turn is recorded: messages, the brain's decisions, usage and the conversation's result.
  */
 
+/** Agent types that only signed-in staff use: no public chat, widget or customer routing. */
+export const INTERNAL_AGENT_TYPES: readonly string[] = ["knowledge"];
+
 /** What each catalogue agent type handles, for routing. */
 export const INTENTS_BY_TYPE: Record<string, readonly string[]> = {
   receptionist: ["booking", "opening_hours", "services", "prices", "location", "general_question"],
@@ -153,6 +156,8 @@ export async function loadRuntime(db: Db, agentId: string, now = new Date(), tes
     .innerJoin(tenants, eq(tenants.id, agents.tenantId))
     .where(eq(agents.id, agentId));
   if (entry?.tenant.status !== "active") return null;
+  // Internal agents (Ask your documents) are for signed-in staff only, never for customers.
+  if (INTERNAL_AGENT_TYPES.includes(entry.agent.type)) return null;
   const tenantId = entry.tenant.id;
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const [all, taught, switches, month, today] = await Promise.all([
@@ -181,20 +186,22 @@ export async function loadRuntime(db: Db, agentId: string, now = new Date(), tes
       .from(usageDaily)
       .where(and(eq(usageDaily.tenantId, tenantId), eq(usageDaily.day, dayString(now)))),
   ]);
-  const specs: AgentSpec[] = all.map((a) => ({
-    id: a.id,
-    name: a.name,
-    type: a.type,
-    // Staff testing a draft agent from the portal may talk to it before it goes live.
-    status: testMode && a.id === agentId && a.status === "draft" ? "live" : a.status,
-    intents: (() => {
-      const policy = policyFromConfig(a.config);
-      return policy.procedures.length > 0
-        ? policyIntents(policy)
-        : (INTENTS_BY_TYPE[a.type] ?? ["general_question"]);
-    })(),
-    tools: [],
-  }));
+  const specs: AgentSpec[] = all
+    .filter((a) => !INTERNAL_AGENT_TYPES.includes(a.type))
+    .map((a) => ({
+      id: a.id,
+      name: a.name,
+      type: a.type,
+      // Staff testing a draft agent from the portal may talk to it before it goes live.
+      status: testMode && a.id === agentId && a.status === "draft" ? "live" : a.status,
+      intents: (() => {
+        const policy = policyFromConfig(a.config);
+        return policy.procedures.length > 0
+          ? policyIntents(policy)
+          : (INTENTS_BY_TYPE[a.type] ?? ["general_question"]);
+      })(),
+      tools: [],
+    }));
   const faq: FaqEntry[] = taught
     .filter((c) => c.topic && words(c.topic).length > 0)
     .map((c) => ({ id: c.id, keywords: words(c.topic as string), answer: c.correctAnswer }));
@@ -797,6 +804,7 @@ export async function publicAgent(db: Db, agentId: string) {
       id: agents.id,
       tenantId: agents.tenantId,
       name: agents.name,
+      type: agents.type,
       status: agents.status,
       business: tenants.name,
       tenantStatus: tenants.status,

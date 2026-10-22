@@ -63,6 +63,7 @@ beforeAll(async () => {
     "0005_agent_policies.sql",
     "0006_agent_test_gate.sql",
     "0007_onboarding.sql",
+    "0008_knowledge.sql",
   ])
     await db.exec(migration(m));
   await db.query(

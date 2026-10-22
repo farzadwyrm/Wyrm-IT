@@ -105,4 +105,7 @@ export const NOTICES: Record<string, string> = {
   taught: "Thanks. The agent will use this answer from now on.",
   test_added: "Test added.",
   invited: "Invitation created.",
+  docs_added: "Added. The agent can use it straight away.",
+  doc_removed: "Document removed. The agent no longer uses it.",
+  access_saved: "Access saved.",
 };

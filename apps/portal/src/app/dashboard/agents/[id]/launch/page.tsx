@@ -14,6 +14,7 @@ import {
   importSiteAction,
   saveWidgetAction,
 } from "./actions";
+import { TeamAccess } from "./team-access";
 
 export const metadata: Metadata = { title: "Launch" };
 
@@ -44,7 +45,9 @@ export default async function LaunchPage({
         ? "#channels"
         : where === "settings"
           ? "/dashboard/settings"
-          : studio(where);
+          : where === "documents" || where === "ask"
+            ? `/dashboard/agents/${agent.id}/${where}`
+            : studio(where);
   const draft = suggestion?.draft as
     | {
         summary?: string;
@@ -130,230 +133,239 @@ export default async function LaunchPage({
         ))}
       </div>
 
-      <Card className="space-y-3">
-        <h2 className="font-display text-xl font-semibold">Import facts from your website</h2>
-        <p className="text-sm text-ink-muted">
-          We read up to 10 public pages and draft your hours, services, prices and common questions.
-          You choose what to keep; nothing is used until you publish.
-        </p>
-        {canEdit && (
-          <form action={importSiteAction} className="flex flex-wrap items-end gap-2">
-            {hidden}
-            <label className="min-w-64 flex-1">
-              <span className="text-sm font-semibold">Website address</span>
-              <input
-                name="url"
-                required
-                maxLength={300}
-                className={input}
-                placeholder="e.g. brightsmile.com"
-              />
-            </label>
-            <button type="submit" className={secondary}>
-              Read my website
-            </button>
-          </form>
-        )}
-        {suggestion && draft && (
-          <form
-            action={applySuggestionAction}
-            className="space-y-2 rounded-xl border border-ember/40 p-3"
-          >
-            {hidden}
-            <input type="hidden" name="suggestionId" value={suggestion.id} />
-            <p className="text-sm">
-              From {suggestion.sourceUrl} ({suggestion.pagesRead} page
-              {suggestion.pagesRead === 1 ? "" : "s"}, {when(suggestion.createdAt)}). Tick what to
-              add:
+      {agent.type !== "knowledge" && (
+        <>
+          <Card className="space-y-3">
+            <h2 className="font-display text-xl font-semibold">Import facts from your website</h2>
+            <p className="text-sm text-ink-muted">
+              We read up to 10 public pages and draft your hours, services, prices and common
+              questions. You choose what to keep; nothing is used until you publish.
             </p>
-            {[
-              ["summary", draft.summary ? `About: ${draft.summary}` : null],
-              [
-                "hours",
-                draft.hours && Object.values(draft.hours).some(Boolean)
-                  ? `Opening hours: ${Object.entries(draft.hours)
-                      .map(([d, h]) => `${d} ${h ? `${h.open}-${h.close}` : "closed"}`)
-                      .join(", ")}`
-                  : null,
-              ],
-              [
-                "services",
-                draft.services?.length
-                  ? `${draft.services.length} services: ${draft.services.map((s) => `${s.name}${s.price ? ` (${s.price})` : ""}`).join(", ")}`
-                  : null,
-              ],
-              [
-                "faqs",
-                draft.faqs?.length
-                  ? `${draft.faqs.length} questions: ${draft.faqs.map((f) => f.question).join("; ")}`
-                  : null,
-              ],
-              [
-                "locations",
-                draft.locations?.length
-                  ? `Address: ${draft.locations.map((l) => l.address).join("; ")}`
-                  : null,
-              ],
-            ]
-              .filter((x): x is [string, string] => Boolean(x[1]))
-              .map(([key, label]) => (
-                <label key={key} className="flex items-start gap-2 text-sm">
+            {canEdit && (
+              <form action={importSiteAction} className="flex flex-wrap items-end gap-2">
+                {hidden}
+                <label className="min-w-64 flex-1">
+                  <span className="text-sm font-semibold">Website address</span>
+                  <input
+                    name="url"
+                    required
+                    maxLength={300}
+                    className={input}
+                    placeholder="e.g. brightsmile.com"
+                  />
+                </label>
+                <button type="submit" className={secondary}>
+                  Read my website
+                </button>
+              </form>
+            )}
+            {suggestion && draft && (
+              <form
+                action={applySuggestionAction}
+                className="space-y-2 rounded-xl border border-ember/40 p-3"
+              >
+                {hidden}
+                <input type="hidden" name="suggestionId" value={suggestion.id} />
+                <p className="text-sm">
+                  From {suggestion.sourceUrl} ({suggestion.pagesRead} page
+                  {suggestion.pagesRead === 1 ? "" : "s"}, {when(suggestion.createdAt)}). Tick what
+                  to add:
+                </p>
+                {[
+                  ["summary", draft.summary ? `About: ${draft.summary}` : null],
+                  [
+                    "hours",
+                    draft.hours && Object.values(draft.hours).some(Boolean)
+                      ? `Opening hours: ${Object.entries(draft.hours)
+                          .map(([d, h]) => `${d} ${h ? `${h.open}-${h.close}` : "closed"}`)
+                          .join(", ")}`
+                      : null,
+                  ],
+                  [
+                    "services",
+                    draft.services?.length
+                      ? `${draft.services.length} services: ${draft.services.map((s) => `${s.name}${s.price ? ` (${s.price})` : ""}`).join(", ")}`
+                      : null,
+                  ],
+                  [
+                    "faqs",
+                    draft.faqs?.length
+                      ? `${draft.faqs.length} questions: ${draft.faqs.map((f) => f.question).join("; ")}`
+                      : null,
+                  ],
+                  [
+                    "locations",
+                    draft.locations?.length
+                      ? `Address: ${draft.locations.map((l) => l.address).join("; ")}`
+                      : null,
+                  ],
+                ]
+                  .filter((x): x is [string, string] => Boolean(x[1]))
+                  .map(([key, label]) => (
+                    <label key={key} className="flex items-start gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        name="parts"
+                        value={key}
+                        defaultChecked={key !== "hours"}
+                        className="mt-1"
+                      />{" "}
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                {canEdit && (
+                  <div className="flex gap-2">
+                    <button type="submit" className={primary}>
+                      Add to my facts (draft)
+                    </button>
+                    <button
+                      type="submit"
+                      formAction={dismissSuggestionAction}
+                      className={secondary}
+                    >
+                      Discard
+                    </button>
+                  </div>
+                )}
+              </form>
+            )}
+          </Card>
+
+          <Card className="space-y-3">
+            <h2 id="channels" className="font-display text-xl font-semibold">
+              Website chat
+            </h2>
+            <form action={saveWidgetAction} className="space-y-3">
+              {hidden}
+              <fieldset disabled={!canEdit} className="space-y-3">
+                <label className="inline-flex items-center gap-2">
                   <input
                     type="checkbox"
-                    name="parts"
-                    value={key}
-                    defaultChecked={key !== "hours"}
-                    className="mt-1"
+                    name="enabled"
+                    defaultChecked={channel?.widgetEnabled ?? false}
                   />{" "}
-                  <span>{label}</span>
+                  Show a chat button on my website
                 </label>
-              ))}
-            {canEdit && (
-              <div className="flex gap-2">
-                <button type="submit" className={primary}>
-                  Add to my facts (draft)
-                </button>
-                <button type="submit" formAction={dismissSuggestionAction} className={secondary}>
-                  Discard
-                </button>
-              </div>
-            )}
-          </form>
-        )}
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 id="channels" className="font-display text-xl font-semibold">
-          Website chat
-        </h2>
-        <form action={saveWidgetAction} className="space-y-3">
-          {hidden}
-          <fieldset disabled={!canEdit} className="space-y-3">
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                name="enabled"
-                defaultChecked={channel?.widgetEnabled ?? false}
-              />{" "}
-              Show a chat button on my website
-            </label>
-            <label className="block">
-              <span className="text-sm font-semibold">
-                Websites allowed to show it (one per line; empty = any)
-              </span>
-              <textarea
-                name="origins"
-                rows={2}
-                defaultValue={(channel?.widgetOrigins ?? []).join("\n")}
-                className={input}
-                placeholder="brightsmile.com"
-              />
-            </label>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label>
-                <span className="text-sm font-semibold">Button text</span>
-                <input
-                  name="label"
-                  maxLength={40}
-                  defaultValue={channel?.widgetLabel ?? "Chat with us"}
-                  className={input}
-                />
-              </label>
-              <label>
-                <span className="text-sm font-semibold">Button colour</span>
-                <input
-                  name="color"
-                  type="color"
-                  defaultValue={channel?.widgetColor ?? "#e8590c"}
-                  className={`${input} h-11`}
-                />
-              </label>
-            </div>
-            {canEdit && (
-              <button type="submit" className={secondary}>
-                Save website chat
-              </button>
-            )}
-          </fieldset>
-        </form>
-        {channel?.widgetEnabled && (
-          <div className="space-y-1">
-            <p className="text-sm">Paste this just before &lt;/body&gt; on your website:</p>
-            <input
-              readOnly
-              value={snippet}
-              aria-label="Website chat code"
-              className={`${input} font-mono text-xs`}
-            />
-            {agent.status !== "live" && (
-              <p className="text-sm text-signal">The button appears once the agent is live.</p>
-            )}
-          </div>
-        )}
-      </Card>
-
-      <Card className="space-y-3">
-        <h2 className="font-display text-xl font-semibold">Calendar</h2>
-        {!calendarConfig() ? (
-          <p className="text-sm text-ink-muted">
-            Calendar booking is being set up by Wyrm. Until then, bookings arrive in your To-do as
-            requests to confirm.
-          </p>
-        ) : calendar ? (
-          <div className="space-y-2">
-            <p>
-              Connected to {calendar.accountEmail ?? "Google Calendar"}{" "}
-              <Badge tone={calendar.status === "ok" ? "good" : "bad"}>
-                {calendar.status === "ok" ? "working" : "needs attention"}
-              </Badge>
-            </p>
-            {calendar.lastError && (
-              <p className="text-sm text-node-output">
-                Last problem: {calendar.lastError}. Reconnect to fix it.
-              </p>
-            )}
-            <p className="text-sm text-ink-muted">
-              Confirmed bookings go straight into this calendar when the time is free.
-            </p>
-            {canEdit && (
-              <div className="flex gap-2">
-                <a href={`/api/calendar/connect?agent=${agent.id}`} className={secondary}>
-                  Reconnect
-                </a>
-                <form action={disconnectCalendarAction}>
-                  {hidden}
-                  <button
-                    type="submit"
-                    className="min-h-11 px-3 text-sm text-ink-muted hover:text-ink"
-                  >
-                    Disconnect
+                <label className="block">
+                  <span className="text-sm font-semibold">
+                    Websites allowed to show it (one per line; empty = any)
+                  </span>
+                  <textarea
+                    name="origins"
+                    rows={2}
+                    defaultValue={(channel?.widgetOrigins ?? []).join("\n")}
+                    className={input}
+                    placeholder="brightsmile.com"
+                  />
+                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label>
+                    <span className="text-sm font-semibold">Button text</span>
+                    <input
+                      name="label"
+                      maxLength={40}
+                      defaultValue={channel?.widgetLabel ?? "Chat with us"}
+                      className={input}
+                    />
+                  </label>
+                  <label>
+                    <span className="text-sm font-semibold">Button colour</span>
+                    <input
+                      name="color"
+                      type="color"
+                      defaultValue={channel?.widgetColor ?? "#e8590c"}
+                      className={`${input} h-11`}
+                    />
+                  </label>
+                </div>
+                {canEdit && (
+                  <button type="submit" className={secondary}>
+                    Save website chat
                   </button>
-                </form>
+                )}
+              </fieldset>
+            </form>
+            {channel?.widgetEnabled && (
+              <div className="space-y-1">
+                <p className="text-sm">Paste this just before &lt;/body&gt; on your website:</p>
+                <input
+                  readOnly
+                  value={snippet}
+                  aria-label="Website chat code"
+                  className={`${input} font-mono text-xs`}
+                />
+                {agent.status !== "live" && (
+                  <p className="text-sm text-signal">The button appears once the agent is live.</p>
+                )}
               </div>
             )}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-sm text-ink-muted">
-              Connect Google Calendar so the agent books real free times. Without it, bookings come
-              to your To-do as requests.
-            </p>
-            {canEdit && (
-              <a href={`/api/calendar/connect?agent=${agent.id}`} className={primary}>
-                Connect Google Calendar
-              </a>
-            )}
-          </div>
-        )}
-      </Card>
+          </Card>
 
-      <Card className="space-y-2">
-        <h2 className="font-display text-xl font-semibold">Phone</h2>
-        <p className="text-sm text-ink-muted">
-          Coming soon: forward your calls in stages (after hours first, then when you're busy, then
-          every call) so you can try the agent safely.
-        </p>
-      </Card>
+          <Card className="space-y-3">
+            <h2 className="font-display text-xl font-semibold">Calendar</h2>
+            {!calendarConfig() ? (
+              <p className="text-sm text-ink-muted">
+                Calendar booking is being set up by Wyrm. Until then, bookings arrive in your To-do
+                as requests to confirm.
+              </p>
+            ) : calendar ? (
+              <div className="space-y-2">
+                <p>
+                  Connected to {calendar.accountEmail ?? "Google Calendar"}{" "}
+                  <Badge tone={calendar.status === "ok" ? "good" : "bad"}>
+                    {calendar.status === "ok" ? "working" : "needs attention"}
+                  </Badge>
+                </p>
+                {calendar.lastError && (
+                  <p className="text-sm text-node-output">
+                    Last problem: {calendar.lastError}. Reconnect to fix it.
+                  </p>
+                )}
+                <p className="text-sm text-ink-muted">
+                  Confirmed bookings go straight into this calendar when the time is free.
+                </p>
+                {canEdit && (
+                  <div className="flex gap-2">
+                    <a href={`/api/calendar/connect?agent=${agent.id}`} className={secondary}>
+                      Reconnect
+                    </a>
+                    <form action={disconnectCalendarAction}>
+                      {hidden}
+                      <button
+                        type="submit"
+                        className="min-h-11 px-3 text-sm text-ink-muted hover:text-ink"
+                      >
+                        Disconnect
+                      </button>
+                    </form>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-ink-muted">
+                  Connect Google Calendar so the agent books real free times. Without it, bookings
+                  come to your To-do as requests.
+                </p>
+                {canEdit && (
+                  <a href={`/api/calendar/connect?agent=${agent.id}`} className={primary}>
+                    Connect Google Calendar
+                  </a>
+                )}
+              </div>
+            )}
+          </Card>
+
+          <Card className="space-y-2">
+            <h2 className="font-display text-xl font-semibold">Phone</h2>
+            <p className="text-sm text-ink-muted">
+              Coming soon: forward your calls in stages (after hours first, then when you're busy,
+              then every call) so you can try the agent safely.
+            </p>
+          </Card>
+        </>
+      )}
+      <TeamAccess agentId={agent.id} page={page} />
     </section>
   );
 }

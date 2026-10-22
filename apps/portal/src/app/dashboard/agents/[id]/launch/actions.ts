@@ -8,6 +8,8 @@ import {
   DomainError,
   disconnectCalendar,
   dismissSuggestion,
+  grantAgentAccess,
+  revokeAgentAccess,
   saveChannel,
   setAgentStatus,
 } from "@wyrm/core";
@@ -40,9 +42,14 @@ async function launch(
       else if (e instanceof ForbiddenError) error = "forbidden";
       else if (
         e instanceof Error &&
-        ["bad_url", "unreachable", "blocked_robots", "no_model", "nothing_found"].includes(
-          e.message,
-        )
+        [
+          "bad_url",
+          "unreachable",
+          "blocked_robots",
+          "no_model",
+          "nothing_found",
+          "bad_level",
+        ].includes(e.message)
       )
         error = e.message;
       else {
@@ -128,4 +135,29 @@ export async function disconnectCalendarAction(form: FormData) {
   await launch(form, "calendar_disconnected", (p, agentId) =>
     disconnectCalendar(p.ctx, { tenantId: p.tenantId, agentId }),
   );
+}
+
+/** Who can use this agent: one person's access level (or none). */
+export async function setAccessAction(form: FormData) {
+  const level = field(form, "level", 20);
+  const tenantUserId = field(form, "tenantUserId", 64);
+  await launch(form, "access_saved", async (p, agentId) => {
+    if (!UUID.test(tenantUserId)) throw new Error("bad_level");
+    if (level === "none")
+      return revokeAgentAccess(p.ctx, {
+        tenantId: p.tenantId,
+        agentId,
+        subjectType: "user",
+        subjectId: tenantUserId,
+      });
+    if (level !== "use" && level !== "configure" && level !== "view_logs")
+      throw new Error("bad_level");
+    return grantAgentAccess(p.ctx, {
+      tenantId: p.tenantId,
+      agentId,
+      subjectType: "user",
+      subjectId: tenantUserId,
+      level,
+    });
+  });
 }

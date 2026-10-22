@@ -1,6 +1,13 @@
 import "server-only";
-import { answerAsAgent, brainClassifiers, clientsFromEnv, judgeReply } from "@wyrm/ai";
-import type { Judge, RuntimeDeps } from "@wyrm/core";
+import {
+  answerAsAgent,
+  answerFromDocuments,
+  brainClassifiers,
+  clientsFromEnv,
+  expandQuestion,
+  judgeReply,
+} from "@wyrm/ai";
+import type { Judge, KnowledgeDeps, RuntimeDeps } from "@wyrm/core";
 import { calendarDeps } from "./calendar";
 
 /**
@@ -17,5 +24,14 @@ export function modelDeps(): { deps: RuntimeDeps; judge: Judge } {
       ...(calendar ? { calendar } : {}),
     },
     judge: { judge: (expectation, transcript) => judgeReply(clients, expectation, transcript) },
+  };
+}
+
+/** Models for "Ask your documents": free models only (search words and the cited answer). */
+export function knowledgeDeps(): KnowledgeDeps {
+  const clients = clientsFromEnv();
+  return {
+    expand: (question) => expandQuestion(clients, question),
+    answer: (input) => answerFromDocuments(clients, input, { allowPaid: false }),
   };
 }

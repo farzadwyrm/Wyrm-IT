@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
     "@wyrm/ui",
   ],
   poweredByHeader: false,
+  experimental: {
+    // Document uploads for "Ask your documents" (Vercel caps a request at 4.5 MB).
+    serverActions: { bodySizeLimit: "4mb" },
+  },
   async headers() {
     return [
       {

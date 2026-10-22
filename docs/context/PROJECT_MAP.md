@@ -4,6 +4,14 @@ Last updated: 2026-10-21
 
 ## Done
 
+- 2026-10-22 "Ask your documents" internal agent (docs/plans/ask-your-documents.md): migration
+  0008 (sources, passages with full-text index, question log), core `knowledge.ts` (chunking,
+  search, cited answers, access per agent, setup checklist), free-model prompts, portal tabs
+  Ask / Documents / Questions, upload (PDF, Word, text), web pages, Google Drive picker
+  (drive.file; needs GOOGLE_PICKER_API_KEY), "Who can use this agent", back-office "Add an
+  agent from a template". Internal agents are blocked from public chat, widget and routing.
+  Verified locally (verify:fast, build). Live: see deploy notes.
+
 - 2026-10-21 Portal layout redesign (customer portal + back office). Customer sidebar:
   Overview (monitoring: alerts, 4 KPIs, 14-day activity chart, latest chats, unanswered
   questions, spend; `dashboard/page.tsx`, `activity-chart.tsx`, core `activityByDay`), Inbox

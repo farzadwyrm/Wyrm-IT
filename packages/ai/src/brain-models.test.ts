@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   answerAsAgent,
+  answerFromDocuments,
   brainClassifiers,
   draftProfileFromPages,
+  expandQuestion,
   firstJson,
   judgeReply,
   type ModelClients,
@@ -208,5 +210,51 @@ describe("draftProfileFromPages", () => {
       summary: "Family dentist.",
       services: [{ name: "Check-up", price: "65 EUR" }],
     });
+  });
+});
+
+describe("documents", () => {
+  const input = {
+    question: "How many holiday days?",
+    history: [],
+    passages: [
+      { n: 1, source: "Handbook", heading: "Holidays", text: "Staff get 25 days a year." },
+      { n: 2, source: "Handbook", heading: "Expenses", text: "Submit receipts in 30 days." },
+    ],
+    rules: ["Never share salaries."],
+    tone: "friendly",
+  };
+
+  it("collects citations from the list and the text, on the free model", async () => {
+    const a = await answerFromDocuments(
+      {
+        anthropic: fakeAnthropic(new Error("should not be called")),
+        groq: fakeGroq(['{"reply":"You get 25 days [1].","cited":[],"answered":true}']),
+      },
+      input,
+      { allowPaid: false },
+    );
+    expect(a).toMatchObject({ reply: "You get 25 days [1].", cited: [1], answered: true });
+  });
+
+  it("passes on 'not found' and returns null with no model", async () => {
+    const a = await answerFromDocuments(
+      {
+        groq: fakeGroq(['{"reply":"Not in your documents.","cited":[],"answered":false}']),
+      },
+      input,
+      { allowPaid: false },
+    );
+    expect(a?.answered).toBe(false);
+    expect(await answerFromDocuments({}, input, { allowPaid: true })).toBeNull();
+  });
+
+  it("widens search words, ignoring junk", async () => {
+    const w = await expandQuestion(
+      { groq: fakeGroq(['{"words":["holiday","leave",3,"vacation"]}']) },
+      "time off?",
+    );
+    expect(w?.words).toEqual(["holiday", "leave", "vacation"]);
+    expect(await expandQuestion({}, "time off?")).toBeNull();
   });
 });

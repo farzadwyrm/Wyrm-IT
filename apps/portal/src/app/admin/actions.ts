@@ -173,3 +173,28 @@ export async function signOffAction(formData: FormData) {
   revalidatePath(`/admin/tenants/${tenantId}`);
   redirect(`/admin/tenants/${tenantId}${error ? `?error=${encodeURIComponent(error)}` : ""}`);
 }
+
+/** Templates Wyrm can add to a client from the back office (the agent starts as a draft). */
+const TEMPLATES = { receptionist: "Receptionist", knowledge: "Ask your documents" } as const;
+
+export async function addAgentAction(formData: FormData) {
+  const access = await requireAdmin();
+  const tenantId = idOf(formData, "tenantId");
+  const type = String(formData.get("type") ?? "");
+  const name = String(formData.get("name") ?? "")
+    .trim()
+    .slice(0, 80);
+  let error = "";
+  try {
+    if (!(type in TEMPLATES)) throw new DomainError("bad_type", "Choose a template.");
+    await provisionAgent(await coreContext(access), {
+      tenantId,
+      name: name || TEMPLATES[type as keyof typeof TEMPLATES],
+      type: type as keyof typeof TEMPLATES,
+    });
+  } catch (e) {
+    error = explain(e);
+  }
+  revalidatePath(`/admin/tenants/${tenantId}`);
+  redirect(`/admin/tenants/${tenantId}${error ? `?error=${encodeURIComponent(error)}` : ""}`);
+}

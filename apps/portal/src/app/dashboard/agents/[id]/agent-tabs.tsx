@@ -4,21 +4,42 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
 /** The My agent sections. Studio sections share one page and switch with `?tab=`. */
-export function AgentTabs({ agentId, conflicts }: { agentId: string; conflicts: number }) {
+export function AgentTabs({
+  agentId,
+  conflicts,
+  type,
+}: {
+  agentId: string;
+  conflicts: number;
+  type: string;
+}) {
   const path = usePathname();
   const tab = useSearchParams().get("tab") ?? "facts";
   const base = `/dashboard/agents/${agentId}`;
   const studio = (key: string) => ({ href: `${base}/studio?tab=${key}`, key });
-  const items: { label: string; href: string; key: string; badge?: number }[] = [
-    { label: "Business info", ...studio("facts") },
-    { label: "Answers", href: `${base}/answers`, key: "answers" },
+  type Item = { label: string; href: string; key: string; badge?: number };
+  const knowledge: Item[] = [
+    { label: "Ask", href: `${base}/ask`, key: "ask" },
+    { label: "Documents", href: `${base}/documents`, key: "documents" },
+    { label: "Questions", href: `${base}/questions`, key: "questions" },
     { label: "Rules", ...studio("rules"), badge: conflicts },
-    { label: "Tasks & booking", ...studio("procedures") },
     { label: "Limits & handoff", ...studio("limits") },
-    { label: "Try & test", ...studio("tests") },
     { label: "Go live", href: `${base}/launch`, key: "launch" },
     { label: "History", ...studio("changes") },
   ];
+  const items: Item[] =
+    type === "knowledge"
+      ? knowledge
+      : [
+          { label: "Business info", ...studio("facts") },
+          { label: "Answers", href: `${base}/answers`, key: "answers" },
+          { label: "Rules", ...studio("rules"), badge: conflicts },
+          { label: "Tasks & booking", ...studio("procedures") },
+          { label: "Limits & handoff", ...studio("limits") },
+          { label: "Try & test", ...studio("tests") },
+          { label: "Go live", href: `${base}/launch`, key: "launch" },
+          { label: "History", ...studio("changes") },
+        ];
   const isActive = (key: string, href: string) =>
     href.includes("/studio?")
       ? path.endsWith("/studio") && tab === key

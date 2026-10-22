@@ -1,4 +1,4 @@
-import { getChannel, publicAgent, widgetAllowed } from "@wyrm/core";
+import { getChannel, INTERNAL_AGENT_TYPES, publicAgent, widgetAllowed } from "@wyrm/core";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChatBox } from "@/components/chat-box";
@@ -19,7 +19,12 @@ export default async function PublicChatPage({
   const db = serverDb();
   if (!db || !/^[0-9a-f-]{36}$/.test(agentId)) notFound();
   const row = await publicAgent(db, agentId);
-  if (row?.status !== "live" || row.tenantStatus !== "active") notFound();
+  if (
+    row?.status !== "live" ||
+    row.tenantStatus !== "active" ||
+    INTERNAL_AGENT_TYPES.includes(row.type)
+  )
+    notFound();
   const embed = query.embed === "1";
   if (embed) {
     const site = typeof query.site === "string" ? query.site : null;

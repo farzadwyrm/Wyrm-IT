@@ -14,7 +14,7 @@ import { ChatBox } from "@/components/chat-box";
 import { coreContext, requireAdmin } from "@/lib/auth";
 import { clientHealth } from "@/lib/health";
 import { money, OUTCOME_LABELS, when } from "@/lib/portal";
-import { adminAgentStatus, signOffAction, viewAsAction } from "../../actions";
+import { addAgentAction, adminAgentStatus, signOffAction, viewAsAction } from "../../actions";
 
 export const metadata: Metadata = { title: "Client" };
 
@@ -111,6 +111,31 @@ export default async function TenantPage({
       <div className="space-y-3">
         <h2 className="font-display text-xl font-semibold">Agents</h2>
         {agents.length === 0 && <p className="text-ink-muted">No agents yet.</p>}
+        <form
+          action={addAgentAction}
+          className="flex flex-wrap items-end gap-2 rounded-2xl border border-dashed border-line p-3"
+        >
+          <input type="hidden" name="tenantId" value={id} />
+          <label>
+            <span className="text-sm font-semibold">Add an agent from a template</span>
+            <select name="type" className={input} defaultValue="knowledge">
+              <option value="knowledge">Ask your documents (internal, staff only)</option>
+              <option value="receptionist">Receptionist (customer-facing)</option>
+            </select>
+          </label>
+          <label className="min-w-48 flex-1">
+            <span className="text-sm font-semibold">Name (optional)</span>
+            <input
+              name="name"
+              maxLength={80}
+              className={input}
+              placeholder="e.g. Ask the handbook"
+            />
+          </label>
+          <button type="submit" className={button}>
+            Add agent
+          </button>
+        </form>
         <ul className="grid gap-4 lg:grid-cols-2">
           {agents.map(({ agent }) => (
             <li key={agent.id} className="space-y-3 rounded-2xl border border-line p-4">
@@ -181,7 +206,14 @@ export default async function TenantPage({
                   </div>
                 );
               })()}
-              <ChatBox agentId={agent.id} test title={`Try ${agent.name} (test chat)`} />
+              {agent.type === "knowledge" ? (
+                <p className="text-sm text-ink-muted">
+                  Internal agent: staff ask it in their portal (My agent → Ask). Use "View as" below
+                  to try it with their documents.
+                </p>
+              ) : (
+                <ChatBox agentId={agent.id} test title={`Try ${agent.name} (test chat)`} />
+              )}
             </li>
           ))}
         </ul>
