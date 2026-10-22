@@ -49,3 +49,23 @@ test("contact page never shows a dead booking link", async ({ page }) => {
     await expect(booking).toContainText("Online booking opens soon");
   }
 });
+
+test("clients can reach the portal sign-in from every page", async ({ page, isMobile }) => {
+  await page.goto("/agents");
+  const portal = /^https:\/\/[^/]+\/login$/;
+  if (isMobile) {
+    await page.getByText("Menu", { exact: true }).click();
+    await expect(page.getByRole("link", { name: "Client sign in" }).first()).toHaveAttribute(
+      "href",
+      portal,
+    );
+  } else {
+    await expect(page.getByRole("banner").getByRole("link", { name: "Sign in" })).toHaveAttribute(
+      "href",
+      portal,
+    );
+  }
+  await expect(
+    page.getByRole("contentinfo").getByRole("link", { name: "Client sign in" }),
+  ).toHaveAttribute("href", portal);
+});

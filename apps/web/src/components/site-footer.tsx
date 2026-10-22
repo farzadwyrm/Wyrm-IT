@@ -34,6 +34,11 @@ export function SiteFooter() {
           <p className="text-sm font-semibold">Get in touch</p>
           <ul className="mt-3 space-y-2 text-sm text-ink-muted">
             <li>
+              <a href={`${SITE.portalUrl}/login`} className="hover:text-ink">
+                Client sign in
+              </a>
+            </li>
+            <li>
               <Link href="/contact" className="hover:text-ink">
                 Book a call
               </Link>

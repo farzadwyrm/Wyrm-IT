@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAccess } from "@/lib/auth";
-import { publicConfig, safeNext } from "@/lib/config";
+import { MAIN_SITE, publicConfig, safeNext } from "@/lib/config";
 import { sendPasswordReset, signInWithGoogle, signInWithPassword } from "./actions";
 import { ForwardLink } from "./forward-link";
 
@@ -138,6 +138,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             Access is by invitation from Wyrm AI.
           </>
         )}
+      </p>
+      <p className="mt-8 text-sm">
+        <a href={MAIN_SITE} className="text-ink-muted hover:text-ink">
+          ← Back to the Wyrm AI website
+        </a>
       </p>
     </section>
   );

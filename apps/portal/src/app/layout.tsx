@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { getAccess } from "@/lib/auth";
+import { MAIN_SITE } from "@/lib/config";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -27,6 +28,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             <Link href="/" className="font-display text-lg font-semibold tracking-tight">
               Wyrm AI <span className="font-mono text-xs text-signal">portal</span>
             </Link>
+            <a
+              href={MAIN_SITE}
+              className="ml-auto hidden text-sm text-ink-muted hover:text-ink sm:inline"
+            >
+              ← Wyrm AI website
+            </a>
             {!access && (
               <Link
                 href="/login"

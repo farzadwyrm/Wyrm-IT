@@ -74,3 +74,12 @@ test("only the public chat page may be embedded in other sites", async ({ reques
   const login = await request.get("/login");
   expect(login.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
 });
+
+test("the portal links back to the website", async ({ page, isMobile }) => {
+  test.skip(isMobile, "The header link is shown from tablet width up.");
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "← Wyrm AI website" })).toHaveAttribute(
+    "href",
+    /^https:\/\//,
+  );
+});

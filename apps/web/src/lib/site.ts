@@ -19,6 +19,10 @@ export const SITE = {
   url: siteUrl(),
   /** Cal.com / Calendly link. When unset, the site shows "booking opens soon" instead of a dead link. */
   bookingUrl: env(process.env.NEXT_PUBLIC_BOOKING_URL),
+  /** The client portal (sign-in for clients and Wyrm staff). */
+  portalUrl:
+    env(process.env.NEXT_PUBLIC_PORTAL_URL)?.replace(/\/+$/, "") ??
+    "https://wyrm-portal.vercel.app",
   /** Public business email. When unset, no email address is shown. */
   contactEmail: env(process.env.NEXT_PUBLIC_CONTACT_EMAIL),
 } as const;
