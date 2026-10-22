@@ -177,58 +177,88 @@ export async function customerHealth(ctx: Ctx, now = new Date()): Promise<Custom
     .toISOString()
     .slice(0, 10);
   const n = (filter?: SQL) => sql<number>`count(*) filter (where ${filter ?? sql`true`})::int`;
-  const [list, agentRows, convRows, approvalRows, spendRows, launchRows, calRows, switchRows] =
-    await Promise.all([
-      ctx.db.select().from(tenants).orderBy(asc(tenants.name)).limit(200),
-      ctx.db
-        .select({ tenantId: agents.tenantId, all: n(), live: n(eq(agents.status, "live")) })
-        .from(agents)
-        .groupBy(agents.tenantId),
-      ctx.db
-        .select({
-          tenantId: conversations.tenantId,
-          week: n(gte(conversations.startedAt, weekAgo)),
-          handedOff: n(
-            and(gte(conversations.startedAt, weekAgo), eq(conversations.outcome, "handed_off")),
-          ),
-          waiting: n(sql`'needs_attention' = any(${conversations.flags})`),
-          last: sql<Date | null>`max(${conversations.startedAt})`,
-        })
-        .from(conversations)
-        .groupBy(conversations.tenantId),
-      ctx.db
-        .select({ tenantId: approvals.tenantId, pending: n() })
-        .from(approvals)
-        .where(eq(approvals.status, "pending"))
-        .groupBy(approvals.tenantId),
-      ctx.db
-        .select({
-          tenantId: usageDaily.tenantId,
-          cost: sql<number>`coalesce(sum(${usageDaily.costMicros}), 0)::bigint`,
-        })
-        .from(usageDaily)
-        .where(gte(usageDaily.day, monthStart))
-        .groupBy(usageDaily.tenantId),
-      ctx.db
-        .select({
-          tenantId: agentLaunches.tenantId,
-          signed: n(isNotNull(agentLaunches.signedOffAt)),
-        })
-        .from(agentLaunches)
-        .groupBy(agentLaunches.tenantId),
-      ctx.db
-        .select({
-          tenantId: calendarConnections.tenantId,
-          errors: n(ne(calendarConnections.status, "ok")),
-        })
-        .from(calendarConnections)
-        .groupBy(calendarConnections.tenantId),
-      ctx.db
-        .select({ tenantId: killSwitches.tenantId, stopped: n() })
-        .from(killSwitches)
-        .where(isNull(killSwitches.clearedAt))
-        .groupBy(killSwitches.tenantId),
-    ]);
+  // One query at a time (the pooled connection is small); a slow step is logged by name.
+  const step = async <T>(label: string, query: PromiseLike<T>): Promise<T> => {
+    const started = Date.now();
+    console.info("customerHealth: step", label);
+    const result = await query;
+    const ms = Date.now() - started;
+    if (ms > 1000) console.warn("customerHealth: slow step", label, ms);
+    return result;
+  };
+  const list = await step(
+    "tenants",
+    ctx.db.select().from(tenants).orderBy(asc(tenants.name)).limit(200),
+  );
+  const agentRows = await step(
+    "agents",
+    ctx.db
+      .select({ tenantId: agents.tenantId, all: n(), live: n(eq(agents.status, "live")) })
+      .from(agents)
+      .groupBy(agents.tenantId),
+  );
+  const convRows = await step(
+    "conversations",
+    ctx.db
+      .select({
+        tenantId: conversations.tenantId,
+        week: n(gte(conversations.startedAt, weekAgo)),
+        handedOff: n(
+          and(gte(conversations.startedAt, weekAgo), eq(conversations.outcome, "handed_off")),
+        ),
+        waiting: n(sql`'needs_attention' = any(${conversations.flags})`),
+        last: sql<Date | null>`max(${conversations.startedAt})`,
+      })
+      .from(conversations)
+      .groupBy(conversations.tenantId),
+  );
+  const approvalRows = await step(
+    "approvals",
+    ctx.db
+      .select({ tenantId: approvals.tenantId, pending: n() })
+      .from(approvals)
+      .where(eq(approvals.status, "pending"))
+      .groupBy(approvals.tenantId),
+  );
+  const spendRows = await step(
+    "usage",
+    ctx.db
+      .select({
+        tenantId: usageDaily.tenantId,
+        cost: sql<number>`coalesce(sum(${usageDaily.costMicros}), 0)::bigint`,
+      })
+      .from(usageDaily)
+      .where(gte(usageDaily.day, monthStart))
+      .groupBy(usageDaily.tenantId),
+  );
+  const launchRows = await step(
+    "launches",
+    ctx.db
+      .select({
+        tenantId: agentLaunches.tenantId,
+        signed: n(isNotNull(agentLaunches.signedOffAt)),
+      })
+      .from(agentLaunches)
+      .groupBy(agentLaunches.tenantId),
+  );
+  const calRows = await step(
+    "calendar",
+    ctx.db
+      .select({
+        tenantId: calendarConnections.tenantId,
+        errors: n(ne(calendarConnections.status, "ok")),
+      })
+      .from(calendarConnections)
+      .groupBy(calendarConnections.tenantId),
+  );
+  const switchRows = await step(
+    "switches",
+    ctx.db
+      .select({ tenantId: killSwitches.tenantId, stopped: n() })
+      .from(killSwitches)
+      .where(isNull(killSwitches.clearedAt))
+      .groupBy(killSwitches.tenantId),
+  );
   const index = <T extends { tenantId: string | null }>(rows: T[]) =>
     new Map(rows.map((r) => [r.tenantId ?? "", r]));
   const [a, c, p, s, l, cal, sw] = [
