@@ -290,11 +290,12 @@ export async function setupStatus(ctx: Ctx, tenantId: string, agentId: string) {
   };
 }
 
-/** Customers can switch an agent on only when setup is complete and Wyrm has signed it off. */
+/**
+ * An agent goes live (or resumes) only when every required setup step is done and Wyrm has
+ * signed it off. No exceptions, Wyrm staff included: a live agent talks to real customers.
+ */
 export async function assertReadyToGoLive(ctx: Ctx, tenantId: string, agentId: string) {
-  if (ctx.actor?.kind === "platform") return; // Wyrm staff may switch on directly (they sign off)
   const status = await setupStatus(ctx, tenantId, agentId);
-  if (status.status === "paused" && status.signedOff) return; // resuming a launched agent
   if (!status.readyToLaunch) {
     const reasons = status.missing.map((i) => i.label.toLowerCase());
     if (!status.signedOff) reasons.push("Wyrm sign-off");
@@ -312,6 +313,12 @@ export async function signOffLaunch(
     throw new ForbiddenError("platform_agents.manage", d.allowed ? "platform_only" : d.reason);
   const note = input.note.trim().slice(0, 500);
   if (note.length < 3) throw new DomainError("note_required", "Add a short sign-off note.");
+  const { missing } = await setupStatus(ctx, input.tenantId, input.agentId);
+  if (missing.length > 0)
+    throw new DomainError(
+      "not_ready",
+      `Can't sign off yet. Still missing: ${missing.map((i) => i.label.toLowerCase()).join(", ")}.`,
+    );
   const staffId = ctx.actor.userId;
   await guarded(() =>
     ctx.db

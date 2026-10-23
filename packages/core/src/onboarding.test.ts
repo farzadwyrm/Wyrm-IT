@@ -105,6 +105,14 @@ describe("setup tracker and go-live gate", () => {
     await expect(
       setAgentStatus(owner, { tenantId: TENANT, agentId: AGENT, status: "live" }),
     ).rejects.toThrow(/Before going live/);
+    // Wyrm staff can't skip the checklist either: no sign-off and no switching on.
+    const staff = await ctxFor(SUPER);
+    await expect(
+      signOffLaunch(staff, { tenantId: TENANT, agentId: AGENT, note: "Looks fine" }),
+    ).rejects.toThrow(/Can't sign off yet/);
+    await expect(
+      setAgentStatus(staff, { tenantId: TENANT, agentId: AGENT, status: "live" }),
+    ).rejects.toThrow(/Before going live/);
   });
 
   it("ticks items off as the owner sets up, and still needs Wyrm's sign-off", async () => {

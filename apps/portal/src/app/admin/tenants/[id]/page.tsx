@@ -181,7 +181,12 @@ export default async function TenantPage({
                         </span>
                       )}
                     </p>
-                    {setup.signedOff ? (
+                    {setup.missing.length > 0 ? (
+                      <p className="text-ink-muted">
+                        Sign-off opens once the client finishes the required steps. The agent can't
+                        go live before then.
+                      </p>
+                    ) : setup.signedOff ? (
                       <p className="text-moss">
                         Signed off{setup.launch?.note ? `: ${setup.launch.note}` : ""}
                       </p>
