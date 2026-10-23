@@ -48,40 +48,36 @@ export interface Offer {
 export const OFFERS: readonly Offer[] = [
   {
     slug: "workflow-sprint",
-    name: "Agent Discovery Sprint",
-    summary:
-      "Two weeks to map your workflows, find where agents pay off and design the first one in detail.",
+    name: "Find the right task",
+    summary: "Two weeks to find where an agent saves you the most time, and plan the first one.",
     price: "Fixed fee",
-    forWho: "Teams that know AI could help but not where to start.",
+    forWho: "You know AI could help but not where to start.",
     deliverables: [
-      "Workshops with the people who do the work today",
-      "Your workflows mapped, with time spent and agent fit for each",
-      "A detailed design of the first agent: steps, systems, guardrails, success measures",
+      "We sit with your team and see how the work is done today",
+      "A clear plan for your first agent, with the time it saves",
     ],
   },
   {
     slug: "build-deploy",
-    name: "Agent Build & Deploy",
+    name: "Build your agent",
     summary:
-      "We build the agent, connect it to your systems, test it on real cases and put it live.",
+      "We build the agent, connect it to your tools, test it on real cases and switch it on.",
     price: "Per agent",
-    forWho: "Businesses with a clear, repetitive workflow: calls, email, leads, invoices, support.",
+    forWho: "You have a repetitive task: calls, emails, leads, invoices or support.",
     deliverables: [
-      "A working agent connected to your phone, inbox, CRM or accounting",
-      "Guardrails and human approval steps where money, customers or safety are involved",
-      "Evaluation on real examples before go-live, and team training",
+      "Works with your phone, inbox, calendar or accounting",
+      "A person approves anything involving money or customers",
     ],
   },
   {
     slug: "managed-agents",
-    name: "Managed Agents",
-    summary: "We run, monitor and improve your agents every month, so they keep getting better.",
+    name: "We run it for you",
+    summary: "We keep your agents running and improve them every month.",
     price: "Monthly",
-    forWho: "Clients who want agents working every day without hiring an AI team.",
+    forWho: "You want agents working every day without hiring an AI team.",
     deliverables: [
-      "Hosting, monitoring, alerts and model updates",
-      "Monthly review of conversations, accuracy and time saved",
-      "New skills and workflows added as your business changes",
+      "We watch every run and fix what's off",
+      "A short monthly report: what it did and the time it saved",
     ],
   },
 ];
@@ -108,7 +104,7 @@ export const DEMOS: readonly Demo[] = [
     slug: "workflow-analysis",
     name: "Workflow analysis",
     summary:
-      "Map one workflow in about seven minutes and see which steps an agent should take over.",
+      "Answer questions about one task and see which steps an agent should take over. About 15 minutes.",
     status: "live",
     href: "/analyse",
   },
@@ -160,7 +156,7 @@ export const PRINCIPLES = [
   },
   {
     title: "Your data stays yours",
-    body: "Least-privilege access, full audit logs, and no training on your data without your say.",
+    body: "We only access what the agent needs, every action is logged, and we never train on your data.",
   },
 ] as const;
 

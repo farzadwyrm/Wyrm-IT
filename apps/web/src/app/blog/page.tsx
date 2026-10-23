@@ -15,9 +15,8 @@ export default function BlogIndexPage() {
   return (
     <>
       <PageHeader
-        eyebrow="blog"
         title="Notes on building AI agents"
-        intro="Short, practical articles on deploying agents in real businesses. No hype."
+        intro="Short, practical notes on using AI in a small business."
       />
       <Container className="pb-8">
         <ul className="divide-y divide-line border-y border-line">

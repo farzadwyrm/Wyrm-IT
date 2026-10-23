@@ -12,26 +12,19 @@ export default function AboutPage() {
   return (
     <>
       <PageHeader
-        eyebrow="about"
-        title="Engineers who build agents, deploy them and keep them running"
-        intro="Wyrm AI was started by an infrastructure and software engineer who saw the same pattern again and again: teams buried in repetitive work an AI agent could do, and nobody to design, build and run that agent safely."
+        title="Engineers who build agents and keep them running"
+        intro="Wyrm AI was started by a software engineer who kept seeing small teams buried in repetitive work an AI agent could do."
       />
 
       <Container className="grid gap-12 pb-8 md:grid-cols-[3fr_2fr]">
         <div className="space-y-5 text-lg text-ink-muted">
           <p>
-            Large companies have AI teams. Small and medium businesses have people answering the
-            same calls, retyping the same invoices and chasing the same leads. That is exactly the
-            work agents are good at.
+            We start with one task. We see how your team does it today, build an agent for it, test
+            it on real cases and run it for you.
           </p>
           <p>
-            We start with one workflow. We map it with the people who do it, design an agent with
-            clear guardrails, connect it to your tools, test it on real cases and run it for you,
-            measuring what it actually does every month.
-          </p>
-          <p>
-            The name comes from the wyrm, the dragon of old stories that guards its treasure. Your
-            data is your treasure: our agents put it to work without leaving the door open.
+            The name comes from the wyrm, the dragon that guards its treasure. Your data is yours,
+            and we look after it.
           </p>
         </div>
 

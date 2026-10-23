@@ -1,7 +1,7 @@
 import { AGENTS, CATEGORIES } from "@wyrm/agents";
 import type { Metadata } from "next";
 import { AgentCard } from "@/components/agent-card";
-import { Container, CtaBand, Eyebrow, PageHeader } from "@/components/sections";
+import { Container, CtaBand, PageHeader } from "@/components/sections";
 
 export const metadata: Metadata = {
   title: "AI agents",
@@ -13,9 +13,8 @@ export default function AgentsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="agents"
-        title="Agents that do the work, with people in control"
-        intro={`${AGENTS.length} agents we deploy, grouped by where they help. Each connects to the tools you already use, follows written guardrails and hands anything risky to a person.`}
+        title="Pick a job to hand over"
+        intro="Each agent does one job, works with the tools you already use, and asks a person before anything important."
       />
       <Container className="pb-4">
         <nav aria-label="Agent categories" className="flex flex-wrap gap-2">
@@ -40,14 +39,14 @@ export default function AgentsPage() {
             className="scroll-mt-20"
           >
             <Container className="py-10">
-              <Eyebrow>{category.name}</Eyebrow>
-              <h2 id={`${category.id}-title`} className="mt-2 font-display text-2xl font-semibold">
-                {category.intro}
+              <h2 id={`${category.id}-title`} className="font-display text-2xl font-semibold">
+                {category.name}
               </h2>
+              <p className="mt-1 text-ink-muted">{category.intro}</p>
               <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {agents.map((agent) => (
                   <li key={agent.slug}>
-                    <AgentCard agent={agent} index={AGENTS.indexOf(agent)} />
+                    <AgentCard agent={agent} />
                   </li>
                 ))}
               </ul>

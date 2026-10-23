@@ -43,7 +43,6 @@ export default function ContactPage() {
   return (
     <>
       <PageHeader
-        eyebrow="contact"
         title="Book a free 30-minute call"
         intro="Talk to an engineer, not a salesperson. We will map one of your workflows and show how an agent would run it."
       />

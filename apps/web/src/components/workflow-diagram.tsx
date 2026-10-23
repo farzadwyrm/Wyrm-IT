@@ -84,11 +84,7 @@ export function WorkflowDiagram({
               <div
                 className={`rounded-xl border border-line bg-paper-raised/80 ${compact ? "px-3 py-2" : "px-4 py-3"}`}
               >
-                <p
-                  className={`font-mono text-[11px] font-medium uppercase tracking-wider ${style.text}`}
-                >
-                  {STEP_LABELS[step.kind]}
-                </p>
+                <p className={`text-xs font-semibold ${style.text}`}>{STEP_LABELS[step.kind]}</p>
                 <p className="mt-0.5 font-semibold">{step.label}</p>
                 {!compact && step.detail && (
                   <p className="mt-1 text-sm text-ink-muted">{step.detail}</p>
@@ -107,20 +103,17 @@ export function WorkflowFacts({ workflow }: { workflow: Workflow }) {
   return (
     <div className="grid gap-6 sm:grid-cols-2">
       <div>
-        <h3 className="font-mono text-xs uppercase tracking-wider text-ink-muted">Connects to</h3>
+        <h3 className="text-sm font-semibold">Works with</h3>
         <ul className="mt-3 flex flex-wrap gap-2">
           {workflow.integrations.map((name) => (
-            <li
-              key={name}
-              className="rounded-md border border-line bg-paper px-2.5 py-1 font-mono text-xs"
-            >
+            <li key={name} className="rounded-md border border-line bg-paper px-2.5 py-1 text-sm">
               {name}
             </li>
           ))}
         </ul>
       </div>
       <div>
-        <h3 className="font-mono text-xs uppercase tracking-wider text-ink-muted">Guardrails</h3>
+        <h3 className="text-sm font-semibold">Always checked</h3>
         <ul className="mt-3 space-y-2 text-sm">
           {workflow.guardrails.map((rule) => (
             <li key={rule} className="flex gap-2">

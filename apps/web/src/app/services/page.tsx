@@ -13,9 +13,8 @@ export default function ServicesPage() {
   return (
     <>
       <PageHeader
-        eyebrow="services"
-        title="From one workflow to agents that run every day"
-        intro="Three steps, each useful on its own. Most clients start with one workflow and add agents only when the first one clearly pays for itself."
+        title="Three ways to work with us"
+        intro="Start small. Add more only when the first agent pays for itself."
       />
 
       <Container className="pb-8">
@@ -38,11 +37,11 @@ export default function ServicesPage() {
               <p className="mt-4 max-w-3xl text-lg text-ink-muted">{offer.summary}</p>
               <div className="mt-6 grid gap-6 md:grid-cols-2">
                 <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wider">Who it is for</h3>
+                  <h3 className="text-sm font-semibold">Who it's for</h3>
                   <p className="mt-2 text-ink-muted">{offer.forWho}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold uppercase tracking-wider">What you get</h3>
+                  <h3 className="text-sm font-semibold">What you get</h3>
                   <ul className="mt-2 space-y-2 text-ink-muted">
                     {offer.deliverables.map((item) => (
                       <li key={item} className="flex gap-2">
@@ -57,7 +56,7 @@ export default function ServicesPage() {
               </div>
               {offer.slug === "workflow-sprint" && (
                 <ButtonLink href="/analyse" className="mt-8" variant="secondary">
-                  Try the free workflow analysis
+                  Check one of your tasks for free
                 </ButtonLink>
               )}
             </li>

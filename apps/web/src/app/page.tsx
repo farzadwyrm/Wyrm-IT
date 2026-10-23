@@ -1,41 +1,25 @@
-import { AGENTS, getAgent, STEP_KINDS, STEP_LABELS, type StepKind } from "@wyrm/agents";
+import { AGENTS, getAgent } from "@wyrm/agents";
 import { ButtonLink } from "@wyrm/ui";
 import Link from "next/link";
 import { AgentCard } from "@/components/agent-card";
-import { Container, CtaBand, Eyebrow, SectionTitle } from "@/components/sections";
+import { Container, CtaBand, SectionTitle } from "@/components/sections";
 import { WorkflowDiagram } from "@/components/workflow-diagram";
-import { DEMOS, PRINCIPLES, USE_CASES } from "@/lib/site";
+import { DEMOS, USE_CASES } from "@/lib/site";
 
 const HERO_AGENT = getAgent("inbox-agent") ?? AGENTS[0];
 
-const KIND_COPY: Record<StepKind, string> = {
-  trigger: "An email, call, form or file starts the run.",
-  agent: "The AI reads, decides and drafts, within its rules.",
-  tool: "It works in your calendar, inbox, CRM or accounting.",
-  human: "A person approves anything that matters.",
-  output: "The work is done, logged and measured.",
-};
-
 const PROCESS = [
   {
-    step: "01",
-    title: "Map",
-    body: "We sit with the people who do the work and map one workflow end to end.",
+    title: "We talk",
+    body: "You tell us which task eats your week. We look at how it's done today.",
   },
   {
-    step: "02",
-    title: "Design",
-    body: "Agent steps, systems, guardrails and the numbers that define success.",
+    title: "We build and test",
+    body: "We connect the agent to your tools and test it on your real cases.",
   },
   {
-    step: "03",
-    title: "Build & test",
-    body: "Connected to your tools and tested on your real cases before go-live.",
-  },
-  {
-    step: "04",
-    title: "Run & improve",
-    body: "We monitor every run, review accuracy monthly and add new skills.",
+    title: "We run it for you",
+    body: "We watch every run, fix what's off and report back each month.",
   },
 ];
 
@@ -44,8 +28,7 @@ export default function HomePage() {
     <>
       <Container className="grid items-center gap-12 pt-16 pb-20 sm:pt-24 lg:grid-cols-[1.1fr_1fr]">
         <div>
-          <Eyebrow>ai agents · designed, deployed, managed</Eyebrow>
-          <h1 className="mt-5 font-display text-5xl font-semibold leading-[1.02] tracking-tight text-balance sm:text-7xl">
+          <h1 className="font-display text-5xl font-semibold leading-[1.02] tracking-tight text-balance sm:text-7xl">
             AI agents that run your{" "}
             <span className="bg-gradient-to-r from-ember-strong via-ember to-signal bg-clip-text text-transparent">
               workflows
@@ -53,101 +36,41 @@ export default function HomePage() {
             .
           </h1>
           <p className="mt-6 max-w-xl text-lg text-ink-muted text-pretty">
-            We build agents that answer calls, handle email, qualify leads, process invoices and
-            support customers, connected to the tools you already use, with people in control of
-            what matters.
+            We set up AI assistants that answer your phone, reply to emails and chase invoices, so
+            your team can get on with the real work. You stay in control.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink href="/analyse">Analyse a workflow</ButtonLink>
-            <ButtonLink href="/agents" variant="secondary">
-              See the agents
+            <ButtonLink href="/agents">See what we can automate</ButtonLink>
+            <ButtonLink href="/receptionist" variant="secondary">
+              Try the live demo
             </ButtonLink>
           </div>
-          <search className="mt-8 max-w-xl">
-            <form
-              action="/analyse"
-              className="flex gap-2 rounded-xl border border-line bg-paper-raised/80 p-1.5 focus-within:border-ember/60"
-            >
-              <label htmlFor="hero-task" className="sr-only">
-                Name a task to analyse
-              </label>
-              <span aria-hidden="true" className="self-center pl-2 font-mono text-sm text-signal">
-                &gt;
-              </span>
-              <input
-                id="hero-task"
-                name="q"
-                maxLength={600}
-                placeholder="e.g. Entering supplier invoices into Xero"
-                className="min-w-0 flex-1 bg-transparent px-1 py-2 outline-none placeholder:text-ink-muted/60"
-              />
-              <button
-                type="submit"
-                className="rounded-lg bg-ember/15 px-3 py-2 text-sm font-semibold text-ember-strong hover:bg-ember/25"
-              >
-                Analyse
-              </button>
-            </form>
-          </search>
         </div>
 
         {HERO_AGENT && (
-          <div className="rounded-3xl border border-line bg-paper-raised/70 shadow-[0_0_80px_-20px] shadow-ember/40">
-            <div className="flex items-center justify-between border-b border-line px-5 py-3 font-mono text-xs text-ink-muted">
-              <span>
-                agent.run(<span className="text-signal">"{HERO_AGENT.slug}"</span>)
-              </span>
-              <span className="flex items-center gap-1.5 text-moss">
-                <span
-                  aria-hidden="true"
-                  className="size-1.5 rounded-full bg-moss motion-safe:animate-pulse"
-                />
-                live
-              </span>
-            </div>
+          <figure className="rounded-3xl border border-line bg-paper-raised/70 shadow-[0_0_80px_-20px] shadow-ember/40">
+            <figcaption className="border-b border-line px-5 py-3 text-sm text-ink-muted">
+              Example: an email answered for you
+            </figcaption>
             <div className="p-5 sm:p-6">
               <WorkflowDiagram workflow={HERO_AGENT.workflow} compact />
             </div>
-          </div>
+          </figure>
         )}
       </Container>
-
-      <section aria-labelledby="anatomy" className="border-t border-line">
-        <Container className="py-20">
-          <SectionTitle
-            id="anatomy"
-            eyebrow="anatomy of an agent"
-            title="Five building blocks behind every agent"
-            intro="Every agent we deploy is a workflow you can read: what starts it, what the AI does, which systems it touches and where a person decides."
-          />
-          <ol className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {STEP_KINDS.map((kind, i) => (
-              <li key={kind} className="rounded-2xl border border-line bg-paper-raised/80 p-5">
-                <p className="font-mono text-xs text-ink-muted">0{i + 1}</p>
-                <p className="mt-3 font-semibold">{STEP_LABELS[kind]}</p>
-                <p className="mt-2 text-sm text-ink-muted">{KIND_COPY[kind]}</p>
-              </li>
-            ))}
-          </ol>
-        </Container>
-      </section>
 
       <section aria-labelledby="agents" className="border-t border-line">
         <Container className="py-20">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <SectionTitle
-              id="agents"
-              eyebrow="agents"
-              title="Agents for the work that eats your week"
-            />
-            <Link href="/agents" className="font-mono text-sm text-ember hover:text-ember-strong">
-              all {AGENTS.length} agents →
+            <SectionTitle id="agents" title="What our agents do" />
+            <Link href="/agents" className="font-semibold text-ember hover:text-ember-strong">
+              See all agents →
             </Link>
           </div>
           <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {AGENTS.slice(0, 6).map((agent, i) => (
+            {AGENTS.slice(0, 6).map((agent) => (
               <li key={agent.slug}>
-                <AgentCard agent={agent} index={i} />
+                <AgentCard agent={agent} />
               </li>
             ))}
           </ul>
@@ -162,54 +85,72 @@ export default function HomePage() {
         <Container className="py-20">
           <SectionTitle
             id="demos-title"
-            eyebrow="try it"
-            title="Talk to an agent before you talk to us"
-            intro="Live demos with a fictional business, so you can see exactly how an agent behaves."
+            title="Try it yourself"
+            intro="Talk to an agent for a pretend business, or check one task of your own."
           />
           <ul className="mt-10 grid gap-4 md:grid-cols-3">
-            {DEMOS.map((demo) => (
+            {/* The task analysis has its own card below, with the search box. */}
+            {DEMOS.filter(
+              (demo) => demo.status === "live" && demo.href && demo.href !== "/analyse",
+            ).map((demo) => (
               <li
                 key={demo.slug}
                 className="flex flex-col rounded-2xl border border-line bg-paper-raised/80 p-6"
               >
                 <h3 className="font-display text-lg font-semibold">{demo.name}</h3>
-                <p className="mt-2 flex-1 text-sm text-ink-muted">{demo.summary}</p>
-                {demo.status === "live" && demo.href ? (
-                  <Link
-                    href={demo.href}
-                    className="mt-5 font-semibold text-ember hover:text-ember-strong"
-                  >
-                    Try it now →
-                  </Link>
-                ) : (
-                  <p className="mt-5 font-mono text-xs uppercase tracking-wider text-ink-muted">
-                    coming soon
-                  </p>
-                )}
+                <p className="mt-2 flex-1 text-ink-muted">{demo.summary}</p>
+                <Link
+                  href={demo.href ?? "/receptionist"}
+                  className="mt-5 font-semibold text-ember hover:text-ember-strong"
+                >
+                  Try it now →
+                </Link>
               </li>
             ))}
+            <li className="flex flex-col rounded-2xl border border-line bg-paper-raised/80 p-6">
+              <h3 className="font-display text-lg font-semibold">Check one of your tasks</h3>
+              <p className="mt-2 text-ink-muted">
+                Name a task and get a free report on what to automate. About 15 minutes.
+              </p>
+              <search className="mt-5">
+                <form
+                  action="/analyse"
+                  className="flex gap-2 rounded-xl border border-line bg-paper p-1.5 focus-within:border-ember/60"
+                >
+                  <label htmlFor="hero-task" className="sr-only">
+                    Name a task to analyse
+                  </label>
+                  <input
+                    id="hero-task"
+                    name="q"
+                    maxLength={600}
+                    placeholder="e.g. Entering invoices"
+                    className="min-w-0 flex-1 bg-transparent px-2 py-2 outline-none placeholder:text-ink-muted/60"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-ember/15 px-3 py-2 text-sm font-semibold text-ember-strong hover:bg-ember/25"
+                  >
+                    Analyse
+                  </button>
+                </form>
+              </search>
+            </li>
           </ul>
         </Container>
       </section>
 
       <section aria-labelledby="use-cases" className="border-t border-line">
         <Container className="py-20">
-          <SectionTitle id="use-cases" eyebrow="use cases" title="Where agents pay off first" />
+          <SectionTitle id="use-cases" title="Where it helps most" />
           <ul className="mt-10 grid gap-4 md:grid-cols-3">
             {USE_CASES.map((useCase) => (
               <li
                 key={useCase.sector}
                 className="rounded-2xl border border-line bg-paper-raised/80 p-6"
               >
-                <h3 className="font-semibold">{useCase.sector}</h3>
-                <p className="mt-3 text-sm text-ink-muted">
-                  <span className="font-mono text-xs text-node-output">before </span>
-                  {useCase.problem}
-                </p>
-                <p className="mt-2 text-sm text-ink-muted">
-                  <span className="font-mono text-xs text-moss">after </span>
-                  {useCase.solution}
-                </p>
+                <h3 className="font-display text-lg font-semibold">{useCase.sector}</h3>
+                <p className="mt-2 text-ink-muted">{useCase.solution}</p>
               </li>
             ))}
           </ul>
@@ -218,34 +159,15 @@ export default function HomePage() {
 
       <section aria-labelledby="process" className="border-t border-line">
         <Container className="py-20">
-          <SectionTitle
-            id="process"
-            eyebrow="deployment"
-            title="From one workflow to agents running every day"
-          />
-          <ol className="mt-10 grid gap-4 md:grid-cols-4">
+          <SectionTitle id="process" title="How it works" />
+          <ol className="mt-10 grid gap-6 md:grid-cols-3">
             {PROCESS.map((p) => (
-              <li key={p.step} className="border-t border-ember/50 pt-5">
-                <p className="font-mono text-sm text-ember">{p.step}</p>
-                <p className="mt-2 font-display text-lg font-semibold">{p.title}</p>
-                <p className="mt-2 text-sm text-ink-muted">{p.body}</p>
+              <li key={p.title} className="border-t border-ember/50 pt-5">
+                <p className="font-display text-lg font-semibold">{p.title}</p>
+                <p className="mt-2 text-ink-muted">{p.body}</p>
               </li>
             ))}
           </ol>
-        </Container>
-      </section>
-
-      <section aria-labelledby="principles" className="border-t border-line">
-        <Container className="py-20">
-          <SectionTitle id="principles" eyebrow="principles" title="Autonomy with guardrails" />
-          <dl className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {PRINCIPLES.map((principle) => (
-              <div key={principle.title}>
-                <dt className="font-semibold">{principle.title}</dt>
-                <dd className="mt-2 text-sm text-ink-muted">{principle.body}</dd>
-              </div>
-            ))}
-          </dl>
         </Container>
       </section>
 
