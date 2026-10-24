@@ -6,6 +6,7 @@ import {
   DomainError,
   endViewAs,
   provisionAgent,
+  resendInvitation,
   setAgentStatus,
   setTenantStatus,
   signOffLaunch,
@@ -91,6 +92,33 @@ const idOf = (form: FormData, name: string) => {
   const value = String(form.get(name) ?? "");
   return UUID.test(value) ? value : "";
 };
+
+export interface InviteLinkState {
+  error?: string;
+  url?: string;
+}
+
+/**
+ * A fresh link for a pending (or expired) invitation: valid 7 days, the old link stops working.
+ * Returned to the page only, never put in a URL or a log.
+ */
+export async function newInviteLinkAction(
+  _prev: InviteLinkState,
+  formData: FormData,
+): Promise<InviteLinkState> {
+  const access = await requireAdmin();
+  try {
+    const { token } = await resendInvitation(
+      await coreContext(access),
+      idOf(formData, "tenantId"),
+      idOf(formData, "invitationId"),
+    );
+    const host = (await headers()).get("host") ?? "";
+    return { url: `https://${host}/invite/${token}` };
+  } catch (error) {
+    return { error: explain(error) };
+  }
+}
 
 /** Wyrm staff switch a client's agent on or off. */
 export async function adminAgentStatus(formData: FormData) {

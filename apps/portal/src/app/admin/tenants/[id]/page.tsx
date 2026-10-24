@@ -4,6 +4,7 @@ import {
   getTenant,
   listAgents,
   listConversations,
+  listInvitations,
   listStaff,
   setupStatus,
 } from "@wyrm/core";
@@ -15,6 +16,7 @@ import { coreContext, requireAdmin } from "@/lib/auth";
 import { clientHealth } from "@/lib/health";
 import { money, OUTCOME_LABELS, when } from "@/lib/portal";
 import { addAgentAction, adminAgentStatus, signOffAction, viewAsAction } from "../../actions";
+import { InviteLink } from "./invite-link";
 
 export const metadata: Metadata = { title: "Client" };
 
@@ -41,12 +43,15 @@ export default async function TenantPage({
     if (e instanceof DomainError) notFound();
     throw e;
   }
-  const [agents, staff, recent, healthRows] = await Promise.all([
+  const [agents, staff, recent, healthRows, invites] = await Promise.all([
     listAgents(ctx, id),
     listStaff(ctx, id),
     listConversations(ctx, id, { limit: 10 }),
     customerHealth(ctx),
+    // Roles without access to client users simply don't see invitations.
+    listInvitations(ctx, id).catch(() => []),
   ]);
+  const waitingInvites = invites.filter((i) => i.status === "pending" || i.status === "expired");
   const row = healthRows.find((r) => r.tenantId === id);
   const health = row ? clientHealth(row) : null;
   const setups = new Map(
@@ -230,6 +235,24 @@ export default async function TenantPage({
           <p className="text-ink-muted">
             Nobody has joined yet. Send the owner their invitation link.
           </p>
+        )}
+        {waitingInvites.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="font-semibold">Invitations not accepted yet</h3>
+            <ul className="divide-y divide-line rounded-2xl border border-line">
+              {waitingInvites.map((inv) => (
+                <InviteLink
+                  key={inv.id}
+                  tenantId={id}
+                  invitationId={inv.id}
+                  email={inv.email}
+                  status={
+                    inv.status === "pending" && inv.expiresAt <= new Date() ? "expired" : inv.status
+                  }
+                />
+              ))}
+            </ul>
+          </div>
         )}
         <ul className="divide-y divide-line rounded-2xl border border-line">
           {staff.map((s) => (
