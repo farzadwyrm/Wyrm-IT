@@ -5,8 +5,7 @@ import {
   addProcedure,
   DomainError,
   deleteRule,
-  getStudio,
-  policyFromConfig,
+  draftPolicy,
   publishPolicy,
   runTests,
   saveLimits,
@@ -217,14 +216,8 @@ export async function publishAction(form: FormData) {
 export async function runTestsAction(form: FormData) {
   form.set("tab", "tests");
   await studio(form, "tests_ran", async (p, agentId) => {
-    const { policy } = await getStudio(p.ctx, p.tenantId, agentId);
-    const draft = policyFromConfig({
-      version: 2,
-      profile: policy.profile,
-      rules: policy.rules.filter((r) => r.enabled),
-      procedures: policy.procedures.filter((x) => x.enabled),
-      limits: policy.limits,
-    });
+    // The same draft publishing would make live (including a sales agent's setup).
+    const draft = await draftPolicy(p.ctx, p.tenantId, agentId);
     const { deps, judge } = modelDeps();
     return runTests(p.ctx, {
       tenantId: p.tenantId,

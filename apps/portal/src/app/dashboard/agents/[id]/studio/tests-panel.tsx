@@ -13,6 +13,7 @@ const ACTION_LABELS: Record<string, string> = {
   "message.request": "Message for the team",
   "transfer.request": "Pass to a person",
   "quote.held": "Quote (held for review)",
+  "qualify.request": "Sales lead recorded",
 };
 
 function Check({ label, ok }: { label: string; ok: boolean | null }) {
