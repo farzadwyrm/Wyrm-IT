@@ -249,6 +249,8 @@ export interface TurnInput {
   /** Test chats only: answer with this (unpublished) policy instead of the live one. */
   policy?: Policy | null;
   customerLabel?: string;
+  /** Who started it (e.g. "mcp:<user id>"); a conversation continues only for the same caller. */
+  customerRef?: string;
   now?: Date;
 }
 
@@ -293,6 +295,7 @@ export async function handleCustomerMessage(
               eq(conversations.tenantId, tenantId),
               eq(conversations.status, "active"),
               gte(conversations.startedAt, new Date(now.getTime() - 6 * 3_600_000)),
+              input.customerRef ? eq(conversations.customerRef, input.customerRef) : undefined,
             ),
           )
       )[0]
@@ -309,6 +312,7 @@ export async function handleCustomerMessage(
           ? "Test chat"
           : (input.customerLabel?.slice(0, 80) ?? "Website visitor"),
         flags: input.test ? ["test"] : [],
+        ...(input.customerRef ? { customerRef: input.customerRef.slice(0, 120) } : {}),
         startedAt: now,
       })
       .returning();

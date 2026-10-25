@@ -6,6 +6,7 @@ import {
   DomainError,
   deleteTenant,
   endViewAs,
+  getTenant,
   provisionAgent,
   resendInvitation,
   revokeAgent,
@@ -113,11 +114,17 @@ export async function updateClientLimitsAction(formData: FormData) {
     const budget = number("budgetDollars");
     if (!Number.isFinite(budget))
       throw new DomainError("bad_budget", "Enter the AI budget in dollars.");
-    await updateTenant(await coreContext(access), tenantId, {
+    const ctx = await coreContext(access);
+    // AI app access (MCP) is a feature flag; other flags are kept as they are.
+    // Sent only when it changes, so Billing staff (plan only) can still save limits.
+    const current = (await getTenant(ctx, tenantId)).features as Record<string, boolean>;
+    const mcp = formData.get("mcp") === "on";
+    await updateTenant(ctx, tenantId, {
       plan: plan as "pilot",
       seatLimit,
       agentLimit: number("agentLimit"),
       aiMonthlyBudgetMicros: Math.round(budget * 100) * 10_000,
+      ...((current?.mcp === true) !== mcp ? { features: { ...current, mcp } } : {}),
     });
   } catch (e) {
     error = explain(e);

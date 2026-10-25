@@ -126,6 +126,7 @@ beforeAll(async () => {
     "0009_connections.sql",
     "0010_sales.sql",
     "0011_history_cleanup.sql",
+    "0012_mcp_oauth.sql",
   ])
     await client.exec(migration(m));
   await client.query(

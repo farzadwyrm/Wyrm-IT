@@ -134,6 +134,15 @@ export default async function TenantPage({
                 className={input}
               />
             </label>
+            <label className="flex items-center gap-2 text-sm sm:col-span-2 lg:col-span-5">
+              <input
+                type="checkbox"
+                name="mcp"
+                defaultChecked={(tenant.features as Record<string, unknown>)?.mcp === true}
+              />
+              AI app access (MCP): the client's team can use their Wyrm agents from Claude, ChatGPT
+              or Copilot
+            </label>
             <button type="submit" className={button}>
               Save limits
             </button>

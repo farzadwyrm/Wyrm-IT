@@ -100,6 +100,7 @@ beforeAll(async () => {
   await client.exec(migration("0009_connections.sql"));
   await client.exec(migration("0010_sales.sql"));
   await client.exec(migration("0011_history_cleanup.sql"));
+  await client.exec(migration("0012_mcp_oauth.sql"));
   await client.query(
     "insert into platform_users (id, email, platform_role) values ($1, $2, 'support')",
     [people.support.id, people.support.email],

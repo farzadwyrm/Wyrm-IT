@@ -7,6 +7,8 @@ export { type Ctx, type Db, DomainError, guarded, translateDbError } from "./con
 export * from "./impersonation";
 export * from "./knowledge";
 export * from "./leads";
+export * from "./mcp";
+export * from "./oauth";
 export * from "./onboarding";
 export * from "./operations";
 export * from "./platform";

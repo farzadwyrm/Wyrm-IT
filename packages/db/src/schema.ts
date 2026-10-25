@@ -729,3 +729,29 @@ export const leads = pgTable("leads", {
 });
 
 export type Lead = typeof leads.$inferSelect;
+
+// MCP OAuth (0012): AI apps registered with Wyrm and their hashed codes and tokens.
+
+export const oauthClients = pgTable("oauth_clients", {
+  clientId: text("client_id").primaryKey(),
+  clientName: text("client_name").notNull().default(""),
+  redirectUris: text("redirect_uris").array().notNull(),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
+export const oauthGrants = pgTable("oauth_grants", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  kind: text("kind", { enum: ["code", "access", "refresh"] }).notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  clientId: text("client_id").notNull(),
+  userId: uuid("user_id").notNull(),
+  tenantId: uuid("tenant_id").notNull(),
+  scope: text("scope").notNull().default(""),
+  resource: text("resource").notNull(),
+  redirectUri: text("redirect_uri"),
+  codeChallenge: text("code_challenge"),
+  expiresAt: ts("expires_at").notNull(),
+  usedAt: ts("used_at"),
+  revokedAt: ts("revoked_at"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
