@@ -38,16 +38,20 @@ export default async function LaunchPage({
   const snippet = `<script src="https://${host}/widget.js" data-agent="${agent.id}" async></script>`;
   const hidden = <input type="hidden" name="agentId" value={agent.id} />;
   const studio = (tab: string) => `/dashboard/agents/${agent.id}/studio?tab=${tab}`;
-  const linkFor = (where: string) =>
-    where === "try"
-      ? studio("tests")
-      : where === "launch"
-        ? "#channels"
-        : where === "settings"
-          ? "/dashboard/settings"
-          : where === "documents" || where === "ask"
-            ? `/dashboard/agents/${agent.id}/${where}`
-            : studio(where);
+  /** Where each step is done; Wyrm's sign-off has no page for the client. */
+  const linkFor = (where: string): string | null =>
+    where === "wyrm"
+      ? null
+      : where === "try"
+        ? studio("tests")
+        : where === "launch"
+          ? "#channels"
+          : where === "settings"
+            ? "/dashboard/settings"
+            : where === "documents" || where === "ask"
+              ? `/dashboard/agents/${agent.id}/${where}`
+              : studio(where);
+  const next = setup.missingBeforeSignOff[0] ?? null;
   const draft = suggestion?.draft as
     | {
         summary?: string;
@@ -64,8 +68,9 @@ export default async function LaunchPage({
         <div>
           <h2 className="font-display text-2xl font-semibold">Go live</h2>
           <p className="mt-1 text-ink-muted">
-            {setup.done} of {setup.total} setup steps done
-            {setup.status === "live" ? ". Your agent is answering customers." : "."}
+            {setup.status === "live"
+              ? "Your agent is answering customers."
+              : `Must do: ${setup.done} of ${setup.total} done.`}
           </p>
         </div>
         {canEdit && (
@@ -95,10 +100,22 @@ export default async function LaunchPage({
       <Notice params={query} />
       {setup.status !== "live" && !setup.readyToLaunch && (
         <p className="rounded-xl border border-line bg-paper-raised p-3 text-sm">
-          Going live needs every required step below, then Wyrm's sign-off.{" "}
-          {setup.signedOff
-            ? "Wyrm has signed off."
-            : "Your Wyrm contact signs off once the required steps are done."}
+          {next ? (
+            <>
+              <strong>Next step:</strong>{" "}
+              {linkFor(next.where) ? (
+                <Link href={linkFor(next.where) ?? "#"} className="font-semibold text-ember">
+                  {next.label} →
+                </Link>
+              ) : (
+                next.label
+              )}
+            </>
+          ) : setup.signedOff ? (
+            "Everything is done. You can go live."
+          ) : (
+            "All your steps are done. Wyrm will review and sign off, then you can go live."
+          )}
         </p>
       )}
 
@@ -106,29 +123,48 @@ export default async function LaunchPage({
         {(["required", "recommended"] as const).map((group) => (
           <Card key={group}>
             <h2 className="font-display text-xl font-semibold">
-              {group === "required" ? "Required" : "Recommended"}
+              {group === "required" ? "Must do" : "Nice to have"}
             </h2>
-            <ul className="mt-3 space-y-2">
-              {setup[group].map((item) => (
-                <li key={item.key} className="flex items-start gap-3">
-                  <span aria-hidden="true" className={item.done ? "text-moss" : "text-ink-muted"}>
-                    {item.done ? "✓" : "○"}
-                  </span>
-                  <span className="flex-1">
-                    <span className={item.done ? "" : "font-semibold"}>{item.label}</span>
-                    <span className="sr-only">{item.done ? " (done)" : " (to do)"}</span>
-                    {!item.done && (
-                      <span className="block text-sm text-ink-muted">
-                        {item.hint}{" "}
-                        <Link href={linkFor(item.where)} className="text-ember">
-                          Open
+            <p className="text-sm text-ink-muted">
+              {group === "required"
+                ? "Needed before your agent can talk to customers, in this order."
+                : "Not needed to launch, but your agent works better with them."}
+            </p>
+            <ol className="mt-3 space-y-2">
+              {setup[group].map((item, i) => {
+                const href = linkFor(item.where);
+                return (
+                  <li key={item.key} className="flex items-start gap-3">
+                    <span
+                      aria-hidden="true"
+                      className={`mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
+                        item.done ? "border-moss/60 text-moss" : "border-line text-ink-muted"
+                      }`}
+                    >
+                      {item.done ? "✓" : group === "required" ? i + 1 : "·"}
+                    </span>
+                    <span className="flex-1">
+                      {href ? (
+                        <Link
+                          href={href}
+                          className={`hover:text-ember ${item.done ? "text-ink-muted" : "font-semibold"}`}
+                        >
+                          {item.label}
                         </Link>
-                      </span>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                      ) : (
+                        <span className={item.done ? "text-ink-muted" : "font-semibold"}>
+                          {item.label}
+                        </span>
+                      )}
+                      <span className="sr-only">{item.done ? " (done)" : " (to do)"}</span>
+                      {!item.done && (
+                        <span className="block text-sm text-ink-muted">{item.hint}</span>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
           </Card>
         ))}
       </div>

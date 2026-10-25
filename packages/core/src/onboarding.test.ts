@@ -105,6 +105,7 @@ describe("setup tracker and go-live gate", () => {
       "tests",
       "published",
       "practice",
+      "signoff",
     ]);
     expect(s.readyToLaunch).toBe(false);
     await expect(
@@ -156,7 +157,7 @@ describe("setup tracker and go-live gate", () => {
         [TENANT, AGENT],
       );
     const s = await setupStatus(owner, TENANT, AGENT);
-    expect(s.missing).toEqual([]);
+    expect(s.missing.map((i) => i.key)).toEqual(["signoff"]);
     expect(s.signedOff).toBe(false);
     await expect(
       setAgentStatus(owner, { tenantId: TENANT, agentId: AGENT, status: "live" }),
@@ -178,7 +179,7 @@ describe("setup tracker and go-live gate", () => {
     await setAgentStatus(owner, { tenantId: TENANT, agentId: AGENT, status: "live" });
     const s = await setupStatus(owner, TENANT, AGENT);
     expect(s.status).toBe("live");
-    expect(s.recommended.find((i) => i.key === "signoff")?.done).toBe(true);
+    expect(s.required.find((i) => i.key === "signoff")?.done).toBe(true);
   });
 });
 

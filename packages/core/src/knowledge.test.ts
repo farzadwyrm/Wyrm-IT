@@ -384,9 +384,9 @@ describe("asking", () => {
 
   it("has its own setup checklist: documents and answered questions", async () => {
     const setup = await setupStatus(await ctxFor(people.owner), tenant, docsAgent);
-    expect(setup.required.map((i) => i.key)).toEqual(["documents", "practice"]);
+    expect(setup.required.map((i) => i.key)).toEqual(["documents", "practice", "signoff"]);
     expect(setup.required[0]?.done).toBe(true);
-    expect(setup.recommended.map((i) => i.key)).toContain("signoff");
+    expect(setup.recommended.map((i) => i.key)).not.toContain("signoff");
   });
 
   it("removes a document and its passages", async () => {

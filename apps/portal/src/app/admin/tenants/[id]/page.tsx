@@ -187,15 +187,16 @@ export default async function TenantPage({
                 return (
                   <div className="space-y-2 rounded-xl border border-line p-3 text-sm">
                     <p>
-                      Setup: {setup.done} of {setup.total} done
-                      {setup.missing.length > 0 && (
+                      Must do: {setup.done} of {setup.total} done
+                      {setup.missingBeforeSignOff.length > 0 && (
                         <span className="text-ink-muted">
                           {" "}
-                          · missing: {setup.missing.map((m) => m.label.toLowerCase()).join(", ")}
+                          · client still to do:{" "}
+                          {setup.missingBeforeSignOff.map((m) => m.label.toLowerCase()).join(", ")}
                         </span>
                       )}
                     </p>
-                    {setup.missing.length > 0 ? (
+                    {setup.missingBeforeSignOff.length > 0 ? (
                       <p className="text-ink-muted">
                         Sign-off opens once the client finishes the required steps. The agent can't
                         go live before then.

@@ -203,13 +203,6 @@ export async function setupStatus(ctx: Ctx, tenantId: string, agentId: string) {
   const recommended: SetupItem[] = isKnowledge
     ? [
         {
-          key: "signoff",
-          label: "Wyrm sign-off",
-          done: Boolean(launch[0]?.signedOffAt),
-          hint: "Your Wyrm contact reviews the documents and answers before launch.",
-          where: "launch",
-        },
-        {
           key: "handoff",
           label: "Who to ask when the documents don't say",
           done: policy.limits.handoffContact.trim().length > 0,
@@ -232,13 +225,6 @@ export async function setupStatus(ctx: Ctx, tenantId: string, agentId: string) {
         },
       ]
     : [
-        {
-          key: "signoff",
-          label: "Wyrm sign-off",
-          done: Boolean(launch[0]?.signedOffAt),
-          hint: "Your Wyrm contact reviews the setup before launch.",
-          where: "launch",
-        },
         {
           key: "channel",
           label: "Website chat installed",
@@ -298,15 +284,27 @@ export async function setupStatus(ctx: Ctx, tenantId: string, agentId: string) {
       },
     );
   }
-  const missing = required.filter((i) => !i.done);
   const signedOff = Boolean(launch[0]?.signedOffAt);
+  // Wyrm's review is the last must-do step; it opens once everything above it is done.
+  required.push({
+    key: "signoff",
+    label: "Wyrm sign-off",
+    done: signedOff,
+    hint: "Your Wyrm contact reviews your setup and approves it. Nothing to do here yourself.",
+    where: "wyrm",
+  });
+  const missing = required.filter((i) => !i.done);
   return {
+    /** Must do before going live, ending with Wyrm's sign-off. */
     required,
+    /** Nice to have: better results, not needed to launch. */
     recommended,
-    done: required.filter((i) => i.done).length + recommended.filter((i) => i.done).length,
-    total: required.length + recommended.length,
-    readyToLaunch: missing.length === 0 && signedOff,
+    done: required.filter((i) => i.done).length,
+    total: required.length,
+    readyToLaunch: missing.length === 0,
     missing,
+    /** What the client still has to do before Wyrm can sign off. */
+    missingBeforeSignOff: missing.filter((i) => i.key !== "signoff"),
     signedOff,
     launch: launch[0] ?? null,
     status: agent[0]?.status ?? "draft",
@@ -320,8 +318,9 @@ export async function setupStatus(ctx: Ctx, tenantId: string, agentId: string) {
 export async function assertReadyToGoLive(ctx: Ctx, tenantId: string, agentId: string) {
   const status = await setupStatus(ctx, tenantId, agentId);
   if (!status.readyToLaunch) {
-    const reasons = status.missing.map((i) => i.label.toLowerCase());
-    if (!status.signedOff) reasons.push("Wyrm sign-off");
+    const reasons = status.missing.map((i) =>
+      i.key === "signoff" ? i.label : i.label.toLowerCase(),
+    );
     throw new DomainError("not_ready", `Before going live: ${reasons.join(", ")}.`);
   }
 }
@@ -336,7 +335,7 @@ export async function signOffLaunch(
     throw new ForbiddenError("platform_agents.manage", d.allowed ? "platform_only" : d.reason);
   const note = input.note.trim().slice(0, 500);
   if (note.length < 3) throw new DomainError("note_required", "Add a short sign-off note.");
-  const { missing } = await setupStatus(ctx, input.tenantId, input.agentId);
+  const { missingBeforeSignOff: missing } = await setupStatus(ctx, input.tenantId, input.agentId);
   if (missing.length > 0)
     throw new DomainError(
       "not_ready",

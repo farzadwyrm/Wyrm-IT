@@ -148,7 +148,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/dashboa
     if (d.setup)
       alerts.push({
         tone: "plain",
-        text: `${d.agent.name} isn't live yet: ${d.setup.done} of ${d.setup.total} setup steps done${d.setup.missing[0] ? `. Next: ${d.setup.missing[0].label.toLowerCase()}` : d.setup.signedOff ? ". Ready to go live" : ". Waiting for Wyrm's sign-off"}.`,
+        text: `${d.agent.name} isn't live yet: ${d.setup.done} of ${d.setup.total} must-do steps done${d.setup.missingBeforeSignOff[0] ? `. Next: ${d.setup.missingBeforeSignOff[0].label.toLowerCase()}` : d.setup.signedOff ? ". Ready to go live" : ". Waiting for Wyrm's sign-off"}.`,
         href: `/dashboard/agents/${d.agent.id}/launch`,
         action: "Continue setup",
       });
