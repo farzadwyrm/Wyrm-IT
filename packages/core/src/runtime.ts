@@ -204,6 +204,7 @@ export async function loadRuntime(db: Db, agentId: string, now = new Date(), tes
           : (INTENTS_BY_TYPE[a.type] ?? ["general_question"]);
       })(),
       tools: [],
+      catchAll: a.type === "sales",
     }));
   const faq: FaqEntry[] = taught
     .filter((c) => c.topic && words(c.topic).length > 0)

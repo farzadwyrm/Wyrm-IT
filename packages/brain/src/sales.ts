@@ -164,11 +164,14 @@ export function scoreLead(setup: SalesSetup, answers: Record<string, string>): L
 /** Text for the model while it qualifies: the offer, the fit, and the exact answer options. */
 export function salesInstructions(setup: SalesSetup): string {
   const lines = [
-    `SALES: You help potential customers and find out whether they are a good fit. Ask the qualifying questions naturally, one or two at a time, and answer their questions from the facts. Never promise prices, discounts, delivery dates or contract terms that are not in the facts. Never tell the customer how they scored.`,
+    `SALES: You help potential customers and collect their answers to the qualifying questions. Ask them naturally, one or two at a time, and answer their questions from the facts. Fill in any field the customer has already answered, even in passing, instead of asking again. Never promise prices, discounts, delivery dates or contract terms that are not in the facts. Never tell the customer how they scored.`,
+    `Who is a good fit is decided by the business afterwards, not by you. Never tell a customer we can't help them, don't serve their area, or that their budget or job is too small, and never invent limits that are not in the facts: just collect the answers and contact details.`,
   ];
   if (setup.offer) lines.push(`What we sell: ${setup.offer}`);
-  if (setup.idealCustomer) lines.push(`A good fit: ${setup.idealCustomer}`);
-  if (setup.notFit) lines.push(`Not a fit: ${setup.notFit}`);
+  // The fit descriptions guide the questions only; the decision is made in code (scoreLead).
+  if (setup.idealCustomer)
+    lines.push(`(For context only) a typical good fit: ${setup.idealCustomer}`);
+  if (setup.notFit) lines.push(`(For context only) usually not a fit: ${setup.notFit}`);
   const choices = setup.questions.filter((q) => q.options.length);
   if (choices.length)
     lines.push(

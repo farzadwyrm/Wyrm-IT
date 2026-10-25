@@ -246,8 +246,23 @@ export async function decide(
     });
     return done({ kind: "route", agentId: agent.id, intent });
   }
-  // Ask only when unsure; a confident "none of our agents does this" goes straight to a person.
+  // A sales agent takes whatever no other agent clearly owns: every enquiry is a possible lead,
+  // and it closes politely in code when the answers say "not a fit". An agent that matched but
+  // with middling confidence still gets the clarifying question below.
   const unsure = confidence >= ASK_AT && confidence < ROUTE_AT;
+  const catchAll = live.find((a) => a.catchAll);
+  if (catchAll && (!agent || agent.id === catchAll.id || !unsure)) {
+    record({
+      ...model,
+      decision: "route",
+      outcome: "ok",
+      reason: "catch_all",
+      ruleId: "catch_all",
+      agentId: catchAll.id,
+    });
+    return done({ kind: "route", agentId: catchAll.id, intent: "sales_enquiry" });
+  }
+  // Ask only when unsure; a confident "none of our agents does this" goes straight to a person.
   if (unsure && event.clarifications < MAX_CLARIFICATIONS) {
     record({
       ...model,

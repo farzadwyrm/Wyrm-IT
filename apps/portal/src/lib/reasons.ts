@@ -22,6 +22,7 @@ const REASONS: Record<string, string> = {
   customer_frustrated: "The customer sounded frustrated, so it passed them to a person.",
   after_hours_handoff: "Outside opening hours, it passes customers to a person.",
   confident_match: "It was clear which agent should help.",
+  catch_all: "No other agent clearly fitted, so the sales agent took it as a possible lead.",
   continue_active_flow: "The customer was already talking to this agent.",
   faq_match: "It matched a saved answer, so no AI was needed.",
   customer_asked_for_person: "The customer asked for a person.",

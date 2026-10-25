@@ -18,6 +18,8 @@ export interface AgentSpec {
   /** Intents this agent handles, e.g. ["booking", "opening_hours"]. */
   intents: readonly string[];
   tools: readonly ToolSpec[];
+  /** Takes enquiries no other agent clearly owns (sales agents: every enquiry is a lead). */
+  catchAll?: boolean;
 }
 
 export interface FaqEntry {

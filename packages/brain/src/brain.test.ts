@@ -116,6 +116,44 @@ describe("routing", () => {
     expect(invented.action.kind).toBe("handoff"); // unknown intents never route
   });
 
+  it("sends enquiries no other agent owns to a sales agent, but not explicit requests", async () => {
+    const SALES = "agent-sales";
+    const withSales = state({
+      agents: [
+        ...state().agents,
+        {
+          id: SALES,
+          name: "Sales",
+          type: "sales",
+          status: "live",
+          intents: ["sales_enquiry"],
+          tools: [],
+          catchAll: true,
+        },
+      ],
+    });
+    const repair = await decide(event("Can you fix a chip on my counter?"), withSales, [
+      fake("anthropic", { intent: "other", confidence: 0.95 }),
+    ]);
+    expect(repair.action).toEqual({ kind: "route", agentId: SALES, intent: "sales_enquiry" });
+    expect(repair.records.at(-1)).toMatchObject({ reason: "catch_all" });
+    const lowConfidence = await decide(event("hmm"), withSales, [
+      fake("anthropic", { confidence: 0.3 }),
+    ]);
+    expect(lowConfidence.action).toMatchObject({ kind: "route", agentId: SALES });
+    // A clear match for another agent still goes there; an unsure one still gets a question.
+    const booking = await decide(event("Book me in"), withSales, [fake("anthropic", {})]);
+    expect(booking.action).toMatchObject({ kind: "route", agentId: FRONT });
+    const unsure = await decide(event("maybe a visit?"), withSales, [
+      fake("anthropic", { confidence: 0.6 }),
+    ]);
+    expect(unsure.action.kind).toBe("ask");
+    const person = await decide(event("I want to speak to a person"), withSales, [
+      fake("anthropic", {}),
+    ]);
+    expect(person.action.kind).toBe("handoff");
+  });
+
   it("falls back from Haiku to Groq, then takes a message", async () => {
     const haiku = fake("anthropic", "throw");
     const groq = fake("groq", { intent: "quote" });
