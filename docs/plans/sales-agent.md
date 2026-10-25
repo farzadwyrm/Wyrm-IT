@@ -13,9 +13,12 @@ email/SMS is out of scope until consent and opt-out handling exist (ePrivacy/GDP
   not-a-fit message. Stored in `agent_sales` (migration 0010), published with the policy.
 - **Qualify procedure** (`brain/studio.ts` template `qualify`, `brain/sales.ts`): the questions
   become fields the model collects; the model is told the exact answer options. A sales agent
-  starts qualifying whatever the visitor opens with.
+  starts qualifying whatever the visitor opens with, and is the brain's catch-all (`catchAll` in
+  `decide.ts`): enquiries no other agent clearly owns go to it rather than to a person. The model
+  is told fit is decided afterwards, so it never refuses or invents limits (service areas etc.).
 - **Scoring in code** (`scoreLead`): answers are matched to options; any "not a fit" answer ends
-  politely, else points >= threshold is hot, otherwise warm. Unmatched answers score nothing, so
+  politely, as soon as name and contact are known (remaining questions are skipped), else
+  points >= threshold is hot, otherwise warm. Unmatched answers score nothing, so
   a visitor can't talk their way to "hot". The score is never shown to the visitor.
 - **Leads** (`leads` table, `core/leads.ts`, portal `agents/[id]/leads`): name, contact, answers,
   score, bucket, reasons, status new/contacted/won/lost. Test chats are marked and hidden by
