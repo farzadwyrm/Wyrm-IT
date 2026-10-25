@@ -53,6 +53,52 @@ export async function getClient(db: Db, clientId: string) {
   return row ?? null;
 }
 
+/** Fetches a client ID metadata document. The caller must block private and internal hosts. */
+export type MetadataFetcher = (url: string) => Promise<unknown>;
+
+const CIMD_REFRESH_MS = 86_400_000;
+
+/**
+ * The client for an authorization request. A client ID that is an https URL is a Client ID
+ * Metadata Document (MCP 2025-11-25+, used by Claude): Wyrm fetches it, checks that it names
+ * itself, and keeps a copy for a day. Other IDs must have registered first.
+ */
+export async function resolveClient(db: Db, clientId: string, fetchMetadata: MetadataFetcher) {
+  if (!clientId.startsWith("https://")) return getClient(db, clientId);
+  let url: URL;
+  try {
+    url = new URL(clientId);
+  } catch {
+    return null;
+  }
+  // The document's URL must have a path and no fragment or credentials.
+  if (clientId.length > 300 || url.pathname === "/" || url.hash || url.username || url.password)
+    return null;
+  const cached = await getClient(db, clientId);
+  if (cached && Date.now() - cached.createdAt.getTime() < CIMD_REFRESH_MS) return cached;
+  let doc: Record<string, unknown>;
+  try {
+    doc = ((await fetchMetadata(clientId)) ?? {}) as Record<string, unknown>;
+  } catch {
+    return cached;
+  }
+  const uris = Array.isArray(doc.redirect_uris)
+    ? doc.redirect_uris.filter((u): u is string => typeof u === "string").slice(0, 10)
+    : [];
+  if (doc.client_id !== clientId || uris.length === 0 || !uris.every((u) => validRedirect(u)))
+    return null;
+  const name = typeof doc.client_name === "string" ? doc.client_name.trim().slice(0, 200) : "";
+  const [row] = await db
+    .insert(oauthClients)
+    .values({ clientId, clientName: name, redirectUris: uris })
+    .onConflictDoUpdate({
+      target: oauthClients.clientId,
+      set: { clientName: name, redirectUris: uris, createdAt: new Date() },
+    })
+    .returning();
+  return row ?? null;
+}
+
 /** Organisations that allow MCP access (phase 0: switched on per client by Wyrm). */
 export async function mcpEnabled(db: Db, tenantId: string) {
   const [t] = await db.select().from(tenants).where(eq(tenants.id, tenantId));

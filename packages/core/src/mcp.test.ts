@@ -16,6 +16,7 @@ import {
   type McpDeps,
   refreshTokens,
   registerClient,
+  resolveClient,
   verifyAccessToken,
 } from "./index";
 import type { Answer } from "./runtime";
@@ -247,6 +248,51 @@ describe("OAuth for MCP clients", () => {
     await client.query("update tenants set features = '{}' where id = $1", [TENANT_A]);
     expect(await verifyAccessToken(db, next.access_token, RESOURCE)).toBeNull();
     await client.query(`update tenants set features = '{"mcp": true}' where id = $1`, [TENANT_A]);
+  });
+
+  it("accepts clients that identify with a metadata document URL, only if it names itself", async () => {
+    const ID = "https://ai-app.example/oauth/client.json";
+    const docs: Record<string, unknown> = {
+      [ID]: { client_id: ID, client_name: "Fictional AI app", redirect_uris: [REDIRECT] },
+      "https://liar.example/client.json": {
+        client_id: "https://someone-else.example/client.json",
+        redirect_uris: [REDIRECT],
+      },
+    };
+    let fetches = 0;
+    const fetcher = async (url: string) => {
+      fetches += 1;
+      return docs[url] ?? null;
+    };
+    const app = await resolveClient(db, ID, fetcher);
+    expect(app).toMatchObject({ clientId: ID, clientName: "Fictional AI app" });
+    // Cached for a day: no second fetch.
+    await resolveClient(db, ID, fetcher);
+    expect(fetches).toBe(1);
+    // A document that names a different client, a bare origin, or http is refused.
+    expect(await resolveClient(db, "https://liar.example/client.json", fetcher)).toBeNull();
+    expect(await resolveClient(db, "https://ai-app.example/", fetcher)).toBeNull();
+    expect(await resolveClient(db, "http://ai-app.example/client.json", fetcher)).toBeNull();
+    // The usual flow then works with the URL as client ID.
+    const verifier = "another-fictional-code-verifier-long-enough-for-pkce-4567";
+    const code = await createAuthCode(db, {
+      clientId: ID,
+      userId: OWNER_A,
+      tenantId: TENANT_A,
+      redirectUri: REDIRECT,
+      codeChallenge: createHash("sha256").update(verifier).digest("base64url"),
+      resource: RESOURCE,
+    });
+    const tokens = await exchangeCode(db, {
+      code,
+      clientId: ID,
+      redirectUri: REDIRECT,
+      codeVerifier: verifier,
+    });
+    expect(await verifyAccessToken(db, tokens.access_token, RESOURCE)).toMatchObject({
+      tenantId: TENANT_A,
+      clientId: ID,
+    });
   });
 });
 

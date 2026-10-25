@@ -1,7 +1,7 @@
 import "server-only";
-import { getClient } from "@wyrm/core";
+import { resolveClient } from "@wyrm/core";
 import { serverDb } from "@/lib/db";
-import { mcpResource, portalBase } from "@/lib/mcp";
+import { fetchClientMetadata, mcpResource, portalBase } from "@/lib/mcp";
 
 /** A validated authorization request. Problems are shown on the page, never redirected. */
 export interface AuthRequest {
@@ -22,7 +22,7 @@ export async function parseAuthRequest(
   if (!db) return { ok: false, problem: "The portal can't reach its database right now." };
   const clientId = one(params.client_id);
   const redirectUri = one(params.redirect_uri);
-  const client = await getClient(db, clientId);
+  const client = await resolveClient(db, clientId, fetchClientMetadata);
   if (!client) return { ok: false, problem: "This app isn't registered with Wyrm." };
   if (!client.redirectUris.includes(redirectUri))
     return { ok: false, problem: "This app's return address doesn't match its registration." };

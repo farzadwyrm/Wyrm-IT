@@ -17,6 +17,8 @@ export async function GET() {
       token_endpoint_auth_methods_supported: ["none"],
       scopes_supported: [MCP_SCOPE],
       authorization_response_iss_parameter_supported: true,
+      // Clients may use an https URL as their ID (Client ID Metadata Documents).
+      client_id_metadata_document_supported: true,
     },
     { headers: { "Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*" } },
   );
