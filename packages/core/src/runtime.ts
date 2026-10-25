@@ -700,8 +700,15 @@ export async function runTurn(ctx: TurnContext): Promise<TurnEffects> {
             collected[field.key] = value.trim().slice(0, 200);
         }
         convState = { ...convState, procedure: procedure.template, collected };
+        // A sales lead that already gave a "not a fit" answer and contact details is closed
+        // politely at once; asking the remaining questions would only waste their time.
+        const sales = procedure.template === "qualify" ? policy.sales : undefined;
+        const settled =
+          sales !== undefined &&
+          Boolean(collected.name && collected.contact) &&
+          scoreLead(sales, collected).bucket === "not_fit";
         const ready =
-          missingInfo(procedure, collected).length === 0 &&
+          (missingInfo(procedure, collected).length === 0 || settled) &&
           (answer.confirmed === true || !procedure.confirmBeforeActing);
         if (ready) {
           const check = checkAction(procedure.template, collected, limits, now);

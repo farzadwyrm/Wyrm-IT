@@ -63,7 +63,6 @@ describe("sales setup", () => {
     expect(keys).toEqual([
       "name",
       "contact",
-      "need",
       "q_budget",
       "q_timing",
       "q_anything_else_we_should_know",

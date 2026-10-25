@@ -592,6 +592,14 @@ describe("Agent Studio policies at runtime", () => {
               { label: "Over 2,000 EUR", rating: "great" },
             ],
           },
+          {
+            key: "timing",
+            question: "When do you want to start?",
+            options: [
+              { label: "This month", rating: "great" },
+              { label: "Later", rating: "ok" },
+            ],
+          },
         ],
       },
     };
@@ -611,7 +619,12 @@ describe("Agent Studio policies at runtime", () => {
         { reply: "Happy to help. What budget do you have?", fields: { need: "A new website" } },
         {
           reply: "Thanks!",
-          fields: { q_budget: "Over 2,000 EUR", name: "Ana Example", contact: "ana@example.com" },
+          fields: {
+            q_budget: "Over 2,000 EUR",
+            q_timing: "This month",
+            name: "Ana Example",
+            contact: "ana@example.com",
+          },
         },
       ]);
       const first = await handleCustomerMessage(db, d, {
@@ -636,10 +649,10 @@ describe("Agent Studio policies at runtime", () => {
         "select bucket, score, name, is_test from leads where conversation_id = $1",
         [last.conversationId],
       );
-      expect(lead).toMatchObject({ bucket: "hot", score: 2, name: "Ana Example", is_test: false });
+      expect(lead).toMatchObject({ bucket: "hot", score: 4, name: "Ana Example", is_test: false });
     });
 
-    it("closes politely when the answers say not a fit", async () => {
+    it("closes politely as soon as an answer says not a fit, without the other questions", async () => {
       const d = studioDeps("general_question", [
         {
           reply: "Thanks.",

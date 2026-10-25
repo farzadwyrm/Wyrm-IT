@@ -97,7 +97,11 @@ export function salesFields(setup: SalesSetup): InfoField[] {
   }));
 }
 
-/** Adds the current questions to the qualify procedure (idempotent: old question fields go). */
+/**
+ * Adds the current questions to the qualify procedure (idempotent: old question fields go).
+ * With questions of its own, the generic "what they are looking for" field is dropped: the
+ * owner's questions cover it, and every extra field is one more the model can forget.
+ */
 export function withSalesQuestions(policy: Policy): Policy {
   if (!policy.sales) return policy;
   const fields = salesFields(policy.sales);
@@ -106,7 +110,9 @@ export function withSalesQuestions(policy: Policy): Policy {
       ? {
           ...p,
           requiredInfo: [
-            ...p.requiredInfo.filter((f) => !f.key.startsWith(QUESTION_PREFIX)),
+            ...p.requiredInfo.filter(
+              (f) => !f.key.startsWith(QUESTION_PREFIX) && !(fields.length && f.key === "need"),
+            ),
             ...fields,
           ],
         }
