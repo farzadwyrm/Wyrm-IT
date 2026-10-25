@@ -1,3 +1,4 @@
+import { check } from "@wyrm/auth";
 import {
   customerHealth,
   DomainError,
@@ -15,7 +16,14 @@ import { ChatBox } from "@/components/chat-box";
 import { coreContext, requireAdmin } from "@/lib/auth";
 import { clientHealth } from "@/lib/health";
 import { money, OUTCOME_LABELS, when } from "@/lib/portal";
-import { addAgentAction, adminAgentStatus, signOffAction, viewAsAction } from "../../actions";
+import {
+  addAgentAction,
+  adminAgentStatus,
+  changeClientStatus,
+  deleteClientAction,
+  signOffAction,
+  viewAsAction,
+} from "../../actions";
 import { InviteLink } from "./invite-link";
 
 export const metadata: Metadata = { title: "Client" };
@@ -306,6 +314,48 @@ export default async function TenantPage({
           </ul>
         )}
       </div>
+
+      {check(access.actor, "tenants.delete").allowed && (
+        <div className="space-y-3 rounded-2xl border border-node-output/50 p-4">
+          <h2 className="font-display text-xl font-semibold">Delete client</h2>
+          <p className="text-sm text-ink-muted">
+            Permanently deletes {tenant.name}: its agents, settings, conversations, leads, documents
+            and staff access. This can't be undone.
+          </p>
+          {tenant.status !== "suspended" ? (
+            <form action={changeClientStatus} className="flex flex-wrap items-center gap-3">
+              <input type="hidden" name="tenantId" value={id} />
+              <input type="hidden" name="status" value="suspended" />
+              <p className="text-sm">Suspend the client first. That stops its agents and logins.</p>
+              <button type="submit" className={button}>
+                Suspend client
+              </button>
+            </form>
+          ) : (
+            <form action={deleteClientAction} className="flex flex-wrap items-end gap-2">
+              <input type="hidden" name="tenantId" value={id} />
+              <label className="min-w-64 flex-1">
+                <span className="text-sm font-semibold">
+                  Type <code className="rounded bg-paper px-1">{tenant.slug}</code> to confirm
+                </span>
+                <input
+                  name="confirm"
+                  required
+                  autoComplete="off"
+                  pattern={tenant.slug.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&")}
+                  className={input}
+                />
+              </label>
+              <button
+                type="submit"
+                className="inline-flex min-h-11 items-center rounded-lg border border-node-output/60 px-4 font-semibold text-node-output hover:bg-node-output/10"
+              >
+                Delete permanently
+              </button>
+            </form>
+          )}
+        </div>
+      )}
     </section>
   );
 }

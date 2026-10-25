@@ -11,6 +11,7 @@ import {
   changeRole,
   createTenant,
   DomainError,
+  deleteTenant,
   grantAgentAccess,
   inviteStaff,
   listAgents,
@@ -282,6 +283,28 @@ describe("4. suspended tenants", () => {
     await expect(
       setTenantStatus(await ctxFor(people.support), tenantA, "suspended"),
     ).rejects.toThrow(/missing_permission/);
+  });
+
+  it("are deleted only by a Super Admin, only once suspended, with the short name typed", async () => {
+    const sup = await ctxFor(people.super);
+    const { tenant } = await createTenant(sup, {
+      name: "Fictional Closing Shop",
+      slug: "closing-shop",
+      plan: "pilot",
+      seatLimit: 2,
+      ownerEmail: "owner@closing-shop.example",
+    });
+    await expect(deleteTenant(sup, tenant.id, "closing-shop")).rejects.toThrow(
+      /Suspend the client/,
+    );
+    await setTenantStatus(sup, tenant.id, "suspended");
+    await expect(deleteTenant(sup, tenant.id, "closing")).rejects.toThrow(/short name/);
+    await expect(
+      deleteTenant(await ctxFor(people.support), tenant.id, "closing-shop"),
+    ).rejects.toThrow(ForbiddenError);
+    await deleteTenant(sup, tenant.id, "closing-shop");
+    const left = await client.query("select 1 from tenants where id = $1", [tenant.id]);
+    expect(left.rows).toEqual([]);
   });
 });
 

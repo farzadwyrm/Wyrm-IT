@@ -131,6 +131,8 @@ describe("platform roles", () => {
     ["super_admin", "platform_staff.manage_super", true],
     ["platform_admin", "platform_staff.manage_super", false],
     ["platform_admin", "tenants.suspend", true],
+    ["platform_admin", "tenants.delete", false],
+    ["super_admin", "tenants.delete", true],
     ["support", "tenants.view", true],
     ["support", "tenants.manage", false],
     ["support", "impersonate", true],

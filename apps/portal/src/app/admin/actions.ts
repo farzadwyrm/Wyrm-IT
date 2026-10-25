@@ -4,6 +4,7 @@ import { ForbiddenError } from "@wyrm/auth";
 import {
   createTenant,
   DomainError,
+  deleteTenant,
   endViewAs,
   provisionAgent,
   resendInvitation,
@@ -85,6 +86,7 @@ export async function changeClientStatus(formData: FormData) {
     console.error("status change failed", explain(error));
   }
   revalidatePath("/admin");
+  if (UUID.test(tenantId)) revalidatePath(`/admin/tenants/${tenantId}`);
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -92,6 +94,31 @@ const idOf = (form: FormData, name: string) => {
   const value = String(form.get(name) ?? "");
   return UUID.test(value) ? value : "";
 };
+
+/**
+ * Deletes a client and everything it owns. Super Admin only, the client must be suspended,
+ * and the short name must be typed (all checked again in core).
+ */
+export async function deleteClientAction(formData: FormData) {
+  const access = await requireAdmin();
+  const tenantId = idOf(formData, "tenantId");
+  let error = "";
+  try {
+    await deleteTenant(
+      await coreContext(access),
+      tenantId,
+      String(formData.get("confirm") ?? "")
+        .trim()
+        .toLowerCase()
+        .slice(0, 60),
+    );
+  } catch (e) {
+    error = explain(e);
+  }
+  if (error) redirect(`/admin/tenants/${tenantId}?error=${encodeURIComponent(error)}`);
+  revalidatePath("/admin");
+  redirect("/admin");
+}
 
 export interface InviteLinkState {
   error?: string;

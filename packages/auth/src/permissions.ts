@@ -58,8 +58,12 @@ const ALL_PLATFORM = [...PLATFORM_PERMISSIONS];
 
 export const PLATFORM_ROLE_PERMISSIONS: Record<PlatformRole, readonly PlatformPermission[]> = {
   super_admin: ALL_PLATFORM,
+  // Deleting a client erases all its data, so it stays with Super Admins.
   platform_admin: ALL_PLATFORM.filter(
-    (p) => p !== "platform_staff.manage_super" && p !== "platform_settings.manage",
+    (p) =>
+      p !== "platform_staff.manage_super" &&
+      p !== "platform_settings.manage" &&
+      p !== "tenants.delete",
   ),
   support: [
     "platform.dashboard",

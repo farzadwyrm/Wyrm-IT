@@ -215,6 +215,9 @@ export async function deleteTenant(ctx: Ctx, tenantId: string, confirmSlug: stri
   assertCan(ctx.actor, "tenants.delete");
   const [tenant] = await ctx.db.select().from(tenants).where(eq(tenants.id, tenantId));
   if (!tenant) throw new DomainError("not_found", "Organisation not found.");
+  // Suspending first stops its agents and logins, so nothing is mid-conversation when it goes.
+  if (tenant.status !== "suspended")
+    throw new DomainError("not_suspended", "Suspend the client before deleting it.");
   if (tenant.slug !== confirmSlug)
     throw new DomainError("confirm", "Type the short name to confirm.");
   // The owner-protection trigger allows removal only together with the tenant itself.
