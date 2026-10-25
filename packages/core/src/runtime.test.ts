@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import type { Classifier } from "@wyrm/brain";
+import { procedureFromTemplate } from "@wyrm/brain";
 import { drizzle } from "drizzle-orm/pglite";
 import { beforeAll, describe, expect, it } from "vitest";
 import { type Answer, handleCustomerMessage, type RuntimeDeps } from "./runtime";
@@ -92,6 +93,7 @@ beforeAll(async () => {
     "0007_onboarding.sql",
     "0008_knowledge.sql",
     "0009_connections.sql",
+    "0010_sales.sql",
   ])
     await client.exec(migration(m));
   await client.query(
@@ -565,6 +567,102 @@ describe("Agent Studio policies at runtime", () => {
       now: monday,
     });
     expect(customer.seen[0]?.instructions).not.toContain("Whitening");
+  });
+
+  describe("a sales agent", () => {
+    // Its own fictional business: a web design studio.
+    const TENANT_S = "10000000-0000-4000-8000-00000000000e";
+    const SALES = "20000000-0000-4000-8000-0000000000e1";
+    const salesPolicy = {
+      version: 2,
+      profile: { timezone: "UTC" },
+      rules: [],
+      procedures: [{ ...procedureFromTemplate("qualify"), id: "p-qualify" }],
+      limits: { handoffContact: "Sam, sales" },
+      sales: {
+        offer: "Websites for small businesses.",
+        idealCustomer: "Budget over 2,000 EUR.",
+        questions: [
+          {
+            key: "budget",
+            question: "What budget do you have?",
+            options: [
+              { label: "Under 500 EUR", rating: "no" },
+              { label: "Over 2,000 EUR", rating: "great" },
+            ],
+          },
+        ],
+      },
+    };
+    beforeAll(async () => {
+      await client.query(
+        "insert into tenants (id, name, slug, agent_limit) values ($1, 'Fictional Web Studio', 'web-studio-e', 2)",
+        [TENANT_S],
+      );
+      await client.query(
+        "insert into agents (id, tenant_id, name, type, status, config) values ($1, $2, 'Sales', 'sales', 'live', $3)",
+        [SALES, TENANT_S, JSON.stringify(salesPolicy)],
+      );
+    });
+
+    it("qualifies whoever it talks to, scores in code and saves the lead", async () => {
+      const d = studioDeps("general_question", [
+        { reply: "Happy to help. What budget do you have?", fields: { need: "A new website" } },
+        {
+          reply: "Thanks!",
+          fields: { q_budget: "Over 2,000 EUR", name: "Ana Example", contact: "ana@example.com" },
+        },
+      ]);
+      const first = await handleCustomerMessage(db, d, {
+        agentId: SALES,
+        text: "Hi, do you build websites?",
+        channel: "web_chat",
+      });
+      if (first.status !== "ok") throw new Error("unavailable");
+      expect(d.seen[0]?.instructions).toContain("SALES:");
+      expect(d.seen[0]?.instructions).toContain('q_budget = "Under 500 EUR" | "Over 2,000 EUR"');
+      expect(d.seen[0]?.collect).toContain("q_budget");
+      const last = await handleCustomerMessage(db, d, {
+        agentId: SALES,
+        conversationId: first.conversationId,
+        text: "Over 2k. I'm Ana Example, ana@example.com",
+        channel: "web_chat",
+      });
+      if (last.status !== "ok") throw new Error("unavailable");
+      expect(last.reply).toContain("great fit");
+      expect(last.reply).not.toMatch(/points|score/i);
+      const [lead] = await rows<{ bucket: string; score: number; name: string; is_test: boolean }>(
+        "select bucket, score, name, is_test from leads where conversation_id = $1",
+        [last.conversationId],
+      );
+      expect(lead).toMatchObject({ bucket: "hot", score: 2, name: "Ana Example", is_test: false });
+    });
+
+    it("closes politely when the answers say not a fit", async () => {
+      const d = studioDeps("general_question", [
+        {
+          reply: "Thanks.",
+          fields: {
+            need: "A website",
+            q_budget: "Under 500 EUR",
+            name: "Ben Example",
+            contact: "ben@example.com",
+          },
+        },
+      ]);
+      const r = await handleCustomerMessage(db, d, {
+        agentId: SALES,
+        text: "I need a cheap website, under 500",
+        channel: "web_chat",
+      });
+      if (r.status !== "ok") throw new Error("unavailable");
+      expect(r.reply).toContain("may not be the right fit");
+      const [lead] = await rows<{ bucket: string }>(
+        "select bucket from leads where conversation_id = $1",
+        [r.conversationId],
+      );
+      expect(lead?.bucket).toBe("not_fit");
+    });
   });
 });
 

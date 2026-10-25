@@ -1,5 +1,6 @@
 import {
   type BusinessProfile,
+  cleanSales,
   DAYS,
   DEFAULT_LIMITS,
   findConflicts,
@@ -12,11 +13,13 @@ import {
   type RuleScope,
   TEMPLATES,
   type Template,
+  withSalesQuestions,
 } from "@wyrm/brain";
 import {
   agentLimits,
   agentProcedures,
   agentRules,
+  agentSales,
   businessProfiles,
   type PROCEDURE_TEMPLATES,
   policyChanges,
@@ -54,7 +57,7 @@ async function logChange(
   entry: {
     tenantId: string;
     agentId: string | null;
-    objectType: "profile" | "rule" | "procedure" | "limits" | "publish" | "restore";
+    objectType: "profile" | "rule" | "procedure" | "limits" | "sales" | "publish" | "restore";
     objectId?: string | null | undefined;
     action: "create" | "update" | "delete" | "enable" | "disable" | "publish" | "restore";
     note: string;
@@ -224,7 +227,7 @@ const toLimits = (l: typeof agentLimits.$inferSelect | undefined): Limits =>
 /** The draft policy of one agent, its change log and rule conflicts. */
 export async function getStudio(ctx: Ctx, tenantId: string, agentId: string) {
   agentGate(ctx, "agents.logs", tenantId, agentId);
-  const [profileRow, rules, procedures, limitsRow, changes] = await Promise.all([
+  const [profileRow, rules, procedures, limitsRow, changes, salesRow] = await Promise.all([
     ctx.db.select().from(businessProfiles).where(eq(businessProfiles.tenantId, tenantId)),
     ctx.db
       .select()
@@ -246,13 +249,18 @@ export async function getStudio(ctx: Ctx, tenantId: string, agentId: string) {
       .where(and(eq(policyChanges.tenantId, tenantId), eq(policyChanges.agentId, agentId)))
       .orderBy(desc(policyChanges.id))
       .limit(50),
+    ctx.db
+      .select()
+      .from(agentSales)
+      .where(and(eq(agentSales.tenantId, tenantId), eq(agentSales.agentId, agentId))),
   ]);
-  const policy: Policy = {
+  const policy: Policy = withSalesQuestions({
     profile: cleanProfile(profileRow[0]?.profile ?? {}),
     rules: rules.map(toRule),
     procedures: procedures.map(toProcedure),
     limits: toLimits(limitsRow[0]),
-  };
+    ...(salesRow[0] ? { sales: cleanSales(salesRow[0].setup) } : {}),
+  });
   return { policy, conflicts: findConflicts(policy.rules), changes };
 }
 
@@ -443,6 +451,7 @@ export async function addProcedure(
         whenNotToUse: t.whenNotToUse,
         requiredInfo: t.requiredInfo,
         steps: t.steps,
+        confirmBeforeActing: t.confirmBeforeActing,
         createdBy: editor(ctx),
       })
       .returning(),
@@ -573,6 +582,44 @@ export async function saveLimits(
   return limits;
 }
 
+/** Saves a sales agent's setup (offer, fit, questions, scoring) as a draft. */
+export async function saveSales(
+  ctx: Ctx,
+  input: { tenantId: string; agentId: string; setup: unknown; note: string },
+) {
+  agentGate(ctx, "agents.configure", input.tenantId, input.agentId);
+  const n = requireNote(input.note);
+  const setup = cleanSales(input.setup);
+  const [before] = await ctx.db
+    .select()
+    .from(agentSales)
+    .where(and(eq(agentSales.agentId, input.agentId), eq(agentSales.tenantId, input.tenantId)));
+  await guarded(() =>
+    ctx.db
+      .insert(agentSales)
+      .values({
+        agentId: input.agentId,
+        tenantId: input.tenantId,
+        setup,
+        updatedBy: editor(ctx),
+      })
+      .onConflictDoUpdate({
+        target: agentSales.agentId,
+        set: { setup, updatedBy: editor(ctx), updatedAt: new Date() },
+      }),
+  );
+  await logChange(ctx, {
+    tenantId: input.tenantId,
+    agentId: input.agentId,
+    objectType: "sales",
+    action: before ? "update" : "create",
+    note: n,
+    before: before ? cleanSales(before.setup) : null,
+    after: setup,
+  });
+  return setup;
+}
+
 /** What publishing would make live: switched-off rules and procedures are left out. */
 const snapshotOf = (policy: Policy) => ({
   version: 2,
@@ -580,6 +627,7 @@ const snapshotOf = (policy: Policy) => ({
   rules: policy.rules.filter((r) => r.enabled),
   procedures: policy.procedures.filter((p) => p.enabled),
   limits: policy.limits,
+  ...(policy.sales ? { sales: policy.sales } : {}),
 });
 
 /** The draft as it would run if published now (for "try your draft" chats). */
@@ -651,12 +699,13 @@ export async function publishPolicy(
 export function policyFromConfig(config: unknown): Policy {
   const c = (config ?? {}) as Record<string, unknown>;
   if (c.version === 2) {
-    return {
+    return withSalesQuestions({
       profile: cleanProfile(c.profile),
       rules: Array.isArray(c.rules) ? (c.rules as Rule[]) : [],
       procedures: Array.isArray(c.procedures) ? (c.procedures as Procedure[]) : [],
       limits: cleanLimits(c.limits),
-    };
+      ...(c.sales ? { sales: cleanSales(c.sales) } : {}),
+    });
   }
   return {
     profile: { other: clip(c.businessFacts, 4000), summary: clip(c.greeting, 300) },

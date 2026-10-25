@@ -1,4 +1,4 @@
-import { TEMPLATES, type Template } from "@wyrm/brain";
+import { cleanSales, TEMPLATES, type Template } from "@wyrm/brain";
 import { getStudio, listAgents, listTestsWithResults } from "@wyrm/core";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -13,13 +13,16 @@ import {
   saveLimitsAction,
   saveProcedureAction,
   saveRuleAction,
+  saveSalesAction,
 } from "./actions";
 import { ProfileLists } from "./profile-lists";
+import { SalesForm } from "./sales-form";
 import { TestsPanel } from "./tests-panel";
 
 export const metadata: Metadata = { title: "Agent Studio" };
 
 const TABS = [
+  { key: "sales", label: "Sales setup" },
   { key: "facts", label: "Facts" },
   { key: "rules", label: "Rules" },
   { key: "procedures", label: "Procedures" },
@@ -74,7 +77,8 @@ export default async function StudioPage({
   const query = await searchParams;
   const agent = (await listAgents(page.ctx, page.tenantId)).find((a) => a.agent.id === id)?.agent;
   if (!agent) notFound();
-  const tab = TABS.find((t) => t.key === query.tab)?.key ?? "facts";
+  const tab =
+    TABS.find((t) => t.key === query.tab)?.key ?? (agent.type === "sales" ? "sales" : "facts");
   const [{ policy, conflicts, changes }, testData] = await Promise.all([
     getStudio(page.ctx, page.tenantId, agent.id),
     listTestsWithResults(page.ctx, page.tenantId, agent.id),
@@ -141,6 +145,36 @@ export default async function StudioPage({
         <p className="text-sm text-ink-muted">
           You can view these settings. Only people who manage this agent can change them.
         </p>
+      )}
+
+      {tab === "sales" && (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <form action={saveSalesAction} className="min-w-0 space-y-5">
+            {hidden}
+            <fieldset disabled={!canEdit} className="space-y-5">
+              <SalesForm initial={policy.sales ?? cleanSales({})} />
+              {canEdit && (
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="min-w-64 flex-1">
+                    <Note placeholder="e.g. New budget question" />
+                  </div>
+                  <button type="submit" className={secondary}>
+                    Save sales setup
+                  </button>
+                </div>
+              )}
+            </fieldset>
+          </form>
+          {page.can("agents.use", agent.id) && (
+            <aside className="space-y-2 xl:sticky xl:top-4 xl:self-start">
+              <ChatBox agentId={agent.id} test draft title="Try your draft" />
+              <p className="text-xs text-ink-muted">
+                Talk to it like a potential customer. Answers come from your saved setup; the lead
+                it creates is marked as a test and nothing is sent.
+              </p>
+            </aside>
+          )}
+        </div>
       )}
 
       {tab === "facts" && (
@@ -495,6 +529,7 @@ export default async function StudioPage({
               <h2 className="font-display text-xl font-semibold">Add a procedure</h2>
               <ul className="grid gap-3 sm:grid-cols-2">
                 {(Object.keys(TEMPLATES) as Template[])
+                  .filter((t) => t !== "qualify" || agent.type === "sales")
                   .filter((t) => !used.has(t))
                   .map((t) => (
                     <li key={t} className="rounded-xl border border-line p-3">

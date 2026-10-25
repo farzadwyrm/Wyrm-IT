@@ -1,9 +1,35 @@
 import { assertCan, check, ForbiddenError } from "@wyrm/auth";
-import { agentAccess, agents, tenants } from "@wyrm/db";
+import { cleanSales, procedureFromTemplate } from "@wyrm/brain";
+import { agentAccess, agentProcedures, agentSales, agents, tenants } from "@wyrm/db";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { audit } from "./audit";
 import { type Ctx, DomainError, guarded } from "./context";
 import { assertReadyToGoLive } from "./onboarding";
+import { addStarterTest } from "./testing";
+
+/** Example questions a new sales agent starts with. The owner edits or replaces them. */
+export const STARTER_SALES = cleanSales({
+  questions: [
+    {
+      key: "budget",
+      question: "Roughly what budget do you have in mind?",
+      options: [
+        { label: "Under 500 EUR", rating: "no" },
+        { label: "500 to 2,000 EUR", rating: "ok" },
+        { label: "Over 2,000 EUR", rating: "great" },
+      ],
+    },
+    {
+      key: "timing",
+      question: "When would you like to start?",
+      options: [
+        { label: "This month", rating: "great" },
+        { label: "In 1 to 3 months", rating: "ok" },
+        { label: "Just researching", rating: "ok" },
+      ],
+    },
+  ],
+});
 
 export const AGENT_TYPES = [
   "receptionist",
@@ -68,6 +94,35 @@ export async function provisionAgent(
       .values({ tenantId: input.tenantId, name: input.name.trim(), type: input.type })
       .returning(),
   );
+  if (agent && input.type === "sales") {
+    const t = procedureFromTemplate("qualify");
+    const userId = ctx.actor?.kind === "platform" ? ctx.actor.userId : null;
+    await ctx.db.insert(agentProcedures).values({
+      tenantId: input.tenantId,
+      agentId: agent.id,
+      template: "qualify",
+      name: t.name,
+      whenToUse: t.whenToUse,
+      whenNotToUse: t.whenNotToUse,
+      requiredInfo: t.requiredInfo,
+      steps: t.steps,
+      confirmBeforeActing: t.confirmBeforeActing,
+      createdBy: userId,
+    });
+    await ctx.db.insert(agentSales).values({
+      tenantId: input.tenantId,
+      agentId: agent.id,
+      setup: STARTER_SALES,
+      updatedBy: userId,
+    });
+    for (const template of ["qualify", "safety"] as const)
+      await addStarterTest(ctx.db, {
+        tenantId: input.tenantId,
+        agentId: agent.id,
+        template,
+        createdBy: userId,
+      });
+  }
   await audit(ctx, {
     action: "agent.provisioned",
     tenantId: input.tenantId,

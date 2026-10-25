@@ -88,6 +88,7 @@ export function when(date: Date, now = new Date()) {
 
 export const NOTICES: Record<string, string> = {
   saved: "Saved as a draft. Publish to make it live.",
+  lead_saved: "Lead updated.",
   approved: "Approved. The agent will carry it out.",
   rejected: "Rejected. The customer will be told someone will follow up.",
   resolved: "Marked as done.",

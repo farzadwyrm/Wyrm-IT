@@ -126,6 +126,7 @@ export default async function TenantPage({
             <select name="type" className={input} defaultValue="knowledge">
               <option value="knowledge">Ask your documents (internal, staff only)</option>
               <option value="receptionist">Receptionist (customer-facing)</option>
+              <option value="sales">Sales agent (qualifies leads)</option>
             </select>
           </label>
           <label className="min-w-48 flex-1">

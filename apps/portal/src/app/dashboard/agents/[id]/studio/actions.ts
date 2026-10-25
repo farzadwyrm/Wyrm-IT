@@ -12,6 +12,7 @@ import {
   saveLimits,
   saveProfile,
   saveRule,
+  saveSales,
   saveTest,
   setRuleEnabled,
   setTestActive,
@@ -97,6 +98,23 @@ export async function saveFactsAction(form: FormData) {
       field(form, "note", 500),
       agentId,
     );
+  });
+}
+
+export async function saveSalesAction(form: FormData) {
+  await studio(form, "saved", (p, agentId) => {
+    let setup: unknown = {};
+    try {
+      setup = JSON.parse(field(form, "sales_json", 20_000) || "{}");
+    } catch {
+      setup = {};
+    }
+    return saveSales(p.ctx, {
+      tenantId: p.tenantId,
+      agentId,
+      setup,
+      note: field(form, "note", 500),
+    });
   });
 }
 

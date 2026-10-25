@@ -398,6 +398,7 @@ export const PROCEDURE_TEMPLATES = [
   "message",
   "transfer",
   "quote",
+  "qualify",
 ] as const;
 export type ProcedureTemplate = (typeof PROCEDURE_TEMPLATES)[number];
 
@@ -466,7 +467,7 @@ export const policyChanges = pgTable("policy_changes", {
   tenantId: uuid("tenant_id").notNull(),
   agentId: uuid("agent_id"),
   objectType: text("object_type", {
-    enum: ["profile", "rule", "procedure", "limits", "publish", "restore"],
+    enum: ["profile", "rule", "procedure", "limits", "sales", "publish", "restore"],
   }).notNull(),
   objectId: text("object_id"),
   action: text("action", {
@@ -695,3 +696,36 @@ export type KnowledgeQuestion = typeof knowledgeQuestions.$inferSelect;
 export type AgentConnection = typeof agentConnections.$inferSelect;
 export type ConnectionLookup = typeof connectionLookups.$inferSelect;
 export type ConnectionCall = typeof connectionCalls.$inferSelect;
+
+// Sales agent (0010): sales setup per agent and the leads it qualifies.
+
+export const agentSales = pgTable("agent_sales", {
+  agentId: uuid("agent_id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  setup: jsonb("setup").notNull().default({}),
+  updatedBy: uuid("updated_by"),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
+export const LEAD_BUCKETS = ["hot", "warm", "not_fit"] as const;
+export const LEAD_STATUSES = ["new", "contacted", "won", "lost"] as const;
+
+export const leads = pgTable("leads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull(),
+  agentId: uuid("agent_id"),
+  conversationId: uuid("conversation_id").notNull().unique(),
+  name: text("name").notNull().default(""),
+  contact: text("contact").notNull().default(""),
+  answers: jsonb("answers").notNull().default({}),
+  score: smallint("score").notNull().default(0),
+  bucket: text("bucket", { enum: LEAD_BUCKETS }).notNull(),
+  reasons: text("reasons").array().notNull().default([]),
+  status: text("status", { enum: LEAD_STATUSES }).notNull().default("new"),
+  isTest: boolean("is_test").notNull().default(false),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+  updatedBy: uuid("updated_by"),
+});
+
+export type Lead = typeof leads.$inferSelect;

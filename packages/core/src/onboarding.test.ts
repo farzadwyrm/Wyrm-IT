@@ -10,12 +10,16 @@ import {
   cleanOrigins,
   createSuggestion,
   getStudio,
+  listLeads,
   loadActor,
+  provisionAgent,
   publishPolicy,
   saveChannel,
   saveLimits,
   saveProfile,
+  saveSales,
   setAgentStatus,
+  setLeadStatus,
   setupStatus,
   signOffLaunch,
   widgetAllowed,
@@ -68,6 +72,7 @@ beforeAll(async () => {
     "0007_onboarding.sql",
     "0008_knowledge.sql",
     "0009_connections.sql",
+    "0010_sales.sql",
   ])
     await client.exec(migration(m));
   await client.query(
@@ -233,6 +238,45 @@ describe("facts from the website", () => {
         agentId: AGENT,
         suggestionId: suggestion?.id ?? "",
         parts: ["hours"],
+      }),
+    ).rejects.toThrow(/not found/i);
+  });
+});
+
+describe("sales agent", () => {
+  it("starts with a qualify step, example questions and tests, and needs its offer before launch", async () => {
+    const staff = await ctxFor(SUPER);
+    const agent = await provisionAgent(staff, { tenantId: TENANT, name: "Sales", type: "sales" });
+    const agentId = agent?.id ?? "";
+    const owner = await ctxFor(OWNER);
+    const { policy } = await getStudio(owner, TENANT, agentId);
+    expect(policy.procedures.map((p) => p.template)).toEqual(["qualify"]);
+    expect(policy.sales?.questions.length).toBe(2);
+    expect(policy.procedures[0]?.requiredInfo.map((f) => f.key)).toContain("q_budget");
+    const tests = await client.query<{ template: string }>(
+      "select template from agent_tests where agent_id = $1 order by template",
+      [agentId],
+    );
+    expect(tests.rows.map((r) => r.template)).toEqual(["qualify", "safety"]);
+
+    let s = await setupStatus(owner, TENANT, agentId);
+    expect(s.missing.map((i) => i.key)).toContain("sales_offer");
+    expect(s.missing.map((i) => i.key)).not.toContain("facts");
+
+    await saveSales(owner, {
+      tenantId: TENANT,
+      agentId,
+      setup: { ...policy.sales, offer: "Whitening packages.", idealCustomer: "Adults nearby." },
+      note: "Our offer",
+    });
+    s = await setupStatus(owner, TENANT, agentId);
+    expect(s.missing.map((i) => i.key)).not.toContain("sales_offer");
+    expect(await listLeads(owner, TENANT, { agentId })).toEqual([]);
+    await expect(
+      setLeadStatus(owner, {
+        tenantId: TENANT,
+        leadId: "30000000-0000-4000-8000-000000000001",
+        status: "won",
       }),
     ).rejects.toThrow(/not found/i);
   });

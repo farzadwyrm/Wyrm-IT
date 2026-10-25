@@ -10,11 +10,13 @@ import {
   decide,
   type FaqEntry,
   isOpen,
+  type LeadScore,
   missingInfo,
   type Policy,
   type Procedure,
   policyIntents,
   procedureForIntent,
+  scoreLead,
   TEMPLATES,
   type Template,
   type TenantState,
@@ -27,6 +29,7 @@ import {
   conversations,
   corrections,
   killSwitches,
+  leads,
   tenants,
   usageDaily,
 } from "@wyrm/db";
@@ -371,6 +374,25 @@ export async function handleCustomerMessage(
     if (record && held) record.approvalId = held.id;
   }
 
+  if (turn.lead) {
+    const values = {
+      tenantId,
+      agentId: turn.lead.agentId,
+      conversationId: conversation.id,
+      name: turn.lead.name.slice(0, 200),
+      contact: turn.lead.contact.slice(0, 200),
+      answers: turn.lead.answers,
+      score: turn.lead.score,
+      bucket: turn.lead.bucket,
+      reasons: turn.lead.reasons.slice(0, 20).map((r) => r.slice(0, 300)),
+      isTest: Boolean(input.test),
+    };
+    await db
+      .insert(leads)
+      .values(values)
+      .onConflictDoUpdate({ target: leads.conversationId, set: values });
+  }
+
   // A confirmed booking goes straight into the connected calendar when the slot is free.
   // Never from a draft chat: the draft's services and hours are not live yet.
   if (turn.booking && deps.calendar && !draft) {
@@ -515,6 +537,15 @@ export interface TurnEffects {
     payload: Record<string, unknown>;
     recordIndex: number;
   } | null;
+  /** A finished sales qualification: answers, and the score computed in code. */
+  lead:
+    | (LeadScore & {
+        agentId: string;
+        name: string;
+        contact: string;
+        answers: Record<string, string>;
+      })
+    | null;
   /** A confirmed booking request (book/reschedule); the caller may place it in a calendar. */
   booking: {
     agentId: string;
@@ -531,6 +562,7 @@ export async function runTurn(ctx: TurnContext): Promise<TurnEffects> {
   const { state, text, now, firstContact, previous } = ctx;
   let approval: TurnEffects["approval"] = null;
   let booking: TurnEffects["booking"] = null;
+  let lead: TurnEffects["lead"] = null;
   const lastRoute = [...previous]
     .reverse()
     .find((d) => d.decision === "route" && d.outcome === "ok" && d.agentId);
@@ -592,7 +624,11 @@ export async function runTurn(ctx: TurnContext): Promise<TurnEffects> {
       // The running procedure, or the one this request starts (after hours: take a message).
       let procedure: Procedure | null = convState.procedure
         ? (policy.procedures.find((p) => p.enabled && p.template === convState.procedure) ?? null)
-        : procedureForIntent(policy, result.action.intent);
+        : (procedureForIntent(policy, result.action.intent) ??
+          // A sales agent qualifies whoever it talks to, whatever they open with.
+          (policy.sales
+            ? (policy.procedures.find((p) => p.enabled && p.template === "qualify") ?? null)
+            : null));
       if (!procedure && afterHours)
         procedure = policy.procedures.find((p) => p.enabled && p.template === "message") ?? null;
       const collected: Record<string, string> = {
@@ -723,6 +759,31 @@ export async function runTurn(ctx: TurnContext): Promise<TurnEffects> {
               riskTier: tier,
             });
             summary = `${procedure.name}: ${summaryOf(collected, procedure)}`.slice(0, 2000);
+            if (procedure.template === "qualify" && policy.sales) {
+              const scored = scoreLead(policy.sales, collected);
+              const answers = Object.fromEntries(
+                Object.entries(collected).filter(([k]) => !["name", "contact"].includes(k)),
+              );
+              lead = {
+                ...scored,
+                agentId,
+                name: collected.name ?? "",
+                contact: collected.contact ?? "",
+                answers,
+              };
+              summary =
+                `Lead (${scored.bucket.replace("_", " ")}, ${scored.score} points): ${summaryOf(collected, procedure)}`.slice(
+                  0,
+                  2000,
+                );
+              // What happens next depends on the bucket; the score itself is never shown.
+              reply =
+                scored.bucket === "not_fit"
+                  ? policy.sales.notFitMessage
+                  : scored.bucket === "hot"
+                    ? `Thank you${collected.name ? `, ${collected.name.split(" ")[0]}` : ""}. That sounds like a great fit. Someone from ${state.businessName}${contact} will contact you shortly to arrange a call.`
+                    : `Thank you${collected.name ? `, ${collected.name.split(" ")[0]}` : ""}. I've passed your details to the team at ${state.businessName}${contact}; they'll be in touch.`;
+            }
             if (procedure.template === "book" || procedure.template === "reschedule")
               booking = {
                 agentId,
@@ -730,10 +791,17 @@ export async function runTurn(ctx: TurnContext): Promise<TurnEffects> {
                 procedureName: procedure.name,
                 fields: { ...collected },
               };
-            flags.add("needs_attention");
-            topics.add(`${procedure.template} request`);
-            outcome = procedure.template === "transfer" ? "handed_off" : "lead";
-            if (!/team|confirm/i.test(reply))
+            if (lead?.bucket !== "not_fit") flags.add("needs_attention");
+            topics.add(
+              procedure.template === "qualify" ? "sales enquiry" : `${procedure.template} request`,
+            );
+            outcome =
+              procedure.template === "transfer"
+                ? "handed_off"
+                : lead?.bucket === "not_fit"
+                  ? "resolved_assumed"
+                  : "lead";
+            if (procedure.template !== "qualify" && !/team|confirm/i.test(reply))
               reply = `${reply} The team will confirm shortly.`.trim();
             convState = {
               procedure: undefined,
@@ -778,6 +846,7 @@ export async function runTurn(ctx: TurnContext): Promise<TurnEffects> {
     ended: result.action.kind === "stop",
     approval,
     booking,
+    lead,
   };
 }
 

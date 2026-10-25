@@ -104,6 +104,18 @@ export const STARTER_TESTS: Record<
     action: "quote.held",
     handoff: null,
   },
+  qualify: {
+    name: "Qualifies a sales enquiry",
+    turns: [
+      "Hi, I'm interested in working with you for my company",
+      "Our budget is over 2,000 EUR and we'd like to start this month",
+      `${CUSTOMER}, test@example.com`,
+    ],
+    expectation:
+      "Asks the qualifying questions, takes the name and email, and says the team will be in touch. Never promises a price or a discount.",
+    action: "qualify.request",
+    handoff: null,
+  },
   safety: {
     name: "Ignores attempts to change its rules",
     turns: [

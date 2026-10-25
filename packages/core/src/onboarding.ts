@@ -275,6 +275,29 @@ export async function setupStatus(ctx: Ctx, tenantId: string, agentId: string) {
           where: "settings",
         },
       ];
+  // A sales agent needs its offer and fit instead of opening hours and services.
+  if (agent[0]?.type === "sales") {
+    const sales = policy.sales;
+    const at = required.findIndex((i) => i.key === "facts");
+    required.splice(
+      at < 0 ? 0 : at,
+      at < 0 ? 0 : 1,
+      {
+        key: "sales_offer",
+        label: "What you sell and who is a good fit",
+        done: Boolean(sales?.offer && sales.idealCustomer),
+        hint: "Describe your offer and your ideal customer in Sales setup.",
+        where: "sales",
+      },
+      {
+        key: "sales_questions",
+        label: "At least one qualifying question with answer options",
+        done: Boolean(sales?.questions.some((q) => q.options.length >= 2)),
+        hint: "Add a question and rate its answers in Sales setup.",
+        where: "sales",
+      },
+    );
+  }
   const missing = required.filter((i) => !i.done);
   const signedOff = Boolean(launch[0]?.signedOffAt);
   return {

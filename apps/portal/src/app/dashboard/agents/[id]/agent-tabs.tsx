@@ -14,7 +14,7 @@ export function AgentTabs({
   type: string;
 }) {
   const path = usePathname();
-  const tab = useSearchParams().get("tab") ?? "facts";
+  const tab = useSearchParams().get("tab") ?? (type === "sales" ? "sales" : "facts");
   const base = `/dashboard/agents/${agentId}`;
   const studio = (key: string) => ({ href: `${base}/studio?tab=${key}`, key });
   type Item = { label: string; href: string; key: string; badge?: number };
@@ -28,19 +28,31 @@ export function AgentTabs({
     { label: "Go live", href: `${base}/launch`, key: "launch" },
     { label: "History", ...studio("changes") },
   ];
+  const sales: Item[] = [
+    { label: "Sales setup", ...studio("sales") },
+    { label: "Leads", href: `${base}/leads`, key: "leads" },
+    { label: "Business info", ...studio("facts") },
+    { label: "Rules", ...studio("rules"), badge: conflicts },
+    { label: "Limits & handoff", ...studio("limits") },
+    { label: "Try & test", ...studio("tests") },
+    { label: "Go live", href: `${base}/launch`, key: "launch" },
+    { label: "History", ...studio("changes") },
+  ];
   const items: Item[] =
     type === "knowledge"
       ? knowledge
-      : [
-          { label: "Business info", ...studio("facts") },
-          { label: "Answers", href: `${base}/answers`, key: "answers" },
-          { label: "Rules", ...studio("rules"), badge: conflicts },
-          { label: "Tasks & booking", ...studio("procedures") },
-          { label: "Limits & handoff", ...studio("limits") },
-          { label: "Try & test", ...studio("tests") },
-          { label: "Go live", href: `${base}/launch`, key: "launch" },
-          { label: "History", ...studio("changes") },
-        ];
+      : type === "sales"
+        ? sales
+        : [
+            { label: "Business info", ...studio("facts") },
+            { label: "Answers", href: `${base}/answers`, key: "answers" },
+            { label: "Rules", ...studio("rules"), badge: conflicts },
+            { label: "Tasks & booking", ...studio("procedures") },
+            { label: "Limits & handoff", ...studio("limits") },
+            { label: "Try & test", ...studio("tests") },
+            { label: "Go live", href: `${base}/launch`, key: "launch" },
+            { label: "History", ...studio("changes") },
+          ];
   const isActive = (key: string, href: string) =>
     href.includes("/studio?")
       ? path.endsWith("/studio") && tab === key

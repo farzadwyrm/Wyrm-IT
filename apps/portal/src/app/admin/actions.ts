@@ -203,7 +203,11 @@ export async function signOffAction(formData: FormData) {
 }
 
 /** Templates Wyrm can add to a client from the back office (the agent starts as a draft). */
-const TEMPLATES = { receptionist: "Receptionist", knowledge: "Ask your documents" } as const;
+const TEMPLATES = {
+  receptionist: "Receptionist",
+  sales: "Sales agent",
+  knowledge: "Ask your documents",
+} as const;
 
 export async function addAgentAction(formData: FormData) {
   const access = await requireAdmin();

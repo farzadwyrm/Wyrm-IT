@@ -65,6 +65,7 @@ beforeAll(async () => {
     "0007_onboarding.sql",
     "0008_knowledge.sql",
     "0009_connections.sql",
+    "0010_sales.sql",
   ])
     await db.exec(migration(m));
   await db.query(

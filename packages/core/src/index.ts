@@ -6,6 +6,7 @@ export * from "./connections";
 export { type Ctx, type Db, DomainError, guarded, translateDbError } from "./context";
 export * from "./impersonation";
 export * from "./knowledge";
+export * from "./leads";
 export * from "./onboarding";
 export * from "./operations";
 export * from "./platform";

@@ -1,3 +1,5 @@
+import type { SalesSetup } from "./sales";
+import { salesInstructions } from "./sales";
 import type { Channel, RiskTier } from "./types";
 
 /**
@@ -41,7 +43,14 @@ export interface InfoField {
   options?: string[];
 }
 
-export type Template = "book" | "reschedule" | "cancel" | "message" | "transfer" | "quote";
+export type Template =
+  | "book"
+  | "reschedule"
+  | "cancel"
+  | "message"
+  | "transfer"
+  | "quote"
+  | "qualify";
 
 export interface Procedure {
   id: string;
@@ -73,6 +82,8 @@ export interface Policy {
   rules: Rule[];
   procedures: Procedure[];
   limits: Limits;
+  /** Sales agents only: offer, fit and qualifying questions (see sales.ts). */
+  sales?: SalesSetup;
 }
 
 export const DEFAULT_LIMITS: Limits = {
@@ -100,6 +111,8 @@ export interface TemplateSpec {
   steps: string[];
   /** Tier of the action at the end (tier 2 is held for staff approval). */
   tier: RiskTier;
+  /** Read the details back and wait for a yes first (default true). */
+  confirmBeforeActing?: boolean;
 }
 
 const NAME: InfoField = { key: "name", label: "Full name", type: "text" };
@@ -189,6 +202,26 @@ export const TEMPLATES: Record<Template, TemplateSpec> = {
     ],
     tier: 2,
   },
+  qualify: {
+    name: "Qualify a sales enquiry",
+    intent: "sales_enquiry",
+    whenToUse: "The visitor is interested in buying, asks what we offer, or wants to work with us.",
+    whenNotToUse: "They are an existing customer with a support question.",
+    requiredInfo: [
+      NAME,
+      { key: "contact", label: "Email or phone", type: "text" },
+      { key: "need", label: "What they are looking for", type: "text" },
+    ],
+    steps: [
+      "Find out what they are looking for and answer their questions from the facts.",
+      "Ask the qualifying questions naturally, one or two at a time.",
+      "Ask for their name and the best email or phone to reach them.",
+      "Thank them and say what happens next.",
+    ],
+    tier: 0,
+    // Reading every answer back would feel like a form; the lead is only recorded, not acted on.
+    confirmBeforeActing: false,
+  },
 };
 
 export function procedureFromTemplate(template: Template, id = template): Procedure {
@@ -201,7 +234,7 @@ export function procedureFromTemplate(template: Template, id = template): Proced
     whenNotToUse: t.whenNotToUse,
     requiredInfo: t.requiredInfo,
     steps: t.steps,
-    confirmBeforeActing: true,
+    confirmBeforeActing: t.confirmBeforeActing ?? true,
     enabled: true,
   };
 }
@@ -418,6 +451,7 @@ export function checkAction(
     return { ok: true, needsApproval: true, reason: late ? "late_cancellation" : "cancellation" };
   }
   if (template === "quote") return { ok: true, needsApproval: true, reason: "quote_needs_review" };
+  if (template === "qualify") return { ok: true, needsApproval: false, reason: "lead_captured" };
   const discount = Number(fields.discount_percent ?? 0);
   if (discount > limits.maxDiscountPercent) return { ok: false, reason: "discount_over_limit" };
   return { ok: true, needsApproval: false, reason: "no_limit" };
@@ -478,6 +512,8 @@ export function buildInstructions(
       limits.blockedTopics.length ? ` Do not discuss: ${limits.blockedTopics.join(", ")}.` : ""
     } The business is ${ctx.situation.open ? "open" : "closed"} right now.`,
   ];
+  if (ctx.procedure?.template === "qualify" && policy.sales)
+    parts.push(salesInstructions(policy.sales));
   if (ctx.procedure) {
     const collected = ctx.collected ?? {};
     const missing = missingInfo(ctx.procedure, collected);
