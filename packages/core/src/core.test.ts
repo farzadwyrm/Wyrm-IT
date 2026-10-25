@@ -99,6 +99,7 @@ beforeAll(async () => {
   await client.exec(migration("0008_knowledge.sql"));
   await client.exec(migration("0009_connections.sql"));
   await client.exec(migration("0010_sales.sql"));
+  await client.exec(migration("0011_history_cleanup.sql"));
   await client.query(
     "insert into platform_users (id, email, platform_role) values ($1, $2, 'support')",
     [people.support.id, people.support.email],
@@ -296,6 +297,16 @@ describe("4. suspended tenants", () => {
     });
     await expect(deleteTenant(sup, tenant.id, "closing-shop")).rejects.toThrow(
       /Suspend the client/,
+    );
+    // History that is append-only must not block deleting the whole organisation.
+    const agent = await provisionAgent(sup, {
+      tenantId: tenant.id,
+      name: "Desk",
+      type: "receptionist",
+    });
+    await client.query(
+      "insert into policy_changes (tenant_id, agent_id, object_type, action, note) values ($1, $2, 'limits', 'update', 'Fictional change')",
+      [tenant.id, agent?.id],
     );
     await setTenantStatus(sup, tenant.id, "suspended");
     await expect(deleteTenant(sup, tenant.id, "closing")).rejects.toThrow(/short name/);

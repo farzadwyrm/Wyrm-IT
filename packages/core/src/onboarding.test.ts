@@ -75,6 +75,7 @@ beforeAll(async () => {
     "0008_knowledge.sql",
     "0009_connections.sql",
     "0010_sales.sql",
+    "0011_history_cleanup.sql",
   ])
     await client.exec(migration(m));
   await client.query(
@@ -290,7 +291,26 @@ describe("sales agent", () => {
     await expect(revokeAgent(await ctxFor(OWNER), TENANT, agent?.id ?? "")).rejects.toThrow(
       ForbiddenError,
     );
+    // History (change log, decisions) stays, unlinked, and must not block removal.
+    await saveLimits(await ctxFor(OWNER), {
+      tenantId: TENANT,
+      agentId: agent?.id ?? "",
+      limits: { handoffContact: "Reception" },
+      note: "Handoff",
+    });
+    await client.query(
+      "insert into agent_decisions (tenant_id, agent_id, decision, outcome, reason) values ($1, $2, 'route', 'ok', 'fictional')",
+      [TENANT, agent?.id],
+    );
     await revokeAgent(staff, TENANT, agent?.id ?? "");
+    const history = await client.query<{ n: number }>(
+      "select count(*)::int as n from policy_changes where tenant_id = $1 and agent_id is null and note = 'Handoff'",
+      [TENANT],
+    );
+    expect(history.rows[0]?.n).toBe(1);
+    await expect(
+      client.query("update policy_changes set note = 'rewritten' where tenant_id = $1", [TENANT]),
+    ).rejects.toThrow(/append_only/);
     const left = await client.query(
       "select (select count(*) from agent_procedures where agent_id = $1)::int as procedures, (select count(*) from agent_sales where agent_id = $1)::int as sales, (select count(*) from agent_tests where agent_id = $1)::int as tests",
       [agent?.id],
