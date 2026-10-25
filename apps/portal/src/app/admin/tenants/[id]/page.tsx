@@ -21,7 +21,9 @@ import {
   adminAgentStatus,
   changeClientStatus,
   deleteClientAction,
+  removeAgentAction,
   signOffAction,
+  updateClientLimitsAction,
   viewAsAction,
 } from "../../actions";
 import { InviteLink } from "./invite-link";
@@ -78,9 +80,66 @@ export default async function TenantPage({
         <h1 className="font-display text-3xl font-semibold">{tenant.name}</h1>
         <p className="mt-1 text-ink-muted">
           {tenant.slug} · {tenant.plan} · {tenant.status} · {tenant.seatLimit} seats ·{" "}
-          {tenant.agentLimit} agents
+          {tenant.agentLimit} agents · AI budget {money(tenant.aiMonthlyBudgetMicros)} a month
         </p>
       </div>
+      {check(access.actor, "tenants.plan").allowed && (
+        <details className="rounded-2xl border border-line p-4">
+          <summary className="cursor-pointer font-semibold">Plan and limits</summary>
+          <form
+            action={updateClientLimitsAction}
+            className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end"
+          >
+            <input type="hidden" name="tenantId" value={id} />
+            <label>
+              <span className="text-sm font-semibold">Plan</span>
+              <select name="plan" defaultValue={tenant.plan} className={input}>
+                <option value="pilot">Pilot</option>
+                <option value="starter">Starter</option>
+                <option value="growth">Growth</option>
+                <option value="enterprise">Enterprise</option>
+              </select>
+            </label>
+            <label>
+              <span className="text-sm font-semibold">Staff seats</span>
+              <input
+                name="seatLimit"
+                type="number"
+                min={1}
+                max={500}
+                defaultValue={tenant.seatLimit}
+                className={input}
+              />
+            </label>
+            <label>
+              <span className="text-sm font-semibold">Agents</span>
+              <input
+                name="agentLimit"
+                type="number"
+                min={Math.max(agents.length, 0)}
+                max={100}
+                defaultValue={tenant.agentLimit}
+                className={input}
+              />
+            </label>
+            <label>
+              <span className="text-sm font-semibold">AI budget ($ a month)</span>
+              <input
+                name="budgetDollars"
+                type="number"
+                min={0}
+                max={1000}
+                step="0.5"
+                defaultValue={(tenant.aiMonthlyBudgetMicros / 1_000_000).toFixed(2)}
+                className={input}
+              />
+            </label>
+            <button type="submit" className={button}>
+              Save limits
+            </button>
+          </form>
+        </details>
+      )}
       {row && health && (
         <div className="space-y-3">
           <p
@@ -173,6 +232,29 @@ export default async function TenantPage({
                   </button>
                 </form>
               </div>
+              {check(access.actor, "platform_agents.manage").allowed && (
+                <details className="text-sm">
+                  <summary className="cursor-pointer text-ink-muted">Remove this agent</summary>
+                  <form action={removeAgentAction} className="mt-2 space-y-2">
+                    <input type="hidden" name="tenantId" value={id} />
+                    <input type="hidden" name="agentId" value={agent.id} />
+                    <p className="text-ink-muted">
+                      Deletes the agent with its settings, tests and sign-off. Past conversations
+                      stay in the client's inbox. Can't be undone.
+                    </p>
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" name="confirm" value="yes" required /> Remove{" "}
+                      {agent.name} for good
+                    </label>
+                    <button
+                      type="submit"
+                      className="inline-flex min-h-11 items-center rounded-lg border border-node-output/60 px-4 font-semibold text-node-output hover:bg-node-output/10"
+                    >
+                      Remove agent
+                    </button>
+                  </form>
+                </details>
+              )}
               {agent.status === "live" && (
                 <p className="text-sm text-ink-muted">
                   Public chat:{" "}

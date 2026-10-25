@@ -137,11 +137,28 @@ export async function updateTenant(
     plan?: Plan;
     seatLimit?: number;
     agentLimit?: number;
+    /** AI spend cap per month, USD millionths (2000000 = $2.00). */
+    aiMonthlyBudgetMicros?: number;
     features?: Record<string, boolean>;
   },
 ) {
   const touchesPlan =
-    patch.plan !== undefined || patch.seatLimit !== undefined || patch.agentLimit !== undefined;
+    patch.plan !== undefined ||
+    patch.seatLimit !== undefined ||
+    patch.agentLimit !== undefined ||
+    patch.aiMonthlyBudgetMicros !== undefined;
+  if (
+    patch.agentLimit !== undefined &&
+    (!Number.isInteger(patch.agentLimit) || patch.agentLimit < 0 || patch.agentLimit > 100)
+  )
+    throw new DomainError("bad_limit", "Agents must be a whole number from 0 to 100.");
+  if (
+    patch.aiMonthlyBudgetMicros !== undefined &&
+    (!Number.isInteger(patch.aiMonthlyBudgetMicros) ||
+      patch.aiMonthlyBudgetMicros < 0 ||
+      patch.aiMonthlyBudgetMicros > 1_000_000_000)
+  )
+    throw new DomainError("bad_budget", "AI budget must be between $0 and $1,000 a month.");
   const touchesProfile = patch.name !== undefined || patch.features !== undefined;
   if (touchesPlan) assertCan(ctx.actor, "tenants.plan");
   if (touchesProfile) assertCan(ctx.actor, "tenants.manage");

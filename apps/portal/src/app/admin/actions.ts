@@ -8,10 +8,12 @@ import {
   endViewAs,
   provisionAgent,
   resendInvitation,
+  revokeAgent,
   setAgentStatus,
   setTenantStatus,
   signOffLaunch,
   startViewAs,
+  updateTenant,
 } from "@wyrm/core";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
@@ -94,6 +96,53 @@ const idOf = (form: FormData, name: string) => {
   const value = String(form.get(name) ?? "");
   return UUID.test(value) ? value : "";
 };
+
+/** Plan and quotas: seats, agents and the monthly AI budget (entered in dollars). */
+export async function updateClientLimitsAction(formData: FormData) {
+  const access = await requireAdmin();
+  const tenantId = idOf(formData, "tenantId");
+  const plan = String(formData.get("plan") ?? "");
+  const number = (name: string) => Number(String(formData.get(name) ?? "").trim());
+  let error = "";
+  try {
+    if (!["pilot", "starter", "growth", "enterprise"].includes(plan))
+      throw new DomainError("bad_plan", "Unknown plan.");
+    const seatLimit = number("seatLimit");
+    if (!Number.isInteger(seatLimit) || seatLimit < 1 || seatLimit > 500)
+      throw new DomainError("bad_limit", "Seats must be a whole number from 1 to 500.");
+    const budget = number("budgetDollars");
+    if (!Number.isFinite(budget))
+      throw new DomainError("bad_budget", "Enter the AI budget in dollars.");
+    await updateTenant(await coreContext(access), tenantId, {
+      plan: plan as "pilot",
+      seatLimit,
+      agentLimit: number("agentLimit"),
+      aiMonthlyBudgetMicros: Math.round(budget * 100) * 10_000,
+    });
+  } catch (e) {
+    error = explain(e);
+  }
+  revalidatePath(`/admin/tenants/${tenantId}`);
+  revalidatePath("/admin");
+  redirect(`/admin/tenants/${tenantId}${error ? `?error=${encodeURIComponent(error)}` : ""}`);
+}
+
+/** Removes one agent and its settings, tests and leads link (conversations are kept). */
+export async function removeAgentAction(formData: FormData) {
+  const access = await requireAdmin();
+  const tenantId = idOf(formData, "tenantId");
+  let error = "";
+  try {
+    if (formData.get("confirm") !== "yes")
+      throw new DomainError("confirm", "Tick the box to confirm removing the agent.");
+    await revokeAgent(await coreContext(access), tenantId, idOf(formData, "agentId"));
+  } catch (e) {
+    error = explain(e);
+  }
+  revalidatePath(`/admin/tenants/${tenantId}`);
+  revalidatePath("/admin");
+  redirect(`/admin/tenants/${tenantId}${error ? `?error=${encodeURIComponent(error)}` : ""}`);
+}
 
 /**
  * Deletes a client and everything it owns. Super Admin only, the client must be suspended,

@@ -14,6 +14,7 @@ import {
   loadActor,
   provisionAgent,
   publishPolicy,
+  revokeAgent,
   saveChannel,
   saveLimits,
   saveProfile,
@@ -22,6 +23,7 @@ import {
   setLeadStatus,
   setupStatus,
   signOffLaunch,
+  updateTenant,
   widgetAllowed,
 } from "./index";
 
@@ -280,5 +282,31 @@ describe("sales agent", () => {
         status: "won",
       }),
     ).rejects.toThrow(/not found/i);
+  });
+
+  it("can be removed cleanly, and Wyrm can raise the client's limits", async () => {
+    const staff = await ctxFor(SUPER);
+    const agent = await provisionAgent(staff, { tenantId: TENANT, name: "Spare", type: "sales" });
+    await expect(revokeAgent(await ctxFor(OWNER), TENANT, agent?.id ?? "")).rejects.toThrow(
+      ForbiddenError,
+    );
+    await revokeAgent(staff, TENANT, agent?.id ?? "");
+    const left = await client.query(
+      "select (select count(*) from agent_procedures where agent_id = $1)::int as procedures, (select count(*) from agent_sales where agent_id = $1)::int as sales, (select count(*) from agent_tests where agent_id = $1)::int as tests",
+      [agent?.id],
+    );
+    expect(left.rows[0]).toEqual({ procedures: 0, sales: 0, tests: 0 });
+
+    const updated = await updateTenant(staff, TENANT, {
+      agentLimit: 5,
+      aiMonthlyBudgetMicros: 10_000_000,
+    });
+    expect(updated).toMatchObject({ agentLimit: 5, aiMonthlyBudgetMicros: 10_000_000 });
+    await expect(updateTenant(staff, TENANT, { aiMonthlyBudgetMicros: -1 })).rejects.toThrow(
+      /AI budget/,
+    );
+    await expect(updateTenant(await ctxFor(OWNER), TENANT, { agentLimit: 50 })).rejects.toThrow(
+      ForbiddenError,
+    );
   });
 });
